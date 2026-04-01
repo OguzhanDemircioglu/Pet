@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PetToptan — Türkiye'nin Toptan Pet Ürünleri Platformu</title>
+<style>
+:root {
+  --bg: #f8f9fa; --bg2: #ffffff; --bg3: #f1f5f9;
+  --text: #1a1a1a; --text2: #64748b; --text3: #94a3b8;
+  --border: #e2e8f0; --border2: #cbd5e1;
+  --primary: #dc2626; --primary-dk: #b91c1c; --primary-bg: #fef2f2;
+  --secondary: #1e3a5f;
+  --accent: #38bdf8;
+  --green: #22c55e;
+  --shadow: 0 4px 16px rgba(0,0,0,0.10);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.14);
+  --r: 8px; --r2: 12px;
+}
+[data-theme="dark"] {
+  --bg: #111827; --bg2: #1e2535; --bg3: #1f2937;
+  --text: #f1f5f9; --text2: #94a3b8; --text3: #64748b;
+  --border: #2d3748; --border2: #374151;
+  --primary-bg: #450a0a;
+  --shadow: 0 4px 16px rgba(0,0,0,0.35);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.45);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer;border:none;outline:none;font-family:inherit}
+
+/* ── INFO BAR CAROUSEL ── */
+.info-bar{background:var(--secondary);color:rgba(255,255,255,.9);font-size:13px;font-weight:500;height:34px;overflow:hidden}
+[data-theme="dark"] .info-bar{background:#0f2035}
+.info-bar-inner{max-width:1280px;margin:0 auto;padding:0 24px;height:34px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.info-bar-slide{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:8px;opacity:0;transition:opacity .5s ease;pointer-events:none}
+.info-bar-slide.active{opacity:1;pointer-events:auto}
+.info-bar-slide a{color:rgba(255,255,255,.95);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.info-bar-dot-wrap{position:absolute;right:24px;display:flex;gap:5px;align-items:center}
+.info-bar-dot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35);cursor:pointer;transition:.2s}
+.info-bar-dot.active{background:#fff;width:14px;border-radius:3px}
+
+/* ── MAIN HEADER ── */
+.header{background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+[data-theme="dark"] .header{background:#1a2333;border-color:#2d3748}
+.header-inner{max-width:1280px;margin:0 auto;padding:0 24px;height:68px;display:flex;align-items:center;gap:0}
+
+/* ── CATEGORY BAR ── */
+.cat-bar{background:var(--secondary);position:sticky;top:68px;z-index:190;box-shadow:0 2px 8px rgba(0,0,0,.15);overflow:visible}
+[data-theme="dark"] .cat-bar{background:#0f2035}
+.cat-bar-inner{max-width:1280px;margin:0 auto;padding:0 24px;display:flex;align-items:center;height:46px;overflow:visible}
+/* Kategori nav → padding-left JS ile arama çubuğuyla hizalanır */
+
+/* Logo */
+.logo-wrap{display:flex;align-items:center;gap:6px;flex-shrink:0;margin-right:20px}
+.logo{display:flex;align-items:center;gap:9px}
+.logo-icon{width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
+.logo-icon img{width:100%;height:100%;object-fit:contain}
+.logo-icon-fallback{width:44px;height:44px;background:linear-gradient(135deg,var(--primary),#ef4444);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 2px 8px rgba(220,38,38,.35);flex-shrink:0}
+.logo-text{font-size:22px;font-weight:900;letter-spacing:-.5px;white-space:nowrap}
+.pet-text{color:var(--primary)}
+.toptan-text{color:var(--accent)}
+.theme-toggle{background:none;border:none;cursor:pointer;padding:4px 5px;border-radius:6px;display:flex;flex-direction:column;align-items:center;gap:0;transition:.2s;line-height:1;margin-left:4px}
+.theme-toggle:hover{background:var(--bg3)}
+.t-weather{font-size:12px;line-height:1.15}
+.t-cat{font-size:16px;line-height:1.1}
+
+/* Category Nav (in cat-bar) */
+.cat-nav{display:flex;align-items:center;height:46px;flex:1}
+.cat-nav-item{position:relative;height:100%;display:flex;align-items:center}
+.cat-nav-btn{display:flex;align-items:center;gap:5px;padding:0 16px;height:100%;font-size:14px;font-weight:600;color:rgba(255,255,255,.88);background:none;border:none;cursor:pointer;transition:.15s;white-space:nowrap;position:relative}
+.cat-nav-btn:hover{color:#fff;background:rgba(255,255,255,.1)}
+.cat-nav-btn::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:#fff;border-radius:2px 2px 0 0;transform:scaleX(0);transition:.2s}
+.cat-nav-item:hover .cat-nav-btn::after{transform:scaleX(1)}
+.cat-nav-btn .cat-arrow{font-size:9px;opacity:.6;transition:.2s}
+.cat-nav-item:hover .cat-arrow{transform:rotate(180deg);opacity:1}
+
+/* Mega Dropdown */
+.cat-dropdown{display:none;position:absolute;top:100%;left:0;min-width:220px;background:var(--bg2);border:1px solid var(--border);border-top:3px solid var(--primary);border-radius:0 0 var(--r2) var(--r2);box-shadow:var(--shadow-lg);z-index:500;padding:10px 0;animation:dropIn .15s ease}
+.cat-nav-item:hover .cat-dropdown{display:block}
+@keyframes dropIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.drop-item{display:flex;align-items:center;gap:8px;padding:9px 18px;font-size:13.5px;font-weight:500;color:var(--text);cursor:pointer;transition:.15s}
+.drop-item:hover{background:var(--primary-bg);color:var(--primary);padding-left:22px}
+.drop-item.no-products{display:none}
+.drop-divider{height:1px;background:var(--border);margin:6px 0}
+.drop-item .sub-arrow{margin-left:auto;font-size:10px;color:var(--text3)}
+
+/* Search Bar */
+.search-bar{flex:1;min-width:0;position:relative;margin:0 16px}
+.search-bar input{width:100%;height:42px;border:2px solid var(--border);border-radius:var(--r);background:var(--bg3);color:var(--text);font-size:14px;padding:0 48px 0 16px;outline:none;transition:.2s;font-family:inherit}
+.search-bar input::placeholder{color:var(--text3)}
+.search-bar input:focus{border-color:var(--primary);background:var(--bg2);box-shadow:0 0 0 3px rgba(220,38,38,.1)}
+[data-theme="dark"] .search-bar input{background:#1f2937;border-color:#374151}
+.search-btn{position:absolute;right:0;top:0;width:44px;height:42px;display:flex;align-items:center;justify-content:center;background:var(--primary);border-radius:0 var(--r) var(--r) 0;color:#fff;font-size:17px;transition:.15s;border:none;cursor:pointer}
+.search-btn:hover{background:var(--primary-dk)}
+.search-dropdown{display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);box-shadow:var(--shadow-lg);z-index:400;overflow:hidden}
+.search-dropdown.open{display:block}
+.search-group-title{padding:9px 14px 5px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px}
+.search-result-item{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;transition:.15s;font-size:13.5px}
+.search-result-item:hover{background:var(--bg3)}
+.search-result-icon{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:15px;background:var(--bg3);flex-shrink:0}
+.search-divider{height:1px;background:var(--border);margin:4px 0}
+
+/* Action Buttons */
+.header-actions{display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:8px}
+.icon-btn{position:relative;background:none;height:42px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:20px;transition:.2s;padding:0 10px;gap:6px}
+.icon-btn:hover{background:var(--bg3);color:var(--text)}
+.icon-btn-label{font-size:12.5px;font-weight:600;white-space:nowrap}
+.badge{position:absolute;top:4px;right:4px;font-size:10px;font-weight:700;min-width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1}
+.red-badge{background:var(--primary);color:#fff}
+.badge.hidden{display:none}
+.cart-btn{border:2px solid var(--border);gap:6px;padding:0 12px;font-size:15px}
+.cart-btn:hover{border-color:var(--primary)}
+.cart-total{font-size:13.5px;font-weight:700;color:var(--text)}
+.cart-icon{font-size:18px}
+.login-btn{display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;color:var(--text2);padding:0 10px;height:42px;border-radius:var(--r);transition:.2s}
+.login-btn:hover{background:var(--bg3);color:var(--text)}
+
+/* Notification Dropdown */
+.notif-wrap{position:relative}
+.notif-dropdown{display:none;position:absolute;top:calc(100% + 10px);right:0;width:320px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);box-shadow:var(--shadow-lg);z-index:600;overflow:hidden}
+.notif-dropdown.open{display:block;animation:dropIn .18s ease}
+.notif-head{display:flex;align-items:center;justify-content:space-between;padding:13px 15px 9px;border-bottom:1px solid var(--border)}
+.notif-list{max-height:280px;overflow-y:auto}
+.notif-item{display:flex;gap:10px;align-items:flex-start;padding:11px 15px;border-bottom:1px solid var(--border);cursor:default}
+.notif-item:last-child{border-bottom:none}
+.notif-unread{background:rgba(220,38,38,.04)}
+.notif-emoji{font-size:20px;width:34px;height:34px;background:var(--bg3);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.notif-text{flex:1;min-width:0}
+.notif-text p{font-size:13px;color:var(--text);line-height:1.4;margin-bottom:2px}
+.notif-text small{font-size:11px;color:var(--text3)}
+.unread-dot{width:8px;height:8px;border-radius:50%;background:var(--primary);flex-shrink:0;margin-top:5px}
+.notif-foot{padding:9px 15px;text-align:center;font-size:12px;color:var(--text2);background:var(--bg3);border-top:1px solid var(--border)}
+
+/* ── CAMPAIGN CAROUSEL ── */
+.carousel-wrap{position:relative;overflow:hidden;background:#000}
+.carousel-track{display:flex;transition:transform .45s cubic-bezier(.4,0,.2,1)}
+.carousel-slide{min-width:100%;height:340px;display:flex;align-items:center;justify-content:space-between;padding:0 80px;position:relative;overflow:hidden;flex-shrink:0}
+.slide-1{background:linear-gradient(130deg,#dc2626 0%,#991b1b 50%,#7f1d1d 100%)}
+.slide-2{background:linear-gradient(130deg,#1e3a5f 0%,#0f2035 50%,#0a1628 100%)}
+.slide-3{background:linear-gradient(130deg,#0f766e 0%,#0d5c56 50%,#0a4a44 100%)}
+.slide-4{background:linear-gradient(130deg,#7c3aed 0%,#6d28d9 50%,#5b21b6 100%)}
+.slide-bg-pattern{position:absolute;inset:0;opacity:.07;background-image:radial-gradient(circle at 20% 50%,white 1px,transparent 1px),radial-gradient(circle at 80% 20%,white 1px,transparent 1px);background-size:40px 40px}
+.slide-content{position:relative;z-index:1;max-width:520px}
+.slide-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:4px 14px;font-size:12.5px;font-weight:600;color:rgba(255,255,255,.95);margin-bottom:16px}
+.slide-title{font-size:clamp(22px,3vw,38px);font-weight:900;color:#fff;line-height:1.2;margin-bottom:10px;letter-spacing:-.3px}
+.slide-sub{font-size:15px;color:rgba(255,255,255,.85);line-height:1.55;margin-bottom:22px}
+.slide-btn{display:inline-flex;align-items:center;gap:8px;background:#fff;color:#dc2626;font-size:14px;font-weight:700;padding:11px 26px;border-radius:var(--r);transition:.2s;box-shadow:0 4px 14px rgba(0,0,0,.15)}
+.slide-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.2)}
+.slide-2 .slide-btn{color:#1e3a5f}
+.slide-3 .slide-btn{color:#0f766e}
+.slide-4 .slide-btn{color:#7c3aed}
+.slide-visual{position:relative;z-index:1;font-size:110px;line-height:1;filter:drop-shadow(0 8px 24px rgba(0,0,0,.2));flex-shrink:0;user-select:none}
+.slide-badge-sticker{position:absolute;top:20px;right:80px;background:#fbbf24;color:#000;font-size:13px;font-weight:900;padding:6px 14px;border-radius:20px;box-shadow:0 4px 12px rgba(0,0,0,.2);z-index:2;transform:rotate(3deg)}
+/* Carousel Controls */
+.carousel-btn{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.2);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s;z-index:10}
+.carousel-btn:hover{background:rgba(255,255,255,.35)}
+.carousel-prev{left:16px}
+.carousel-next{right:16px}
+.carousel-dots{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:7px;z-index:10}
+.dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.4);cursor:pointer;transition:.2s}
+.dot.active{background:#fff;width:24px;border-radius:4px}
+
+/* ── PAGE CONTENT ── */
+.page-content{max-width:1280px;margin:0 auto;padding:0 24px}
+.section-wrap{padding:44px 0 0}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+.section-title{font-size:21px;font-weight:800;color:var(--text);position:relative;padding-left:14px}
+.section-title::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:4px;height:22px;background:var(--primary);border-radius:2px}
+.section-link{font-size:13.5px;font-weight:600;color:var(--primary);display:flex;align-items:center;gap:4px;transition:.2s}
+.section-link:hover{gap:8px}
+
+/* ── CATEGORY CARDS (homepage) ── */
+.cat-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+.cat-card{border-radius:var(--r2);padding:24px 12px 18px;text-align:center;cursor:pointer;transition:.22s;border:2px solid transparent;position:relative;overflow:hidden}
+.cat-card:hover{transform:translateY(-4px);box-shadow:var(--shadow);border-color:rgba(220,38,38,.25)}
+.cat-c1{background:linear-gradient(135deg,#fce7f3,#fdf2f8)}
+.cat-c2{background:linear-gradient(135deg,#dbeafe,#eff6ff)}
+.cat-c3{background:linear-gradient(135deg,#dcfce7,#f0fdf4)}
+.cat-c4{background:linear-gradient(135deg,#e0f2fe,#f0f9ff)}
+.cat-c5{background:linear-gradient(135deg,#fef3c7,#fffbeb)}
+.cat-c6{background:linear-gradient(135deg,#ede9fe,#f5f3ff)}
+[data-theme="dark"] .cat-c1{background:linear-gradient(135deg,#4a1942,#3b0f36)}
+[data-theme="dark"] .cat-c2{background:linear-gradient(135deg,#1e3a5f,#162d4a)}
+[data-theme="dark"] .cat-c3{background:linear-gradient(135deg,#14532d,#0f3d22)}
+[data-theme="dark"] .cat-c4{background:linear-gradient(135deg,#0c4a6e,#083455)}
+[data-theme="dark"] .cat-c5{background:linear-gradient(135deg,#713f12,#52300e)}
+[data-theme="dark"] .cat-c6{background:linear-gradient(135deg,#3b0764,#2d0550)}
+.cat-emoji{font-size:40px;display:block;margin-bottom:10px;line-height:1}
+.cat-name{font-size:14px;font-weight:800;color:var(--text);margin-bottom:3px}
+.cat-count{font-size:11px;color:var(--text2);font-weight:500}
+
+/* ── PRODUCT CARDS ── */
+.prod-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.prod-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;transition:.22s;cursor:pointer;display:flex;flex-direction:column}
+.prod-card:hover{box-shadow:0 8px 28px rgba(0,0,0,.11);transform:translateY(-3px);border-color:var(--primary)}
+.prod-img{height:165px;display:flex;align-items:center;justify-content:center;font-size:64px;position:relative;flex-shrink:0}
+.prod-badge{position:absolute;top:10px;left:10px;background:var(--primary);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:5px}
+.prod-badge-new{background:#7c3aed}
+.prod-body{padding:14px;flex:1;display:flex;flex-direction:column}
+.prod-brand{font-size:11px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.prod-title{font-size:13px;font-weight:600;color:var(--text);line-height:1.4;margin-bottom:8px;flex:1}
+.prod-stars{display:flex;align-items:center;gap:5px;margin-bottom:10px}
+.stars{color:#f59e0b;font-size:13px;letter-spacing:-1px}
+.star-count{font-size:11px;color:var(--text3)}
+.prod-price-row{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:10px}
+.prod-price{font-size:20px;font-weight:900;color:var(--primary)}
+.prod-price-sub{font-size:11px;color:var(--text3);margin-bottom:2px}
+.prod-price-old{font-size:12px;color:var(--text3);text-decoration:line-through}
+.add-to-cart{width:100%;background:var(--primary);color:#fff;font-size:13px;font-weight:700;padding:9px 0;border-radius:var(--r);transition:.2s;margin-top:auto}
+.add-to-cart:hover{background:var(--primary-dk)}
+
+/* ── WHY SECTION ── */
+.why-section{padding:48px 0 52px}
+.why-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.why-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:26px 20px;text-align:center;transition:.2s}
+.why-card:hover{border-color:var(--primary);box-shadow:var(--shadow)}
+.why-icon{font-size:40px;display:block;margin-bottom:12px}
+.why-title{font-size:15px;font-weight:800;color:var(--text);margin-bottom:7px}
+.why-desc{font-size:13px;color:var(--text2);line-height:1.6}
+
+/* ── FOOTER ── */
+.footer{background:var(--bg2);border-top:1px solid var(--border);padding:36px 24px 24px;margin-top:24px}
+.footer-inner{max-width:1280px;margin:0 auto}
+.footer-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:16px}
+.footer-logo{display:flex;align-items:center;gap:9px}
+.footer-links{display:flex;gap:22px;flex-wrap:wrap}
+.footer-links a{font-size:13px;color:var(--text2);transition:.2s}
+.footer-links a:hover{color:var(--primary)}
+.footer-bottom{border-top:1px solid var(--border);padding-top:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.footer-copy{font-size:12px;color:var(--text3)}
+.footer-badges{display:flex;gap:10px}
+.footer-badge{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--text2)}
+</style>
+</head>
+<body>
+
+<!-- INFO BAR CAROUSEL -->
+<div class="info-bar">
+  <div class="info-bar-inner">
+    <!-- Slide 0: E-posta (mektup ikonu) -->
+    <div class="info-bar-slide active" id="ibs0">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">
+        <rect x="2" y="4" width="20" height="16" rx="2"/>
+        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+      </svg>
+      Bize ulaşın: <a href="mailto:info@pettoptan.com.tr">info@pettoptan.com.tr</a>
+    </div>
+    <!-- Slide 1: WhatsApp -->
+    <div class="info-bar-slide" id="ibs1">
+      <a href="https://wa.me/905XXXXXXXXX" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;color:rgba(255,255,255,.95);text-decoration:none">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="rgba(255,255,255,.9)" style="flex-shrink:0">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/>
+        </svg>
+        <strong>WhatsApp:</strong> +90 5XX XXX XX XX
+      </a>
+      &nbsp;·&nbsp; Haftaiçi 09:00–18:00
+    </div>
+    <!-- Slide 2: Satıcıya Sor -->
+    <div class="info-bar-slide" id="ibs2">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="rgba(255,255,255,.9)" style="flex-shrink:0">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/>
+      </svg>
+      <strong>Satıcıya Sor</strong> — Her ürün sayfasında WhatsApp ile direkt satıcıya ulaşın
+    </div>
+    <div class="info-bar-dot-wrap">
+      <div class="info-bar-dot active" data-s="0"></div>
+      <div class="info-bar-dot" data-s="1"></div>
+      <div class="info-bar-dot" data-s="2"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN HEADER -->
+<header class="header">
+  <div class="header-inner">
+
+    <!-- Logo + Theme Toggle -->
+    <div class="logo-wrap">
+      <a href="#" class="logo">
+        <div class="logo-icon" id="logoIcon">
+          <img src="logo.svg" alt="PetToptan" id="logoImg" onerror="this.parentElement.style.display='none';document.getElementById('logoFallback').style.display='flex'">
+        </div>
+        <div class="logo-icon-fallback" id="logoFallback" style="display:none">🐾</div>
+        <div class="logo-text"><span class="pet-text">Pet</span><span class="toptan-text">Toptan</span></div>
+      </a>
+      <button class="theme-toggle" id="themeToggle" title="Tema değiştir">
+        <div id="themeIcon">
+          <span class="t-weather">☀️</span>
+          <span class="t-cat">🐱</span>
+        </div>
+      </button>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-bar">
+      <input type="text" placeholder="Ürün, kategori veya marka ara..." id="searchInput" autocomplete="off">
+      <button class="search-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+             stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+      </button>
+      <div class="search-dropdown" id="searchDropdown">
+        <div class="search-group-title">Ürünler</div>
+        <div class="search-result-item">
+          <div class="search-result-icon">🐱</div>
+          <span>Royal Canin Adult Kedi Maması 10kg</span>
+        </div>
+        <div class="search-result-item">
+          <div class="search-result-icon">🐶</div>
+          <span>Hill's Science Plan Köpek Maması 14kg</span>
+        </div>
+        <div class="search-divider"></div>
+        <div class="search-group-title">Kategoriler</div>
+        <div class="search-result-item">
+          <div class="search-result-icon">🥩</div>
+          <span>Kuru Mamalar</span>
+        </div>
+        <div class="search-result-item">
+          <div class="search-result-icon">🥫</div>
+          <span>Yaş Mamalar</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="header-actions">
+      <!-- Bildirimler (sadece giriş yapılmışsa) -->
+      <div class="notif-wrap" id="notifWrap" style="display:none">
+        <button class="icon-btn" id="notifBtn" title="Bildirimler">
+          🔔
+          <span class="badge red-badge" id="notifBadge">3</span>
+        </button>
+        <div class="notif-dropdown" id="notifDropdown">
+          <div class="notif-head">
+            <span style="font-weight:700;font-size:14px">Bildirimler</span>
+            <span style="font-size:12px;color:var(--primary);cursor:pointer" onclick="markAllRead()">Tümünü okundu işaretle</span>
+          </div>
+          <div class="notif-list">
+            <div class="notif-item notif-unread">
+              <span class="notif-emoji">📦</span>
+              <div class="notif-text"><p><strong>Siparişiniz hazırlanıyor</strong> — #PET20240042 no'lu siparişiniz depoda hazırlanmaktadır.</p><small>2 saat önce</small></div>
+              <span class="unread-dot"></span>
+            </div>
+            <div class="notif-item notif-unread">
+              <span class="notif-emoji">🏷️</span>
+              <div class="notif-text"><p><strong>Yeni indirim!</strong> — Royal Canin ürünlerinde bu hafta %15 indirim başladı.</p><small>5 saat önce</small></div>
+              <span class="unread-dot"></span>
+            </div>
+            <div class="notif-item notif-unread">
+              <span class="notif-emoji">⭐</span>
+              <div class="notif-text"><p><strong>Ürününüzü değerlendirin</strong> — #PET20240038 siparişinizi almış olmalısınız.</p><small>1 gün önce</small></div>
+              <span class="unread-dot"></span>
+            </div>
+            <div class="notif-item">
+              <span class="notif-emoji">✅</span>
+              <div class="notif-text"><p>Siparişiniz teslim edildi — #PET20240038</p><small>2 gün önce</small></div>
+              <span class="unread-dot" style="opacity:0"></span>
+            </div>
+          </div>
+          <div class="notif-foot">Son 30 günün bildirimleri gösteriliyor</div>
+        </div>
+      </div>
+
+      <!-- Login -->
+      <button class="login-btn">👤 <span class="icon-btn-label">Üye Girişi</span></button>
+
+      <!-- Cart -->
+      <button class="icon-btn cart-btn" title="Sepetim">
+        <span class="cart-icon">🛒</span>
+        <span class="cart-total" id="cartTotal">₺0,00</span>
+      </button>
+    </div>
+
+  </div>
+</header>
+
+<!-- CATEGORY BAR -->
+<div class="cat-bar">
+  <div class="cat-bar-inner">
+    <nav class="cat-nav">
+
+      <!-- Kedi -->
+      <div class="cat-nav-item">
+        <button class="cat-nav-btn">🐱 Kedi <span class="cat-arrow">▾</span></button>
+        <div class="cat-dropdown">
+          <div class="drop-item">🥩 Kuru Mamalar <span class="sub-arrow">›</span></div>
+          <div class="drop-item">🥫 Yaş Mamalar <span class="sub-arrow">›</span></div>
+          <div class="drop-item">🍬 Ödüller</div>
+          <div class="drop-item">🍽️ Mama ve Su Kapları</div>
+          <div class="drop-item">🪣 Kumlar</div>
+          <div class="drop-item">🎾 Oyuncaklar</div>
+          <div class="drop-item">📿 Tasmalar</div>
+          <div class="drop-item">🧳 Taşımalar</div>
+          <div class="drop-item">🪵 Tırmalamalar</div>
+          <div class="drop-item">🛏️ Yatak ve Yuvalar</div>
+          <div class="drop-item">🚿 Bakım Ürünleri <span class="sub-arrow">›</span></div>
+          <div class="drop-item">💊 Vitamin ve Katkıları</div>
+          <div class="drop-item no-products">🎓 Eğitim Ürünleri</div>
+          <div class="drop-item no-products">🚪 Kapılar</div>
+        </div>
+      </div>
+
+      <!-- Köpek -->
+      <div class="cat-nav-item">
+        <button class="cat-nav-btn">🐶 Köpek <span class="cat-arrow">▾</span></button>
+        <div class="cat-dropdown">
+          <div class="drop-item">🥩 Kuru Mamalar <span class="sub-arrow">›</span></div>
+          <div class="drop-item">🥫 Yaş Mamalar</div>
+          <div class="drop-item">🍬 Ödüller</div>
+          <div class="drop-item">🍽️ Mama ve Su Kapları</div>
+          <div class="drop-item">🎾 Oyuncaklar</div>
+          <div class="drop-item">📿 Tasmalar</div>
+          <div class="drop-item">🚶 Gezdirme Ürünleri</div>
+          <div class="drop-item">🛏️ Yataklar</div>
+          <div class="drop-item">🎒 Aksesuarlar</div>
+          <div class="drop-item">💊 Vitaminler</div>
+          <div class="drop-item">🚿 Bakım Ürünleri <span class="sub-arrow">›</span></div>
+          <div class="drop-item no-products">👕 Kıyafetler</div>
+          <div class="drop-item no-products">🏠 Kulübeler</div>
+          <div class="drop-item no-products">🌿 Bahçe Ekipmanları</div>
+        </div>
+      </div>
+
+      <!-- Kuş -->
+      <div class="cat-nav-item">
+        <button class="cat-nav-btn">🐦 Kuş <span class="cat-arrow">▾</span></button>
+        <div class="cat-dropdown">
+          <div class="drop-item">🌾 Yemler</div>
+          <div class="drop-item">🍘 Krakerler</div>
+          <div class="drop-item">🪣 Kumlar</div>
+          <div class="drop-item">🏠 Kafesler</div>
+          <div class="drop-item">🎾 Oyuncaklar</div>
+          <div class="drop-item">🎒 Aksesuarlar</div>
+          <div class="drop-item no-products">💊 Vitaminler</div>
+          <div class="drop-item no-products">🚿 Bakım Ürünleri</div>
+        </div>
+      </div>
+
+      <!-- Akvaryum -->
+      <div class="cat-nav-item">
+        <button class="cat-nav-btn">🐟 Akvaryum <span class="cat-arrow">▾</span></button>
+        <div class="cat-dropdown" style="min-width:250px">
+          <div class="drop-item">🍱 Balık Yemi <span class="sub-arrow">›</span></div>
+          <div class="drop-item">💊 Balık Vitamin & Mineral</div>
+          <div class="drop-item">🏺 Akvaryum ve Fanus</div>
+          <div class="drop-item">🧪 Su Düzenleyiciler</div>
+          <div class="drop-item">🧹 Bakım & Temizlik</div>
+          <div class="drop-item">💡 Aydınlatma</div>
+          <div class="drop-item">⚙️ Ekipman & Aksesuarlar <span class="sub-arrow">›</span></div>
+          <div class="drop-item">🔄 Filtreler <span class="sub-arrow">›</span></div>
+          <div class="drop-item">🧲 Filtre Malzemeleri</div>
+          <div class="drop-item">🌡️ Isıtma & Soğutma</div>
+          <div class="drop-item">🔧 Motorlar</div>
+        </div>
+      </div>
+
+      <!-- Kemirgen -->
+      <div class="cat-nav-item">
+        <button class="cat-nav-btn">🐹 Kemirgen <span class="cat-arrow">▾</span></button>
+        <div class="cat-dropdown">
+          <div class="drop-item">🌾 Yemler</div>
+          <div class="drop-item">🏠 Kafesler</div>
+          <div class="drop-item">🎾 Oyuncaklar</div>
+          <div class="drop-item">🚿 Bakım & Sağlık</div>
+        </div>
+      </div>
+
+      <!-- Sürüngen -->
+      <div class="cat-nav-item">
+        <button class="cat-nav-btn">🦎 Sürüngen <span class="cat-arrow">▾</span></button>
+        <div class="cat-dropdown">
+          <div class="drop-item">🍃 Sürüngen Yemi <span class="sub-arrow">›</span></div>
+          <div class="drop-item">🎒 Aksesuarlar <span class="sub-arrow">›</span></div>
+          <div class="drop-item">🪵 Taban Malzemeleri <span class="sub-arrow">›</span></div>
+        </div>
+      </div>
+
+    </nav>
+  </div>
+</div>
+
+<!-- CAMPAIGN CAROUSEL -->
+<div class="carousel-wrap">
+  <div class="carousel-track" id="carouselTrack">
+
+    <!-- Slide 1 -->
+    <div class="carousel-slide slide-1">
+      <div class="slide-bg-pattern"></div>
+      <div class="slide-content">
+        <div class="slide-badge">🔥 Mart Kampanyası</div>
+        <h2 class="slide-title">Royal Canin'de<br>%20 Toptan İndirim</h2>
+        <p class="slide-sub">Tüm Royal Canin ürünlerinde geçerli özel toptan fiyatları. 10+ adet alımlarda ekstra %5 indirim!</p>
+        <a href="#" class="slide-btn">Hemen İncele →</a>
+      </div>
+      <div class="slide-visual">🐱</div>
+      <div class="slide-badge-sticker">%20 İndirim</div>
+    </div>
+
+    <!-- Slide 2 -->
+    <div class="carousel-slide slide-2">
+      <div class="slide-bg-pattern"></div>
+      <div class="slide-content">
+        <div class="slide-badge">🚚 Ücretsiz Kargo</div>
+        <h2 class="slide-title">750 ₺ Üzeri<br>Ücretsiz Kargo</h2>
+        <p class="slide-sub">Tüm siparişlerinizde 750 ₺ ve üzeri alımlarda ücretsiz hızlı kargo fırsatı. Tüm Türkiye'ye teslimat!</p>
+        <a href="#" class="slide-btn">Alışverişe Başla →</a>
+      </div>
+      <div class="slide-visual">🚚</div>
+    </div>
+
+    <!-- Slide 3 -->
+    <div class="carousel-slide slide-3">
+      <div class="slide-bg-pattern"></div>
+      <div class="slide-content">
+        <div class="slide-badge">🐟 Akvaryum Sezonu</div>
+        <h2 class="slide-title">Yeni Akvaryum<br>Ürünleri Geldi!</h2>
+        <p class="slide-sub">JBL, Tetra ve Sera markalarında yeni sezon ürünler. Filtre, ışıklandırma ve yem çeşitlerinde toptan fiyatlar.</p>
+        <a href="#" class="slide-btn">Keşfet →</a>
+      </div>
+      <div class="slide-visual">🐟</div>
+    </div>
+
+    <!-- Slide 4 -->
+    <div class="carousel-slide slide-4">
+      <div class="slide-bg-pattern"></div>
+      <div class="slide-content">
+        <div class="slide-badge">💜 Özel Teklif</div>
+        <h2 class="slide-title">Hill's Science Plan<br>Stok Fiyatına!</h2>
+        <p class="slide-sub">Hill's Science Plan kedi ve köpek mamalarında sınırlı stok fırsatı. Erken davranın, stoklar tükeniyor!</p>
+        <a href="#" class="slide-btn">Hemen Al →</a>
+      </div>
+      <div class="slide-visual">🐶</div>
+      <div class="slide-badge-sticker">Son Stoklar</div>
+    </div>
+
+  </div>
+
+  <!-- Arrows -->
+  <button class="carousel-btn carousel-prev" id="carouselPrev">‹</button>
+  <button class="carousel-btn carousel-next" id="carouselNext">›</button>
+
+  <!-- Dots -->
+  <div class="carousel-dots" id="carouselDots">
+    <div class="dot active" data-idx="0"></div>
+    <div class="dot" data-idx="1"></div>
+    <div class="dot" data-idx="2"></div>
+    <div class="dot" data-idx="3"></div>
+  </div>
+</div>
+
+<!-- PAGE CONTENT -->
+<div class="page-content">
+
+  <!-- FEATURED PRODUCTS -->
+  <div class="section-wrap">
+    <div class="section-head">
+      <h2 class="section-title">Öne Çıkan Ürünler</h2>
+      <a href="#" class="section-link">Tümünü Gör →</a>
+    </div>
+    <div class="prod-grid">
+      <div class="prod-card">
+        <div class="prod-img" style="background:linear-gradient(135deg,#fce7f3,#fdf2f8)">🐱<span class="prod-badge">%12</span></div>
+        <div class="prod-body">
+          <div class="prod-brand">Royal Canin</div>
+          <div class="prod-title">Adult Yetişkin Kedi Maması 10kg</div>
+          <div class="prod-stars"><span class="stars">★★★★★</span><span class="star-count">(42)</span></div>
+          <div class="prod-price-row"><div><div class="prod-price-sub">5+ adet</div><div class="prod-price">420 ₺</div></div><div class="prod-price-old">478 ₺</div></div>
+          <button class="add-to-cart">Sepete Ekle</button>
+        </div>
+      </div>
+      <div class="prod-card">
+        <div class="prod-img" style="background:linear-gradient(135deg,#dbeafe,#eff6ff)">🐶<span class="prod-badge">%8</span></div>
+        <div class="prod-body">
+          <div class="prod-brand">Hill's</div>
+          <div class="prod-title">Science Plan Köpek Maması Tavuklu 14kg</div>
+          <div class="prod-stars"><span class="stars">★★★★☆</span><span class="star-count">(28)</span></div>
+          <div class="prod-price-row"><div><div class="prod-price-sub">10+ adet</div><div class="prod-price">685 ₺</div></div><div class="prod-price-old">745 ₺</div></div>
+          <button class="add-to-cart">Sepete Ekle</button>
+        </div>
+      </div>
+      <div class="prod-card">
+        <div class="prod-img" style="background:linear-gradient(135deg,#dcfce7,#f0fdf4)">🐱</div>
+        <div class="prod-body">
+          <div class="prod-brand">Pro Plan</div>
+          <div class="prod-title">Sterilised Kısırlaştırılmış Kedi Maması 3kg</div>
+          <div class="prod-stars"><span class="stars">★★★★★</span><span class="star-count">(67)</span></div>
+          <div class="prod-price-row"><div><div class="prod-price-sub">5+ adet</div><div class="prod-price">195 ₺</div></div><div class="prod-price-old">210 ₺</div></div>
+          <button class="add-to-cart">Sepete Ekle</button>
+        </div>
+      </div>
+      <div class="prod-card">
+        <div class="prod-img" style="background:linear-gradient(135deg,#fef3c7,#fffbeb)">🐶<span class="prod-badge">%15</span></div>
+        <div class="prod-body">
+          <div class="prod-brand">Eukanuba</div>
+          <div class="prod-title">Adult Medium Köpek Maması Tavuklu 15kg</div>
+          <div class="prod-stars"><span class="stars">★★★★☆</span><span class="star-count">(19)</span></div>
+          <div class="prod-price-row"><div><div class="prod-price-sub">5+ adet</div><div class="prod-price">720 ₺</div></div><div class="prod-price-old">847 ₺</div></div>
+          <button class="add-to-cart">Sepete Ekle</button>
+        </div>
+      </div>
+      <div class="prod-card">
+        <div class="prod-img" style="background:linear-gradient(135deg,#f3e8ff,#faf5ff)">🐱</div>
+        <div class="prod-body">
+          <div class="prod-brand">Whiskas</div>
+          <div class="prod-title">Jöle İçinde Ton Balıklı Kedi Konservesi 85g × 24</div>
+          <div class="prod-stars"><span class="stars">★★★★☆</span><span class="star-count">(33)</span></div>
+          <div class="prod-price-row"><div><div class="prod-price-sub">10+ adet</div><div class="prod-price">380 ₺</div></div></div>
+          <button class="add-to-cart">Sepete Ekle</button>
+        </div>
+      </div>
+      <div class="prod-card">
+        <div class="prod-img" style="background:linear-gradient(135deg,#e0f2fe,#f0f9ff)">🐟<span class="prod-badge">%10</span></div>
+        <div class="prod-body">
+          <div class="prod-brand">Tetra</div>
+          <div class="prod-title">TetraMin Balık Yemi Granül 1L</div>
+          <div class="prod-stars"><span class="stars">★★★★★</span><span class="star-count">(11)</span></div>
+          <div class="prod-price-row"><div><div class="prod-price-sub">5+ adet</div><div class="prod-price">145 ₺</div></div><div class="prod-price-old">161 ₺</div></div>
+          <button class="add-to-cart">Sepete Ekle</button>
+        </div>
+      </div>
+      <div class="prod-card">
+        <div class="prod-img" style="background:linear-gradient(135deg,#fce7f3,#fdf2f8)">🐶</div>
+        <div class="prod-body">
+          <div class="prod-brand">Pedigree</div>
+          <div class="prod-title">Adult Köpek Maması Biftekli & Sebzeli 15kg</div>
+          <div class="prod-stars"><span class="stars">★★★☆☆</span><span class="star-count">(8)</span></div>
+          <div class="prod-price-row"><div><div class="prod-price-sub">5+ adet</div><div class="prod-price">490 ₺</div></div></div>
+          <button class="add-to-cart">Sepete Ekle</button>
+        </div>
+      </div>
+      <div class="prod-card">
+        <div class="prod-img" style="background:linear-gradient(135deg,#dcfce7,#f0fdf4)">🐹<span class="prod-badge">%5</span></div>
+        <div class="prod-body">
+          <div class="prod-brand">Vitakraft</div>
+          <div class="prod-title">Hamster ve Kemirgen Yemi Karışımı 1kg</div>
+          <div class="prod-stars"><span class="stars">★★★★☆</span><span class="star-count">(15)</span></div>
+          <div class="prod-price-row"><div><div class="prod-price-sub">10+ adet</div><div class="prod-price">68 ₺</div></div><div class="prod-price-old">71 ₺</div></div>
+          <button class="add-to-cart">Sepete Ekle</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEW ARRIVALS -->
+  <div class="section-wrap">
+    <div class="section-head">
+      <h2 class="section-title">Yeni Gelenler</h2>
+      <a href="#" class="section-link">Tümünü Gör →</a>
+    </div>
+    <div class="prod-grid">
+      <div class="prod-card">
+        <div class="prod-img" style="background:linear-gradient(135deg,#ede9fe,#f5f3ff)">🐱<span class="prod-badge prod-badge-new">YENİ</span></div>
+        <div class="prod-body">
+          <div class="prod-brand">Royal Canin</div>
+          <div class="prod-title">Kitten Yavru Kedi Maması Balıklı 4kg</div>
+          <div class="prod-stars"><span class="stars">★★★★★</span><span class="star-count">(4)</span></div>
+          <div class="prod-price-row"><div><div class="prod-price-sub">5+ adet</div><div class="prod-price">285 ₺</div></div></div>
+          <button class="add-to-cart">Sepete Ekle</button>
+        </div>
+      </div>
+      <div class="prod-card">
+        <div class="prod-img" style="background:linear-gradient(135deg,#fef3c7,#fffbeb)">🐶<span class="prod-badge prod-badge-new">YENİ</span></div>
+        <div class="prod-body">
+          <div class="prod-brand">Hill's</div>
+          <div class="prod-title">Puppy Yavru Köpek Maması Küçük Irk 3kg</div>
+          <div class="prod-stars"><span class="stars">★★★★☆</span><span class="star-count">(2)</span></div>
+          <div class="prod-price-row"><div><div class="prod-price-sub">5+ adet</div><div class="prod-price">320 ₺</div></div></div>
+          <button class="add-to-cart">Sepete Ekle</button>
+        </div>
+      </div>
+      <div class="prod-card">
+        <div class="prod-img" style="background:linear-gradient(135deg,#dbeafe,#eff6ff)">🐦<span class="prod-badge prod-badge-new">YENİ</span></div>
+        <div class="prod-body">
+          <div class="prod-brand">Versele-Laga</div>
+          <div class="prod-title">Prestige Papağan Yemi Premium Karışım 15kg</div>
+          <div class="prod-stars"><span class="stars">★★★★★</span><span class="star-count">(6)</span></div>
+          <div class="prod-price-row"><div><div class="prod-price-sub">3+ adet</div><div class="prod-price">440 ₺</div></div></div>
+          <button class="add-to-cart">Sepete Ekle</button>
+        </div>
+      </div>
+      <div class="prod-card">
+        <div class="prod-img" style="background:linear-gradient(135deg,#dcfce7,#f0fdf4)">🐟<span class="prod-badge prod-badge-new">YENİ</span></div>
+        <div class="prod-body">
+          <div class="prod-brand">JBL</div>
+          <div class="prod-title">NovoFil Kuru Dondurulmuş Kırmızı Sinek Larvası 100ml</div>
+          <div class="prod-stars"><span class="stars">★★★★☆</span><span class="star-count">(3)</span></div>
+          <div class="prod-price-row"><div><div class="prod-price-sub">5+ adet</div><div class="prod-price">95 ₺</div></div></div>
+          <button class="add-to-cart">Sepete Ekle</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WHY SECTION -->
+  <div class="why-section">
+    <div class="section-head">
+      <h2 class="section-title">Neden PetToptan?</h2>
+    </div>
+    <div class="why-grid">
+      <div class="why-card"><span class="why-icon">🏷️</span><div class="why-title">Toptan Fiyatlar</div><div class="why-desc">Doğrudan üretici fiyatlarına yakın miktarlı alım imkânı. Ne kadar çok alırsanız o kadar kazanırsınız.</div></div>
+      <div class="why-card"><span class="why-icon">🚚</span><div class="why-title">Hızlı Kargo</div><div class="why-desc">Tüm Türkiye'ye 1–3 iş günü içinde güvenli teslimat. 750 ₺ üzeri siparişlerde ücretsiz kargo.</div></div>
+      <div class="why-card"><span class="why-icon">🔒</span><div class="why-title">Güvenli Ödeme</div><div class="why-desc">iyzico ve PayTR altyapısıyla SSL korumalı ödeme. Kredi kartı ve havale seçenekleri mevcut.</div></div>
+      <div class="why-card"><span class="why-icon">💬</span><div class="why-title">WhatsApp Destek</div><div class="why-desc">WhatsApp hattımız üzerinden tüm sorularınıza hızlıca yanıt alın. Müşteri memnuniyeti önceliğimizdir.</div></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div class="footer-logo">
+        <div style="width:32px;height:32px;background:linear-gradient(135deg,var(--primary),#ef4444);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:17px">🐾</div>
+        <div class="logo-text" style="font-size:18px;font-weight:800;letter-spacing:-.5px"><span class="pet-text">Pet</span><span class="toptan-text">Toptan</span></div>
+      </div>
+      <div class="footer-links">
+        <a href="#">Hakkımızda</a>
+        <a href="#">Nasıl Çalışır</a>
+        <a href="#">Bayilik</a>
+        <a href="#">Kampanyalar</a>
+        <a href="#">İletişim</a>
+        <a href="#">Gizlilik Politikası</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-copy">© 2024 PetToptan. Tüm hakları saklıdır.</div>
+      <div class="footer-badges">
+        <span class="footer-badge">iyzico</span>
+        <span class="footer-badge">PayTR</span>
+        <span class="footer-badge">SSL Güvenli</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ── Auth state (mockup: giriş yapılmamış) ──
+const isLoggedIn = false;
+if (isLoggedIn) {
+  document.getElementById('notifWrap').style.display = '';
+}
+
+// ── Info Bar Carousel ──
+(function(){
+  const slides = document.querySelectorAll('.info-bar-slide');
+  const dots   = document.querySelectorAll('.info-bar-dot');
+  let cur = 0;
+  function goTo(i){
+    slides[cur].classList.remove('active');
+    dots[cur].classList.remove('active');
+    cur = (i + slides.length) % slides.length;
+    slides[cur].classList.add('active');
+    dots[cur].classList.add('active');
+  }
+  dots.forEach(d => d.addEventListener('click', () => goTo(+d.dataset.s)));
+  setInterval(() => goTo(cur + 1), 3500);
+})();
+
+// ── Theme ──
+(function(){
+  const s = localStorage.getItem('pt-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', s);
+  setThemeIcon(s);
+})();
+function setThemeIcon(t) {
+  const el = document.getElementById('themeIcon');
+  if (!el) return;
+  if (t === 'dark') el.innerHTML = '<span class="t-weather">🌙</span><span class="t-cat">😴</span>';
+  else el.innerHTML = '<span class="t-weather">☀️</span><span class="t-cat">🐱</span>';
+}
+document.getElementById('themeToggle').addEventListener('click', function(){
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('pt-theme', next);
+  setThemeIcon(next);
+});
+
+// ── Notifications ──
+let notifOpen = false, notifAllRead = false;
+document.getElementById('notifBtn').addEventListener('click', function(e){
+  e.stopPropagation();
+  notifOpen = !notifOpen;
+  document.getElementById('notifDropdown').classList.toggle('open', notifOpen);
+  if (notifOpen && !notifAllRead) markAllRead();
+});
+document.addEventListener('click', function(e){
+  if (!e.target.closest('.notif-wrap')) {
+    document.getElementById('notifDropdown').classList.remove('open');
+    notifOpen = false;
+  }
+});
+function markAllRead() {
+  notifAllRead = true;
+  document.getElementById('notifBadge').classList.add('hidden');
+  document.querySelectorAll('.notif-unread').forEach(el => el.classList.remove('notif-unread'));
+  document.querySelectorAll('.unread-dot').forEach(d => d.style.opacity='0');
+}
+
+// ── Search Dropdown ──
+const searchInput = document.getElementById('searchInput');
+const searchDropdown = document.getElementById('searchDropdown');
+searchInput.addEventListener('focus', function(){
+  if (searchInput.value.length >= 0) searchDropdown.classList.add('open');
+});
+searchInput.addEventListener('input', function(){
+  searchDropdown.classList.toggle('open', searchInput.value.length > 0 || document.activeElement === searchInput);
+});
+document.addEventListener('click', function(e){
+  if (!e.target.closest('.search-bar')) searchDropdown.classList.remove('open');
+});
+
+// ── Category bar alignment ──
+function syncCatBarAlignment() {
+  const searchBar = document.querySelector('.search-bar');
+  const catNav    = document.querySelector('.cat-nav');
+  if (!searchBar || !catNav) return;
+  catNav.style.paddingLeft = '0px'; // önce sıfırla
+  const offset = searchBar.getBoundingClientRect().left - catNav.getBoundingClientRect().left;
+  catNav.style.paddingLeft = Math.max(0, offset) + 'px';
+}
+// Font + resim yüklendikten sonra çalıştır
+if (document.readyState === 'complete') {
+  syncCatBarAlignment();
+} else {
+  window.addEventListener('load', syncCatBarAlignment);
+}
+window.addEventListener('resize', syncCatBarAlignment);
+document.getElementById('logoImg').addEventListener('error', function(){ setTimeout(syncCatBarAlignment, 50); });
+
+// ── Cart ──
+let cartTotal = 0;
+document.querySelectorAll('.add-to-cart').forEach(btn => {
+  btn.addEventListener('click', function(e){
+    e.stopPropagation();
+    // Mock price from sibling
+    const priceEl = this.closest('.prod-card').querySelector('.prod-price');
+    const price = parseFloat(priceEl.textContent.replace(/[^\d,]/g,'').replace(',','.')) || 0;
+    cartTotal += price;
+    document.getElementById('cartTotal').textContent = '₺' + cartTotal.toFixed(2).replace('.', ',');
+    btn.textContent = '✓ Eklendi';
+    btn.style.background = 'var(--green)';
+    setTimeout(() => { btn.textContent = 'Sepete Ekle'; btn.style.background = ''; }, 1200);
+  });
+});
+
+// ── Carousel ──
+const track = document.getElementById('carouselTrack');
+const dots = document.querySelectorAll('.dot');
+let current = 0;
+const total = 4;
+
+function goTo(idx) {
+  current = (idx + total) % total;
+  track.style.transform = `translateX(-${current * 100}%)`;
+  dots.forEach((d,i) => d.classList.toggle('active', i === current));
+}
+
+document.getElementById('carouselPrev').addEventListener('click', () => goTo(current - 1));
+document.getElementById('carouselNext').addEventListener('click', () => goTo(current + 1));
+dots.forEach(d => d.addEventListener('click', () => goTo(+d.dataset.idx)));
+
+// Auto-play
+let autoplay = setInterval(() => goTo(current + 1), 4500);
+document.querySelector('.carousel-wrap').addEventListener('mouseenter', () => clearInterval(autoplay));
+document.querySelector('.carousel-wrap').addEventListener('mouseleave', () => {
+  autoplay = setInterval(() => goTo(current + 1), 4500);
+});
+</script>
+</body>
+</html>

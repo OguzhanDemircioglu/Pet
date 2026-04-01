@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Royal Canin Adult Yetişkin Kedi Maması 10kg — PetToptan</title>
+<style>
+:root {
+  --bg: #f8f9fa; --bg2: #ffffff; --bg3: #f1f5f9;
+  --text: #1a1a1a; --text2: #64748b; --text3: #94a3b8;
+  --border: #e2e8f0; --border2: #cbd5e1;
+  --orange: #f97316; --orange-dark: #ea6b0a; --orange-bg: #fff7ed;
+  --green: #22c55e; --green-dark: #16a34a; --green-bg: #f0fdf4;
+  --blue: #38bdf8;
+  --shadow: 0 4px 12px rgba(0,0,0,0.08);
+  --r: 8px; --r2: 12px;
+}
+[data-theme="dark"] {
+  --bg: #111827; --bg2: #1e2535; --bg3: #1f2937;
+  --text: #f1f5f9; --text2: #94a3b8; --text3: #64748b;
+  --border: #2d3748; --border2: #374151;
+  --orange-bg: #431407; --green-bg: #052e16;
+  --shadow: 0 4px 12px rgba(0,0,0,0.35);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);transition:background .25s,color .25s;min-height:100vh}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer;border:none;outline:none;font-family:inherit}
+
+/* ── HEADER ── */
+.header{background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,0.07);transition:background .25s,border-color .25s}
+.header-inner{max-width:1200px;margin:0 auto;padding:0 20px;height:66px;display:flex;align-items:center}
+.logo-area{display:flex;align-items:center;gap:4px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:38px;height:38px;background:linear-gradient(135deg,#f97316,#fb923c);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 8px rgba(249,115,22,.4)}
+.logo-text{font-size:22px;font-weight:800;letter-spacing:-.5px}
+.pet-text{color:var(--orange)}
+.toptan-text{color:#38bdf8}
+.theme-toggle{background:none;border:none;cursor:pointer;padding:4px 5px;border-radius:6px;display:flex;flex-direction:column;align-items:center;gap:0;transition:.2s;line-height:1}
+.theme-toggle:hover{background:var(--bg3)}
+.theme-icon-wrap{display:flex;flex-direction:column;align-items:center;line-height:1}
+.t-weather{font-size:13px;line-height:1.1}
+.t-cat{font-size:17px;line-height:1.1}
+.header-actions{display:flex;align-items:center;gap:6px}
+.icon-btn{position:relative;background:none;width:40px;height:40px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:20px;transition:.2s}
+.icon-btn:hover{background:var(--bg3);color:var(--text)}
+.badge{position:absolute;top:3px;right:3px;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;padding:0 2px;line-height:1}
+.red-badge{background:#ef4444;color:#fff}
+.orange-badge{background:var(--orange);color:#fff}
+.badge.hidden{display:none}
+.notif-wrap{position:relative}
+.notif-dropdown{display:none;position:absolute;top:calc(100% + 8px);right:0;width:310px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);box-shadow:var(--shadow);z-index:300;overflow:hidden;transition:background .25s,border-color .25s}
+.notif-dropdown.open{display:block;animation:dropIn .18s ease}
+@keyframes dropIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.notif-head{display:flex;align-items:center;justify-content:space-between;padding:13px 15px 9px;border-bottom:1px solid var(--border)}
+.notif-list{max-height:280px;overflow-y:auto}
+.notif-item{display:flex;gap:10px;align-items:flex-start;padding:11px 15px;border-bottom:1px solid var(--border);user-select:none}
+.notif-item:last-child{border-bottom:none}
+.notif-unread{background:rgba(249,115,22,.05)}
+.notif-emoji{font-size:22px;width:34px;height:34px;background:var(--bg3);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-style:normal}
+.notif-text{flex:1;min-width:0}
+.notif-text p{font-size:13px;color:var(--text);line-height:1.4;margin-bottom:2px}
+.notif-text small{font-size:11px;color:var(--text3)}
+.unread-dot{width:8px;height:8px;border-radius:50%;background:var(--orange);flex-shrink:0;margin-top:4px}
+.notif-foot{padding:9px 15px;text-align:center;font-size:12px;color:var(--text2);background:var(--bg3);border-top:1px solid var(--border)}
+
+/* ── LAYOUT ── */
+.page-wrap{max-width:1200px;margin:0 auto;padding:0 20px}
+
+/* ── BREADCRUMB ── */
+.breadcrumb{padding:16px 0 10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.breadcrumb a,.breadcrumb span{font-size:13px;color:var(--text2)}
+.breadcrumb a:hover{color:var(--orange)}
+.breadcrumb .sep{color:var(--text3);font-size:11px}
+.breadcrumb .current{color:var(--text);font-weight:600}
+
+/* ── PRODUCT SECTION ── */
+.product-section{display:grid;grid-template-columns:1fr 1fr;gap:36px;padding:8px 0 36px;align-items:start}
+
+/* ── GALLERY ── */
+.gallery{}
+.main-img{background:linear-gradient(135deg,#fce7f3 0%,#fdf2f8 50%,#fff1f7 100%);border-radius:var(--r2);border:1px solid var(--border);height:380px;display:flex;align-items:center;justify-content:center;font-size:110px;margin-bottom:12px;position:relative;overflow:hidden;cursor:zoom-in;transition:.2s}
+.main-img:hover{border-color:var(--orange)}
+.main-img-badge{position:absolute;top:14px;left:14px;background:var(--orange);color:#fff;font-size:12px;font-weight:700;padding:4px 10px;border-radius:5px}
+.main-img-zoom{position:absolute;bottom:12px;right:12px;background:rgba(0,0,0,.35);color:#fff;font-size:12px;padding:4px 9px;border-radius:5px;backdrop-filter:blur(4px)}
+.thumb-row{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.thumb{border-radius:var(--r);border:2px solid var(--border);height:80px;display:flex;align-items:center;justify-content:center;font-size:34px;cursor:pointer;transition:.18s}
+.thumb:hover{border-color:var(--orange);transform:translateY(-2px)}
+.thumb.active{border-color:var(--orange);box-shadow:0 0 0 2px rgba(249,115,22,.25)}
+.thumb-bg1{background:linear-gradient(135deg,#fce7f3,#fdf2f8)}
+.thumb-bg2{background:linear-gradient(135deg,#dbeafe,#eff6ff)}
+.thumb-bg3{background:linear-gradient(135deg,#dcfce7,#f0fdf4)}
+.thumb-bg4{background:linear-gradient(135deg,#fef3c7,#fffbeb)}
+
+/* ── PRODUCT INFO ── */
+.prod-info{}
+.brand-badge{display:inline-flex;align-items:center;gap:6px;background:var(--orange-bg);color:var(--orange);font-size:12px;font-weight:800;letter-spacing:.8px;padding:4px 11px;border-radius:5px;border:1px solid rgba(249,115,22,.25);margin-bottom:12px;text-transform:uppercase}
+.prod-title{font-size:22px;font-weight:800;color:var(--text);line-height:1.3;margin-bottom:12px}
+.rating-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.stars-lg{color:#f59e0b;font-size:17px;letter-spacing:-1px}
+.rating-val{font-size:14px;font-weight:700;color:var(--text)}
+.rating-count{font-size:13px;color:var(--text2)}
+.rating-sep{color:var(--border2);font-size:18px}
+.chips{display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:5px 11px;border-radius:20px;border:1px solid transparent}
+.chip-green{background:var(--green-bg);color:var(--green-dark);border-color:rgba(34,197,94,.3)}
+.chip-orange{background:var(--orange-bg);color:var(--orange-dark);border-color:rgba(249,115,22,.3)}
+.chip-blue{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
+[data-theme="dark"] .chip-blue{background:#1e3a5f;color:#93c5fd;border-color:#1d4ed8}
+
+/* ── PRICE TABLE ── */
+.price-table-wrap{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:20px}
+.price-table-head{padding:11px 16px;font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);background:var(--bg2)}
+.price-table{width:100%;border-collapse:collapse}
+.price-table th{padding:9px 14px;text-align:left;font-size:12px;font-weight:700;color:var(--text2);background:var(--bg2);border-bottom:1px solid var(--border)}
+.price-table td{padding:10px 14px;font-size:14px;border-bottom:1px solid var(--border)}
+.price-table tr:last-child td{border-bottom:none}
+.price-table tr.highlighted{background:rgba(249,115,22,.08)}
+.price-table tr.highlighted td:first-child{font-weight:700;color:var(--orange)}
+.price-big{font-size:16px;font-weight:800;color:var(--orange)}
+.discount-pill{display:inline-block;background:var(--orange);color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px}
+
+/* ── QTY + ACTIONS ── */
+.qty-row{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.qty-label{font-size:13px;font-weight:600;color:var(--text2)}
+.qty-ctrl{display:flex;align-items:center;gap:0;border:2px solid var(--border2);border-radius:var(--r);overflow:hidden}
+.qty-btn{width:38px;height:38px;background:var(--orange);color:#fff;font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:.15s;border:none;cursor:pointer}
+.qty-btn:hover{background:var(--orange-dark)}
+.qty-val{width:48px;text-align:center;font-size:16px;font-weight:800;color:var(--text);background:var(--bg2);height:38px;line-height:38px;border-left:2px solid var(--border2);border-right:2px solid var(--border2)}
+.qty-info{font-size:12px;color:var(--text3)}
+
+.action-btns{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.btn-cart{width:100%;background:var(--orange);color:#fff;font-size:15px;font-weight:700;padding:14px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;gap:8px;transition:.2s;box-shadow:0 4px 12px rgba(249,115,22,.35)}
+.btn-cart:hover{background:var(--orange-dark);transform:translateY(-1px);box-shadow:0 6px 16px rgba(249,115,22,.4)}
+.btn-wp{width:100%;background:#22c55e;color:#fff;font-size:15px;font-weight:700;padding:14px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;gap:8px;transition:.2s;box-shadow:0 4px 12px rgba(34,197,94,.3)}
+.btn-wp:hover{background:#16a34a;transform:translateY(-1px)}
+
+.price-info-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.price-info-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2)}
+.price-info-item span{font-size:14px}
+
+/* ── TABS ── */
+.tabs-section{margin-bottom:36px}
+.tab-nav{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:24px}
+.tab-btn{padding:12px 22px;font-size:14px;font-weight:600;color:var(--text2);background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;transition:.18s}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--orange);border-bottom-color:var(--orange)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* ── DESCRIPTION ── */
+.desc-text p{font-size:15px;color:var(--text2);line-height:1.75;margin-bottom:14px}
+.desc-text p:last-child{margin-bottom:0}
+.desc-text strong{color:var(--text)}
+.desc-highlight{background:var(--orange-bg);border-left:4px solid var(--orange);padding:14px 18px;border-radius:0 var(--r) var(--r) 0;margin:18px 0;font-size:14px;color:var(--text2);line-height:1.6}
+
+/* ── SPECS ── */
+.specs-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.spec-item{display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px}
+.spec-key{font-size:13px;color:var(--text2);font-weight:500}
+.spec-val{font-size:13px;font-weight:700;color:var(--text)}
+
+/* ── REVIEWS ── */
+.reviews-summary{display:flex;align-items:center;gap:32px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:20px 24px;margin-bottom:20px}
+.review-big-score{text-align:center}
+.review-big-num{font-size:48px;font-weight:900;color:var(--orange);line-height:1}
+.review-big-stars{font-size:20px;color:#f59e0b;margin:4px 0}
+.review-big-count{font-size:12px;color:var(--text3)}
+.review-bars{flex:1}
+.review-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.review-bar-row:last-child{margin-bottom:0}
+.bar-label{font-size:12px;color:var(--text2);width:28px;text-align:right;flex-shrink:0}
+.bar-track{flex:1;height:7px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;background:var(--orange)}
+.bar-count{font-size:12px;color:var(--text3);width:20px;flex-shrink:0}
+
+.review-list{display:flex;flex-direction:column;gap:14px}
+.review-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:18px 20px}
+.review-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.review-user{display:flex;align-items:center;gap:10px}
+.review-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0}
+.review-name{font-size:14px;font-weight:700;color:var(--text)}
+.review-date{font-size:12px;color:var(--text3)}
+.review-stars-sm{color:#f59e0b;font-size:14px;letter-spacing:-.5px}
+.review-body{font-size:14px;color:var(--text2);line-height:1.65;margin-bottom:8px}
+.review-verify{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--green-dark);background:var(--green-bg);padding:3px 8px;border-radius:4px}
+
+/* ── RELATED ── */
+.related-section{margin-bottom:48px}
+.rel-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.prod-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;transition:.22s;cursor:pointer;display:flex;flex-direction:column}
+.prod-card:hover{box-shadow:0 8px 24px rgba(0,0,0,.1);transform:translateY(-3px);border-color:var(--orange)}
+.prod-img-sm{height:130px;display:flex;align-items:center;justify-content:center;font-size:52px;position:relative;flex-shrink:0}
+.prod-body{padding:13px;flex:1;display:flex;flex-direction:column}
+.prod-brand-sm{font-size:10px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.prod-title-sm{font-size:12px;font-weight:600;color:var(--text);line-height:1.4;margin-bottom:7px;flex:1}
+.prod-price-sm{font-size:16px;font-weight:900;color:var(--orange);margin-bottom:8px}
+.add-to-cart-sm{width:100%;background:var(--orange);color:#fff;font-size:12px;font-weight:700;padding:8px 0;border-radius:var(--r);transition:.2s}
+.add-to-cart-sm:hover{background:var(--orange-dark)}
+
+/* ── SECTION TITLE ── */
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.section-title{font-size:20px;font-weight:800;color:var(--text);position:relative;padding-left:14px}
+.section-title::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:4px;height:20px;background:var(--orange);border-radius:2px}
+
+/* ── FOOTER ── */
+.footer{background:var(--bg2);border-top:1px solid var(--border);padding:36px 20px 24px;margin-top:8px}
+.footer-inner{max-width:1200px;margin:0 auto}
+.footer-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:16px}
+.footer-links{display:flex;gap:24px;flex-wrap:wrap}
+.footer-links a{font-size:13px;color:var(--text2);transition:.2s}
+.footer-links a:hover{color:var(--orange)}
+.footer-bottom{border-top:1px solid var(--border);padding-top:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.footer-copy{font-size:12px;color:var(--text3)}
+.footer-badges{display:flex;gap:10px}
+.footer-badge{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--text2)}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-inner">
+    <div class="logo-area">
+      <a href="mockup-anasayfa.html" class="logo">
+        <div class="logo-icon">🐾</div>
+        <div class="logo-text"><span class="pet-text">Pet</span><span class="toptan-text">Toptan</span></div>
+      </a>
+      <button class="theme-toggle" id="themeToggle" title="Tema değiştir">
+        <div id="themeIcon" class="theme-icon-wrap">
+          <span class="t-weather">☀️</span>
+          <span class="t-cat">🐱</span>
+        </div>
+      </button>
+    </div>
+    <div style="flex:1"></div>
+    <div class="header-actions">
+      <div class="notif-wrap" style="position:relative">
+        <button class="icon-btn" id="notifBtn" title="Bildirimler">
+          🔔
+          <span class="badge red-badge" id="notifBadge">3</span>
+        </button>
+        <div class="notif-dropdown" id="notifDropdown">
+          <div class="notif-head">
+            <span style="font-weight:700;font-size:14px">Bildirimler</span>
+            <span style="font-size:12px;color:#f97316;cursor:pointer" onclick="markAllRead()">Tümünü okundu işaretle</span>
+          </div>
+          <div class="notif-list">
+            <div class="notif-item notif-unread" id="ni1">
+              <span class="notif-emoji">📦</span>
+              <div class="notif-text"><p><strong>Siparişiniz hazırlanıyor</strong> — #PET20240042 no'lu siparişiniz depoda hazırlanmaktadır.</p><small>2 saat önce</small></div>
+              <span class="unread-dot" id="dot1"></span>
+            </div>
+            <div class="notif-item notif-unread" id="ni2">
+              <span class="notif-emoji">🏷️</span>
+              <div class="notif-text"><p><strong>Yeni indirim!</strong> — Royal Canin ürünlerinde bu hafta %15 indirim başladı.</p><small>5 saat önce</small></div>
+              <span class="unread-dot" id="dot2"></span>
+            </div>
+            <div class="notif-item notif-unread" id="ni3">
+              <span class="notif-emoji">⭐</span>
+              <div class="notif-text"><p><strong>Ürününüzü değerlendirin</strong> — #PET20240038 siparişinizi almış olmalısınız.</p><small>1 gün önce</small></div>
+              <span class="unread-dot" id="dot3"></span>
+            </div>
+            <div class="notif-item" id="ni4">
+              <span class="notif-emoji">✅</span>
+              <div class="notif-text"><p>Siparişiniz teslim edildi — #PET20240038</p><small>2 gün önce</small></div>
+              <span class="unread-dot" style="opacity:0" id="dot4"></span>
+            </div>
+          </div>
+          <div class="notif-foot">Son 30 günün bildirimleri gösteriliyor</div>
+        </div>
+      </div>
+      <button class="icon-btn" title="Profilim">👤</button>
+      <button class="icon-btn cart-btn" title="Sepetim">
+        🛒 <span class="badge orange-badge cart-count">3</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="page-wrap">
+
+  <!-- BREADCRUMB -->
+  <nav class="breadcrumb">
+    <a href="mockup-anasayfa.html">Ana Sayfa</a>
+    <span class="sep">›</span>
+    <a href="#">Kedi</a>
+    <span class="sep">›</span>
+    <a href="#">Kuru Mamalar</a>
+    <span class="sep">›</span>
+    <span class="current">Yetişkin Kedi Mamaları</span>
+  </nav>
+
+  <!-- PRODUCT SECTION -->
+  <div class="product-section">
+
+    <!-- LEFT: GALLERY -->
+    <div class="gallery">
+      <div class="main-img" id="mainImg">
+        <span id="mainEmoji">🐱</span>
+        <span class="main-img-badge">%12 İndirim</span>
+        <span class="main-img-zoom">🔍 Yakınlaştır</span>
+      </div>
+      <div class="thumb-row">
+        <div class="thumb thumb-bg1 active" onclick="switchThumb(this,'🐱','linear-gradient(135deg,#fce7f3,#fdf2f8)')">🐱</div>
+        <div class="thumb thumb-bg2" onclick="switchThumb(this,'🛍️','linear-gradient(135deg,#dbeafe,#eff6ff)')">🛍️</div>
+        <div class="thumb thumb-bg3" onclick="switchThumb(this,'📦','linear-gradient(135deg,#dcfce7,#f0fdf4)')">📦</div>
+        <div class="thumb thumb-bg4" onclick="switchThumb(this,'🏷️','linear-gradient(135deg,#fef3c7,#fffbeb)')">🏷️</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: PRODUCT INFO -->
+    <div class="prod-info">
+      <div class="brand-badge">🏅 Royal Canin</div>
+      <h1 class="prod-title">Royal Canin Adult Yetişkin Kedi Maması 10kg</h1>
+
+      <div class="rating-row">
+        <span class="stars-lg">★★★★½</span>
+        <span class="rating-val">4.5</span>
+        <span class="rating-sep">·</span>
+        <span class="rating-count">12 yorum</span>
+        <span class="rating-sep">·</span>
+        <span style="font-size:13px;color:var(--orange);font-weight:600">SKU: RC-ADULT-10KG</span>
+      </div>
+
+      <div class="chips">
+        <span class="chip chip-green">✓ Stokta Var</span>
+        <span class="chip chip-orange">Min. 5 adet</span>
+        <span class="chip chip-blue">🚚 1-3 İş Günü Teslimat</span>
+      </div>
+
+      <!-- PRICE TIER TABLE -->
+      <div class="price-table-wrap">
+        <div class="price-table-head">💡 Toptan Fiyat Kademesi — Miktar arttıkça kazanırsınız</div>
+        <table class="price-table">
+          <thead>
+            <tr>
+              <th>Miktar</th>
+              <th>Birim Fiyat</th>
+              <th>İndirim</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1 – 4 adet</td>
+              <td class="price-big" style="color:var(--text2);font-size:14px;font-weight:600">450 ₺</td>
+              <td><span style="font-size:12px;color:var(--text3)">—</span></td>
+            </tr>
+            <tr class="highlighted">
+              <td>5 – 9 adet <span style="font-size:11px;color:var(--orange);font-weight:700">← Seçili</span></td>
+              <td class="price-big">420 ₺</td>
+              <td><span class="discount-pill">%7</span></td>
+            </tr>
+            <tr>
+              <td>10 – 24 adet</td>
+              <td class="price-big" style="font-size:15px">395 ₺</td>
+              <td><span class="discount-pill" style="background:var(--green-dark)">%12</span></td>
+            </tr>
+            <tr>
+              <td>25+ adet</td>
+              <td class="price-big" style="font-size:15px">370 ₺</td>
+              <td><span class="discount-pill" style="background:#7c3aed">%18</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- QTY SELECTOR -->
+      <div class="qty-row">
+        <span class="qty-label">Adet:</span>
+        <div class="qty-ctrl">
+          <button class="qty-btn" id="qtyMinus" onclick="changeQty(-1)">−</button>
+          <div class="qty-val" id="qtyVal">5</div>
+          <button class="qty-btn" id="qtyPlus" onclick="changeQty(1)">+</button>
+        </div>
+        <span class="qty-info">Min. 5 · Stok: 248 adet</span>
+      </div>
+
+      <!-- ACTION BUTTONS -->
+      <div class="action-btns">
+        <button class="btn-cart" onclick="addToCart()">
+          🛒 Sepete Ekle
+        </button>
+        <button class="btn-wp">
+          💬 Satıcıya Sor (WhatsApp)
+        </button>
+      </div>
+
+      <!-- PRICE INFO -->
+      <div class="price-info-row">
+        <div class="price-info-item"><span>✅</span> KDV dahil fiyat</div>
+        <div class="price-info-item"><span>🚚</span> 5.000 ₺ üzeri ücretsiz kargo</div>
+        <div class="price-info-item"><span>🔄</span> 14 gün iade hakkı</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs-section">
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="switchTab(this,'tab-desc')">Açıklama</button>
+      <button class="tab-btn" onclick="switchTab(this,'tab-specs')">Özellikler</button>
+      <button class="tab-btn" onclick="switchTab(this,'tab-reviews')">Yorumlar <span style="background:var(--bg3);border-radius:10px;padding:1px 7px;font-size:11px;margin-left:2px">12</span></button>
+    </div>
+
+    <!-- DESCRIPTION TAB -->
+    <div class="tab-panel active desc-text" id="tab-desc">
+      <p>
+        <strong>Royal Canin Adult Yetişkin Kedi Maması</strong>, 1 yaş üzeri yetişkin kediler için özel olarak formüle edilmiş premium bir kuru mamadır. Yüksek kaliteli protein kaynakları, dengeli vitamin ve mineral içeriğiyle kedinizin günlük besin ihtiyaçlarını eksiksiz karşılar.
+      </p>
+      <div class="desc-highlight">
+        🏆 Royal Canin, 50 yılı aşkın araştırma birikimi ve veteriner biliminin desteğiyle geliştirdiği özel formülleriyle dünyanın önde gelen pet gıda markasıdır.
+      </div>
+      <p>
+        Ürün, <strong>kedinizin sindirim sistemini destekleyen prebiyotikler</strong> ve ince bağırsak florasını dengede tutan lif kaynakları içermektedir. Ayrıca diş ve diş eti sağlığına katkı sağlayan özel bir kaplama teknolojisiyle üretilmektedir. Her kedi için en doğru beslenme deneyimini sunan kibble şekli, kedinizin yavaş yemesini teşvik eder.
+      </p>
+      <p>
+        <strong>Toptan alım avantajı:</strong> Bu ürün minimum 5 adet ile %7, 10 adet ile %12 ve 25 adet ile %18 indirim kademesiyle sunulmaktadır. Pet shop, veteriner klinikleri ve işletmeler için ideal toptan çözüm. Kargo ve fatura bilgisi için satıcı ile iletişime geçebilirsiniz.
+      </p>
+    </div>
+
+    <!-- SPECS TAB -->
+    <div class="tab-panel" id="tab-specs">
+      <div class="specs-grid">
+        <div class="spec-item"><span class="spec-key">Marka</span><span class="spec-val">Royal Canin</span></div>
+        <div class="spec-item"><span class="spec-key">Ağırlık</span><span class="spec-val">10 kg</span></div>
+        <div class="spec-item"><span class="spec-key">Hedef Kedi Yaşı</span><span class="spec-val">1+ Yaş (Yetişkin)</span></div>
+        <div class="spec-item"><span class="spec-key">Ham Protein</span><span class="spec-val">%32</span></div>
+        <div class="spec-item"><span class="spec-key">Ham Yağ</span><span class="spec-val">%18</span></div>
+        <div class="spec-item"><span class="spec-key">Ham Kül</span><span class="spec-val">%7.8</span></div>
+        <div class="spec-item"><span class="spec-key">Ham Selülöz</span><span class="spec-val">%1.4</span></div>
+        <div class="spec-item"><span class="spec-key">Nem</span><span class="spec-val">%8.5</span></div>
+        <div class="spec-item"><span class="spec-key">Kalsiyum</span><span class="spec-val">%1.06</span></div>
+        <div class="spec-item"><span class="spec-key">Fosfor</span><span class="spec-val">%0.82</span></div>
+        <div class="spec-item"><span class="spec-key">Metabolik Enerji</span><span class="spec-val">3.847 kcal/kg</span></div>
+        <div class="spec-item"><span class="spec-key">Üretim Yeri</span><span class="spec-val">Fransa</span></div>
+        <div class="spec-item"><span class="spec-key">Raf Ömrü</span><span class="spec-val">18 Ay</span></div>
+        <div class="spec-item"><span class="spec-key">KDV Oranı</span><span class="spec-val">%20</span></div>
+        <div class="spec-item"><span class="spec-key">Saklama Koşulu</span><span class="spec-val">Serin ve kuru yerde</span></div>
+        <div class="spec-item"><span class="spec-key">Barcode</span><span class="spec-val">3182550702232</span></div>
+      </div>
+    </div>
+
+    <!-- REVIEWS TAB -->
+    <div class="tab-panel" id="tab-reviews">
+      <div class="reviews-summary">
+        <div class="review-big-score">
+          <div class="review-big-num">4.5</div>
+          <div class="review-big-stars">★★★★½</div>
+          <div class="review-big-count">12 değerlendirme</div>
+        </div>
+        <div class="review-bars">
+          <div class="review-bar-row">
+            <span class="bar-label">5 ★</span>
+            <div class="bar-track"><div class="bar-fill" style="width:62%"></div></div>
+            <span class="bar-count">7</span>
+          </div>
+          <div class="review-bar-row">
+            <span class="bar-label">4 ★</span>
+            <div class="bar-track"><div class="bar-fill" style="width:25%"></div></div>
+            <span class="bar-count">3</span>
+          </div>
+          <div class="review-bar-row">
+            <span class="bar-label">3 ★</span>
+            <div class="bar-track"><div class="bar-fill" style="width:8%;background:#f59e0b"></div></div>
+            <span class="bar-count">1</span>
+          </div>
+          <div class="review-bar-row">
+            <span class="bar-label">2 ★</span>
+            <div class="bar-track"><div class="bar-fill" style="width:8%;background:#ef4444"></div></div>
+            <span class="bar-count">1</span>
+          </div>
+          <div class="review-bar-row">
+            <span class="bar-label">1 ★</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0%"></div></div>
+            <span class="bar-count">0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="review-list">
+
+        <div class="review-card">
+          <div class="review-top">
+            <div class="review-user">
+              <div class="review-avatar" style="background:#f97316">M</div>
+              <div>
+                <div class="review-name">Mehmet K.</div>
+                <div class="review-date">12 Ocak 2024</div>
+              </div>
+            </div>
+            <div class="review-stars-sm">★★★★★</div>
+          </div>
+          <p class="review-body">Pet shopumuz için düzenli olarak 10'lu koli alıyoruz. Kediler çok seviyor, çok az artık bırakıyorlar. Toptan fiyatlar gerçekten rekabetçi, kargo da oldukça hızlı geldi. Kesinlikle tavsiye ederim. 5 yıldır Royal Canin satıyoruz ve bu kadar kolay temin etmek harika.</p>
+          <span class="review-verify">✓ Onaylı Satın Alma</span>
+        </div>
+
+        <div class="review-card">
+          <div class="review-top">
+            <div class="review-user">
+              <div class="review-avatar" style="background:#38bdf8">A</div>
+              <div>
+                <div class="review-name">Ayşe D.</div>
+                <div class="review-date">28 Aralık 2023</div>
+              </div>
+            </div>
+            <div class="review-stars-sm">★★★★★</div>
+          </div>
+          <p class="review-body">Veteriner kliniğimiz için aldık. Hastalarımızın sahiplerine önerdiğimiz mama bu, artık kliniğimizden de satabiliyoruz. Ürün orijinal ve ambalajı sağlam geldi. Fiyat-performans açısından en iyi seçenek. Bir dahaki siparişte 25+ koli alıp daha fazla indirim almayı planlıyoruz.</p>
+          <span class="review-verify">✓ Onaylı Satın Alma</span>
+        </div>
+
+        <div class="review-card">
+          <div class="review-top">
+            <div class="review-user">
+              <div class="review-avatar" style="background:#22c55e">K</div>
+              <div>
+                <div class="review-name">Kerem T.</div>
+                <div class="review-date">5 Kasım 2023</div>
+              </div>
+            </div>
+            <div class="review-stars-sm">★★★★☆</div>
+          </div>
+          <p class="review-body">Genel olarak memnunum. Ürün kalitesi her zamanki gibi iyi. Tek eksiğim kargonun bir gün gecikmesi oldu, ama müşteri hizmetleri bilgi verdi ve çözdük. Bir dahaki siparişimde 10'lu alımla daha fazla indirim almayı deneyeceğim.</p>
+          <span class="review-verify">✓ Onaylı Satın Alma</span>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- RELATED PRODUCTS -->
+  <div class="related-section">
+    <div class="section-head">
+      <h2 class="section-title">Benzer Ürünler</h2>
+      <a href="#" style="font-size:14px;font-weight:600;color:var(--orange)">Tümünü Gör →</a>
+    </div>
+    <div class="rel-grid">
+
+      <div class="prod-card">
+        <div class="prod-img-sm" style="background:linear-gradient(135deg,#ede9fe,#f5f3ff)">🐱</div>
+        <div class="prod-body">
+          <div class="prod-brand-sm">Royal Canin</div>
+          <div class="prod-title-sm">Kitten Yavru Kedi Maması 4kg</div>
+          <div class="prod-price-sm">285 ₺</div>
+          <button class="add-to-cart-sm">Sepete Ekle</button>
+        </div>
+      </div>
+
+      <div class="prod-card">
+        <div class="prod-img-sm" style="background:linear-gradient(135deg,#dcfce7,#f0fdf4)">🐱</div>
+        <div class="prod-body">
+          <div class="prod-brand-sm">Pro Plan</div>
+          <div class="prod-title-sm">Sterilised Kısırlaştırılmış Kedi Maması 3kg</div>
+          <div class="prod-price-sm">195 ₺</div>
+          <button class="add-to-cart-sm">Sepete Ekle</button>
+        </div>
+      </div>
+
+      <div class="prod-card">
+        <div class="prod-img-sm" style="background:linear-gradient(135deg,#dbeafe,#eff6ff)">🐱</div>
+        <div class="prod-body">
+          <div class="prod-brand-sm">Hill's</div>
+          <div class="prod-title-sm">Science Plan Adult Ton Balıklı 1.5kg</div>
+          <div class="prod-price-sm">168 ₺</div>
+          <button class="add-to-cart-sm">Sepete Ekle</button>
+        </div>
+      </div>
+
+      <div class="prod-card">
+        <div class="prod-img-sm" style="background:linear-gradient(135deg,#fce7f3,#fdf2f8)">🐱</div>
+        <div class="prod-body">
+          <div class="prod-brand-sm">Whiskas</div>
+          <div class="prod-title-sm">Adult Tavuklu Kuru Mama 3.8kg</div>
+          <div class="prod-price-sm">125 ₺</div>
+          <button class="add-to-cart-sm">Sepete Ekle</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:32px;height:32px;background:linear-gradient(135deg,#f97316,#fb923c);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:17px">🐾</div>
+        <div class="logo-text" style="font-size:18px;font-weight:800;letter-spacing:-.5px"><span class="pet-text">Pet</span><span class="toptan-text">Toptan</span></div>
+      </div>
+      <div class="footer-links">
+        <a href="#">Hakkımızda</a>
+        <a href="#">Nasıl Çalışır</a>
+        <a href="#">Bayilik</a>
+        <a href="#">Kampanyalar</a>
+        <a href="#">Blog</a>
+        <a href="#">İletişim</a>
+        <a href="#">Gizlilik Politikası</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-copy">© 2024 PetToptan. Tüm hakları saklıdır. Türkiye'nin toptan pet ürünleri platformu.</div>
+      <div class="footer-badges">
+        <span class="footer-badge">iyzico</span>
+        <span class="footer-badge">PayTR</span>
+        <span class="footer-badge">SSL Güvenli</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// Theme
+(function(){
+  const s = localStorage.getItem('pt-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', s);
+  setThemeIcon(s);
+})();
+function setThemeIcon(t) {
+  const el = document.getElementById('themeIcon');
+  if (!el) return;
+  if (t === 'dark') el.innerHTML = '<span class="t-weather">🌙</span><span class="t-cat">😴</span>';
+  else el.innerHTML = '<span class="t-weather">☀️</span><span class="t-cat">🐱</span>';
+}
+document.getElementById('themeToggle').addEventListener('click', function(){
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('pt-theme', next);
+  setThemeIcon(next);
+});
+
+// Notifications
+let notifOpen = false, notifAllRead = false;
+document.getElementById('notifBtn').addEventListener('click', function(e){
+  e.stopPropagation();
+  notifOpen = !notifOpen;
+  document.getElementById('notifDropdown').classList.toggle('open', notifOpen);
+  if (notifOpen && !notifAllRead) markAllRead();
+});
+document.addEventListener('click', function(e){
+  if (!e.target.closest('.notif-wrap')) {
+    document.getElementById('notifDropdown').classList.remove('open');
+    notifOpen = false;
+  }
+});
+function markAllRead() {
+  notifAllRead = true;
+  document.getElementById('notifBadge').classList.add('hidden');
+  document.querySelectorAll('.notif-unread').forEach(function(el){ el.classList.remove('notif-unread'); });
+  document.querySelectorAll('.unread-dot').forEach(function(d){ d.style.opacity='0'; });
+}
+
+// Gallery thumbnail switch
+const mainBgs = {
+  '🐱': 'linear-gradient(135deg,#fce7f3 0%,#fdf2f8 50%,#fff1f7 100%)',
+  '🛍️': 'linear-gradient(135deg,#dbeafe 0%,#eff6ff 50%,#e0f2fe 100%)',
+  '📦': 'linear-gradient(135deg,#dcfce7 0%,#f0fdf4 50%,#d1fae5 100%)',
+  '🏷️': 'linear-gradient(135deg,#fef3c7 0%,#fffbeb 50%,#fef9c3 100%)'
+};
+function switchThumb(el, emoji, bg) {
+  document.querySelectorAll('.thumb').forEach(function(t){ t.classList.remove('active'); });
+  el.classList.add('active');
+  var mi = document.getElementById('mainImg');
+  mi.style.background = mainBgs[emoji] || bg;
+  document.getElementById('mainEmoji').textContent = emoji;
+}
+
+// Qty
+var qty = 5;
+var tiers = [
+  {min:1, max:4,  price:450, discount:null,  label:'—'},
+  {min:5, max:9,  price:420, discount:'%7',   label:'%7'},
+  {min:10,max:24, price:395, discount:'%12',  label:'%12'},
+  {min:25,max:999,price:370, discount:'%18',  label:'%18'}
+];
+function getTierIdx(q) {
+  for (var i=0;i<tiers.length;i++) { if (q>=tiers[i].min && q<=tiers[i].max) return i; }
+  return tiers.length-1;
+}
+function updateTable() {
+  var rows = document.querySelectorAll('.price-table tbody tr');
+  var ti = getTierIdx(qty);
+  rows.forEach(function(r,i){
+    r.classList.toggle('highlighted', i===ti);
+    var firstCell = r.querySelector('td:first-child');
+    var baseText = ['1 – 4 adet','5 – 9 adet','10 – 24 adet','25+ adet'][i];
+    firstCell.innerHTML = baseText + (i===ti ? ' <span style="font-size:11px;color:var(--orange);font-weight:700">← Seçili</span>' : '');
+  });
+}
+function changeQty(delta) {
+  var nq = qty + delta;
+  if (nq < 1) nq = 1;
+  qty = nq;
+  document.getElementById('qtyVal').textContent = qty;
+  updateTable();
+}
+function addToCart() {
+  var btn = document.querySelector('.btn-cart');
+  var orig = btn.innerHTML;
+  btn.innerHTML = '✅ Sepete Eklendi!';
+  btn.style.background = '#22c55e';
+  var badge = document.querySelector('.cart-count');
+  badge.textContent = parseInt(badge.textContent) + 1;
+  setTimeout(function(){
+    btn.innerHTML = orig;
+    btn.style.background = '';
+  }, 1800);
+}
+
+// Tabs
+function switchTab(btn, panelId) {
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+  btn.classList.add('active');
+  document.getElementById(panelId).classList.add('active');
+}
+</script>
+</body>
+</html>

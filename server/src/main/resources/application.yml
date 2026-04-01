@@ -1,0 +1,87 @@
+spring:
+  application:
+    name: pettoptan-server
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:pg-3da83de9-keya.h.aivencloud.com}:${DB_PORT:15474}/${DB_NAME:defaultdb}?currentSchema=petshop&sslmode=require
+    username: ${DB_USERNAME:avnadmin}
+    password: ${DB_PASSWORD:AVNS_jl1LCHVSQuJzsy5eRcz}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: petshop
+        format_sql: true
+    defer-datasource-initialization: true
+    open-in-view: false
+
+  sql:
+    init:
+      mode: always
+      data-locations: classpath:data.sql,classpath:seed-kopek-kuru-mamalar.sql
+      encoding: UTF-8
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
+
+  mail:
+    host: ${MAIL_HOST:smtp-relay.brevo.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:info@pettoptan.com.tr}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:}
+            client-secret: ${GOOGLE_CLIENT_SECRET:}
+            scope:
+              - email
+              - profile
+
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /
+
+# JWT
+jwt:
+  secret: ${JWT_SECRET:pettoptan-super-secret-key-minimum-256-bits-for-HS256-algorithm-change-in-production}
+  access-token-expiration-ms: 900000        # 15 dakika
+  refresh-token-expiration-ms: 604800000    # 7 gün
+
+# Uygulama ayarları
+app:
+  upload-dir: ${UPLOAD_DIR:./uploads/products}
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  admin-email: ${ADMIN_EMAIL:admin@pettoptan.com.tr}
+  callmebot:
+    phone: ${CALLMEBOT_PHONE:}
+    api-key: ${CALLMEBOT_API_KEY:}
+
+logging:
+  level:
+    com.pettoptan: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
