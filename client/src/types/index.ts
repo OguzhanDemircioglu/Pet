@@ -39,6 +39,7 @@ export interface User {
   email: string
   firstName: string
   lastName: string
+  phone: string | null
   role: 'ADMIN' | 'CUSTOMER'
 }
 
@@ -46,6 +47,11 @@ export interface AuthResponse {
   accessToken: string
   refreshToken: string
   user: User
+}
+
+export interface AdminInfo {
+  email: string
+  phone: string | null
 }
 
 export interface Page<T> {

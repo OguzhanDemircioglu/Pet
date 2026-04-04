@@ -1,5 +1,5 @@
 -- ============================================================
--- PetToptan — Köpek Kuru Mamaları Ürün Seed Data
+-- OffCats — Köpek Kuru Mamaları Ürün Seed Data
 -- Kaynak: pettoptan.com (30 ürün, ilk sayfa)
 -- Notlar:
 --   - base_price değerleri pettoptan.com indirimli fiyatlarıdır (KDV dahil/hariç kontrol et)

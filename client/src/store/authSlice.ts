@@ -24,6 +24,23 @@ export const loginThunk = createAsyncThunk(
   }
 )
 
+export const registerThunk = createAsyncThunk(
+  'auth/register',
+  async (payload: { email: string; password: string; firstName: string; lastName: string; phone: string }) => {
+    return authApi.register(payload.email, payload.password, payload.firstName, payload.lastName, payload.phone)
+  }
+)
+
+export const verifyEmailThunk = createAsyncThunk(
+  'auth/verifyEmail',
+  async ({ email, code }: { email: string; code: string }) => {
+    const data = await authApi.verifyEmail(email, code)
+    localStorage.setItem('accessToken', data.accessToken)
+    localStorage.setItem('refreshToken', data.refreshToken)
+    return data.user
+  }
+)
+
 export const loadMeThunk = createAsyncThunk('auth/loadMe', async () => {
   const token = localStorage.getItem('accessToken')
   if (!token) return null
@@ -49,6 +66,7 @@ const authSlice = createSlice({
       .addCase(loginThunk.fulfilled, (state, action) => { state.loading = false; state.user = action.payload })
       .addCase(loginThunk.rejected, (state, action) => { state.loading = false; state.error = action.error.message ?? 'Hata' })
       .addCase(loadMeThunk.fulfilled, (state, action) => { state.user = action.payload })
+      .addCase(verifyEmailThunk.fulfilled, (state, action) => { state.loading = false; state.user = action.payload })
   },
 })
 

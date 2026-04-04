@@ -11,11 +11,11 @@
     <relativePath/>
   </parent>
 
-  <groupId>com.pettoptan</groupId>
-  <artifactId>pettoptan-server</artifactId>
+  <groupId>com.offcats</groupId>
+  <artifactId>offcats-server</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  <name>pettoptan-server</name>
-  <description>PetToptan B2B Toptan Pet Ürünleri Backend</description>
+  <name>offcats-server</name>
+  <description>OffCats B2B Toptan Pet Ürünleri Backend</description>
 
   <properties>
     <java.version>17</java.version>
@@ -74,16 +74,6 @@
       <scope>runtime</scope>
     </dependency>
 
-    <!-- Google OAuth2 -->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-oauth2-client</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.google.api-client</groupId>
-      <artifactId>google-api-client</artifactId>
-      <version>2.4.0</version>
-    </dependency>
 
     <!-- iText 7 — PDF Fatura -->
     <dependency>

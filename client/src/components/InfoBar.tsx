@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { authApi } from '../api/authApi'
+import type { AdminInfo } from '../types'
 
 const WA_SVG = (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="rgba(255,255,255,.9)" style={{ flexShrink: 0 }}>
@@ -6,95 +8,85 @@ const WA_SVG = (
   </svg>
 )
 
-const slides = [
-  {
-    content: (
-      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-          <rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-        </svg>
-        Bize ulaşın: <a href="mailto:info@pettoptan.com.tr" style={{ color: 'rgba(255,255,255,.95)', textDecoration: 'underline', textUnderlineOffset: 2 }}>info@pettoptan.com.tr</a>
-      </span>
-    ),
-  },
-  {
-    content: (
-      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        {WA_SVG}
-        <a href="https://wa.me/905XXXXXXXXX" target="_blank" rel="noopener" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,.95)', textDecoration: 'none' }}>
-          <strong>WhatsApp:</strong> +90 5XX XXX XX XX
-        </a>
-        &nbsp;·&nbsp; Haftaiçi 09:00–18:00
-      </span>
-    ),
-  },
-  {
-    content: (
-      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        {WA_SVG}
-        <strong>Satıcıya Sor</strong> — Her ürün sayfasında WhatsApp ile direkt satıcıya ulaşın
-      </span>
-    ),
-  },
-]
+function formatPhone(raw: string | null | undefined): string {
+  if (!raw) return ''
+  const digits = raw.replace(/\D/g, '')
+  if (digits.length === 11) {
+    return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7, 9)} ${digits.slice(9, 11)}`
+  }
+  return raw
+}
 
 export default function InfoBar() {
   const [cur, setCur] = useState(0)
+  const [adminInfo, setAdminInfo] = useState<AdminInfo | null>(null)
 
   useEffect(() => {
-    const id = setInterval(() => {
-      setCur(c => (c + 1) % slides.length)
-    }, 3500)
-    return () => clearInterval(id)
+    authApi.adminInfo().then(setAdminInfo).catch(() => {})
   }, [])
 
+  const adminEmail = adminInfo?.email ?? 'info@offcats.com.tr'
+  const adminPhone = adminInfo?.phone
+
+  const slides = [
+    {
+      content: (
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+            <rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+          </svg>
+          Bize ulaşın:{' '}
+          <a href={`mailto:${adminEmail}`} style={{ color: 'rgba(255,255,255,.95)', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+            {adminEmail}
+          </a>
+        </span>
+      ),
+    },
+    {
+      content: (
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {WA_SVG}
+          {adminPhone ? (
+            <>
+              <a href={`https://wa.me/90${adminPhone.replace(/\D/g, '').slice(1)}`}
+                target="_blank" rel="noopener"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,.95)', textDecoration: 'none' }}>
+                <strong>WhatsApp:</strong> +90 {formatPhone(adminPhone).slice(1)}
+              </a>
+              <span style={{ color: 'rgba(255,255,255,.6)' }}>&nbsp;·&nbsp; Haftaiçi 09:00–18:00</span>
+            </>
+          ) : (
+            <span>WhatsApp desteği · Haftaiçi 09:00–18:00</span>
+          )}
+        </span>
+      ),
+    },
+    {
+      content: (
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {WA_SVG}
+          <strong>Satıcıya Sor</strong> — Her ürün sayfasında WhatsApp ile direkt satıcıya ulaşın
+        </span>
+      ),
+    },
+  ]
+
+  useEffect(() => {
+    const id = setInterval(() => setCur(c => (c + 1) % slides.length), 3500)
+    return () => clearInterval(id)
+  }, [slides.length])
+
   return (
-    <div style={{
-      background: 'var(--secondary)',
-      color: 'rgba(255,255,255,.9)',
-      fontSize: 13,
-      fontWeight: 500,
-      height: 34,
-      overflow: 'hidden',
-    }}>
-      <div style={{
-        maxWidth: 1280,
-        margin: '0 auto',
-        padding: '0 24px',
-        height: 34,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative',
-        overflow: 'hidden',
-      }}>
+    <div style={{ background: 'var(--secondary)', color: 'rgba(255,255,255,.9)', fontSize: 13, fontWeight: 500, height: 34, overflow: 'hidden' }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 24px', height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
         {slides.map((s, i) => (
-          <div key={i} style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            opacity: i === cur ? 1 : 0,
-            transition: 'opacity 0.5s ease',
-            pointerEvents: i === cur ? 'auto' : 'none',
-          }}>
+          <div key={i} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: i === cur ? 1 : 0, transition: 'opacity 0.5s ease', pointerEvents: i === cur ? 'auto' : 'none' }}>
             {s.content}
           </div>
         ))}
-
-        {/* Dots */}
         <div style={{ position: 'absolute', right: 24, display: 'flex', gap: 5, alignItems: 'center' }}>
           {slides.map((_, i) => (
-            <div key={i} onClick={() => setCur(i)} style={{
-              width: i === cur ? 14 : 5,
-              height: 5,
-              borderRadius: i === cur ? 3 : '50%',
-              background: i === cur ? '#fff' : 'rgba(255,255,255,.35)',
-              cursor: 'pointer',
-              transition: '0.2s',
-            }} />
+            <div key={i} onClick={() => setCur(i)} style={{ width: i === cur ? 14 : 5, height: 5, borderRadius: i === cur ? 3 : '50%', background: i === cur ? '#fff' : 'rgba(255,255,255,.35)', cursor: 'pointer', transition: '0.2s' }} />
           ))}
         </div>
       </div>

@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Provider } from 'react-redux'
 import { Toaster } from 'react-hot-toast'
+import { GoogleOAuthProvider } from '@react-oauth/google'
 import { store } from './store'
 import { loadMeThunk } from './store/authSlice'
 import { useAppDispatch } from './hooks/useAppDispatch'
@@ -10,6 +11,8 @@ import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import ProductListPage from './pages/ProductListPage'
 import ProductDetailPage from './pages/ProductDetailPage'
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
 
 function AppInner() {
   const dispatch = useAppDispatch()
@@ -31,7 +34,7 @@ function AppInner() {
   )
 }
 
-export default function App() {
+function AppWithProviders() {
   return (
     <Provider store={store}>
       <ThemeProvider>
@@ -39,4 +42,15 @@ export default function App() {
       </ThemeProvider>
     </Provider>
   )
+}
+
+export default function App() {
+  if (GOOGLE_CLIENT_ID) {
+    return (
+      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+        <AppWithProviders />
+      </GoogleOAuthProvider>
+    )
+  }
+  return <AppWithProviders />
 }
