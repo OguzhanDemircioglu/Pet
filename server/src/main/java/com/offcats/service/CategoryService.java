@@ -1,5 +1,6 @@
 package com.offcats.service;
 
+import com.offcats.dto.response.CategoryFlatResponse;
 import com.offcats.dto.response.CategoryResponse;
 import com.offcats.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,19 @@ public class CategoryService {
                 .stream()
                 .map(c -> CategoryResponse.from(c, withProducts))
                 .filter(c -> !c.children().isEmpty())
+                .toList();
+    }
+
+    public List<CategoryFlatResponse> getAllFlat() {
+        Set<Long> withProducts = categoryRepository.findCategoryIdsWithActiveProducts();
+        return categoryRepository.findAllActiveOrderByName().stream()
+                .map(c -> new CategoryFlatResponse(
+                        c.getId(),
+                        c.getName(),
+                        c.getSlug(),
+                        c.getParent() != null ? c.getParent().getId() : null,
+                        withProducts.contains(c.getId())
+                ))
                 .toList();
     }
 

@@ -10,6 +10,7 @@ import type { RootState, AppDispatch } from '../store'
 import { logout } from '../store/authSlice'
 import { fetchProductsThunk } from '../store/productSlice'
 import { productApi, categoryApi, userApi, type ProductForm } from '../api/productApi'
+import { fetchCategoriesThunk } from '../store/categorySlice'
 import type { Product, Category, AdminUser } from '../types'
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
@@ -42,6 +43,8 @@ export default function ProfilePage() {
   const dispatch = useDispatch<AppDispatch>()
   const user = useSelector((s: RootState) => s.auth.user)
   const allProducts = useSelector((s: RootState) => s.products.products)
+  const categories = useSelector((s: RootState) => s.categories.categories)
+  const categoriesLoading = useSelector((s: RootState) => s.categories.loading)
   const isAdmin = user?.role === 'ADMIN'
 
   const [section, setSection] = useState<Section>(isAdmin ? 'products' : 'orders')
@@ -114,8 +117,8 @@ export default function ProfilePage() {
           {section === 'addresses' && <AddressesSection />}
           {section === 'info' && <InfoSection user={user} />}
           {section === 'notifications' && <NotificationsSection />}
-          {section === 'products' && isAdmin && <AdminProductsSection products={allProducts} onRefresh={() => dispatch(fetchProductsThunk(true))} />}
-          {section === 'categories' && isAdmin && <AdminCategoriesSection />}
+          {section === 'products' && isAdmin && <AdminProductsSection products={allProducts} onRefresh={() => dispatch(fetchProductsThunk(true))} categories={categories} categoriesLoading={categoriesLoading} />}
+          {section === 'categories' && isAdmin && <AdminCategoriesSection categories={categories} onRefresh={() => dispatch(fetchCategoriesThunk(true))} />}
           {section === 'campaigns' && isAdmin && <AdminCampaignsSection />}
           {section === 'users' && isAdmin && <AdminUsersSection />}
         </div>
@@ -296,31 +299,28 @@ function NotificationsSection() {
 
 // ─── Admin Products Section ────────────────────────────────────────────────────
 function findParentForEdit(catId: number, cats: Category[]): number {
-  if (cats.some(c => c.id === catId)) return catId
-  for (const cat of cats) {
-    if (cat.children.some(c => c.id === catId)) return cat.id
-  }
-  return 0
+  const cat = cats.find(c => c.category_id === catId)
+  if (!cat) return 0
+  if (cat.parent_id === null) return catId  // root kategori, kendisi parent
+  return cat.parent_id
 }
 
-function AdminProductsSection({ products, onRefresh }: { products: Product[]; onRefresh: () => void }) {
+function AdminProductsSection({ products, onRefresh, categories, categoriesLoading }: {
+  products: Product[]
+  onRefresh: () => void
+  categories: Category[]
+  categoriesLoading: boolean
+}) {
   const [search, setSearch] = useState('')
   const [modal, setModal] = useState<null | 'add' | 'edit'>(null)
   const [editing, setEditing] = useState<Product | null>(null)
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [form, setForm] = useState<ProductForm>({ ...EMPTY_FORM })
-  const [categories, setCategories] = useState<Category[]>([])
-  const [loadingCats, setLoadingCats] = useState(false)
   const [parentCatId, setParentCatId] = useState<number>(0)
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    setLoadingCats(true)
-    categoryApi.list()
-      .then(setCategories)
-      .catch(() => toast.error('Kategoriler yüklenemedi — backend çalışıyor mu?'))
-      .finally(() => setLoadingCats(false))
-  }, [])
+  const rootCats = useMemo(() => categories.filter(c => c.parent_id === null), [categories])
+  const childCats = useMemo(() => categories.filter(c => c.parent_id === parentCatId), [categories, parentCatId])
 
   const filtered = useMemo(() => {
     if (!search) return products
@@ -331,7 +331,7 @@ function AdminProductsSection({ products, onRefresh }: { products: Product[]; on
   const openAdd = () => { setForm({ ...EMPTY_FORM }); setParentCatId(0); setEditing(null); setModal('add') }
   const openEdit = (p: Product) => {
     const pid = findParentForEdit(p.categoryId, categories)
-    setParentCatId(pid)
+    setParentCatId(pid > 0 ? pid : p.categoryId)
     setForm({
       name: p.name, sku: p.sku, categoryId: p.categoryId, brandName: p.brandName || '',
       basePrice: p.basePrice, vatRate: p.vatRate, moq: p.moq, stockQuantity: p.availableStock,
@@ -438,25 +438,21 @@ function AdminProductsSection({ products, onRefresh }: { products: Product[]; on
                   <input value={form.sku} onChange={e => setForm(p => ({ ...p, sku: e.target.value }))} style={inputStyle} placeholder="Stok kodu" />
                 </FormField>
                 <FormField label="Ana Kategori *">
-                  <select value={parentCatId} disabled={loadingCats} onChange={e => {
+                  <select value={parentCatId} disabled={categoriesLoading} onChange={e => {
                     const pid = Number(e.target.value)
                     setParentCatId(pid)
-                    const parent = categories.find(c => c.id === pid)
-                    if (!parent || parent.children.length === 0) {
-                      setForm(p => ({ ...p, categoryId: pid }))
-                    } else {
-                      setForm(p => ({ ...p, categoryId: 0 }))
-                    }
+                    const hasChildren = categories.some(c => c.parent_id === pid)
+                    setForm(p => ({ ...p, categoryId: hasChildren ? 0 : pid }))
                   }} style={inputStyle}>
-                    <option value={0}>{loadingCats ? 'Yükleniyor...' : categories.length === 0 ? 'Kategori bulunamadı' : 'Seçiniz...'}</option>
-                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    <option value={0}>{categoriesLoading ? 'Yükleniyor...' : rootCats.length === 0 ? 'Kategori bulunamadı' : 'Seçiniz...'}</option>
+                    {rootCats.map(c => <option key={c.category_id} value={c.category_id}>{c.category_name}</option>)}
                   </select>
                 </FormField>
-                {parentCatId > 0 && (categories.find(c => c.id === parentCatId)?.children.length ?? 0) > 0 && (
+                {parentCatId > 0 && childCats.length > 0 && (
                   <FormField label="Alt Kategori *">
                     <select value={form.categoryId} onChange={e => setForm(p => ({ ...p, categoryId: Number(e.target.value) }))} style={inputStyle}>
                       <option value={0}>Seçiniz...</option>
-                      {(categories.find(c => c.id === parentCatId)?.children ?? []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      {childCats.map(c => <option key={c.category_id} value={c.category_id}>{c.category_name}</option>)}
                     </select>
                   </FormField>
                 )}
@@ -644,29 +640,27 @@ function AdminCampaignsSection() {
 }
 
 // ─── Admin Categories Section ──────────────────────────────────────────────────
-type CatFlat = { id: number; name: string; parentId: number | null; displayOrder: number; childCount: number }
+type CatFlat = { id: number; name: string; parentId: number | null; childCount: number }
 
-function AdminCategoriesSection() {
-  const [categories, setCategories] = useState<Category[]>([])
+function AdminCategoriesSection({ categories, onRefresh }: { categories: Category[]; onRefresh: () => void }) {
   const [modal, setModal] = useState<null | 'add' | 'edit'>(null)
   const [editCat, setEditCat] = useState<CatFlat | null>(null)
   const [form, setForm] = useState({ name: '', parentId: 0, displayOrder: 0 })
   const [saving, setSaving] = useState(false)
   const [deleteId, setDeleteId] = useState<number | null>(null)
 
-  const load = () => categoryApi.list().then(setCategories).catch(() => {})
-  useEffect(() => { load() }, [])
+  const flat: CatFlat[] = useMemo(() =>
+    categories.map(c => ({
+      id: c.category_id,
+      name: c.category_name,
+      parentId: c.parent_id,
+      childCount: categories.filter(ch => ch.parent_id === c.category_id).length,
+    })), [categories])
 
-  const flat: CatFlat[] = []
-  for (const c of categories) {
-    flat.push({ id: c.id, name: c.name, parentId: null, displayOrder: c.displayOrder, childCount: c.children.length })
-    for (const ch of c.children) {
-      flat.push({ id: ch.id, name: ch.name, parentId: c.id, displayOrder: ch.displayOrder, childCount: 0 })
-    }
-  }
+  const rootCats = useMemo(() => categories.filter(c => c.parent_id === null), [categories])
 
   const openAdd = () => { setForm({ name: '', parentId: 0, displayOrder: 0 }); setEditCat(null); setModal('add') }
-  const openEdit = (c: CatFlat) => { setForm({ name: c.name, parentId: c.parentId ?? 0, displayOrder: c.displayOrder }); setEditCat(c); setModal('edit') }
+  const openEdit = (c: CatFlat) => { setForm({ name: c.name, parentId: c.parentId ?? 0, displayOrder: 0 }); setEditCat(c); setModal('edit') }
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error('Kategori adı zorunlu'); return }
@@ -675,14 +669,14 @@ function AdminCategoriesSection() {
       const data = { name: form.name.trim(), parentId: form.parentId || null, displayOrder: form.displayOrder }
       if (modal === 'add') { await categoryApi.adminCreate(data); toast.success('Kategori eklendi') }
       else if (editCat) { await categoryApi.adminUpdate(editCat.id, data); toast.success('Kategori güncellendi') }
-      setModal(null); load()
+      setModal(null); onRefresh()
     } catch { toast.error('Bir hata oluştu') }
     finally { setSaving(false) }
   }
 
   const handleDelete = async (id: number) => {
     try {
-      await categoryApi.adminDelete(id); toast.success('Kategori silindi'); load()
+      await categoryApi.adminDelete(id); toast.success('Kategori silindi'); onRefresh()
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Silinemedi — kategoride ürün mevcut olabilir')
     }
@@ -699,7 +693,7 @@ function AdminCategoriesSection() {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--bg3)', borderBottom: '1px solid var(--border)' }}>
-              {['Kategori Adı', 'Tür', 'Sıra', 'Alt Kategori', ''].map(h => (
+              {['Kategori Adı', 'Tür', 'Alt Kategori', 'Ürün', ''].map(h => (
                 <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</th>
               ))}
             </tr>
@@ -717,8 +711,12 @@ function AdminCategoriesSection() {
                     {c.parentId ? 'Alt' : 'Ana'}
                   </span>
                 </td>
-                <td style={{ padding: '12px 14px', fontSize: 13, color: 'var(--text2)' }}>{c.displayOrder}</td>
                 <td style={{ padding: '12px 14px', fontSize: 13, color: 'var(--text3)' }}>{c.childCount > 0 ? `${c.childCount} alt` : '—'}</td>
+                <td style={{ padding: '12px 14px' }}>
+                  {categories.find(x => x.category_id === c.id)?.has_product
+                    ? <span style={{ color: '#16a34a', fontSize: 12, fontWeight: 700 }}>Var</span>
+                    : <span style={{ color: 'var(--text3)', fontSize: 12 }}>—</span>}
+                </td>
                 <td style={{ padding: '12px 14px' }}>
                   {deleteId === c.id ? (
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -756,7 +754,7 @@ function AdminCategoriesSection() {
               <FormField label="Üst Kategori (Ana kategori için boş bırakın)">
                 <select value={form.parentId} onChange={e => setForm(p => ({ ...p, parentId: Number(e.target.value) }))} style={inputStyle}>
                   <option value={0}>— Ana Kategori —</option>
-                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {rootCats.map(c => <option key={c.category_id} value={c.category_id}>{c.category_name}</option>)}
                 </select>
               </FormField>
               <FormField label="Sıralama">

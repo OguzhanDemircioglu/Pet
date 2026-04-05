@@ -4,6 +4,7 @@ import { useTheme } from '../context/ThemeContext'
 import { useSelector, useDispatch } from 'react-redux'
 import type { RootState, AppDispatch } from '../store'
 import { fetchProductsThunk } from '../store/productSlice'
+import { fetchCategoriesThunk } from '../store/categorySlice'
 
 interface HeaderProps {
   showSearch?: boolean
@@ -60,7 +61,7 @@ export default function Header({ showSearch = true }: HeaderProps) {
 
         {/* Logo + Theme Toggle */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginRight: 20 }}>
-          <Link to="/" onClick={() => dispatch(fetchProductsThunk(true))} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          <Link to="/" onClick={() => { dispatch(fetchProductsThunk(true)); dispatch(fetchCategoriesThunk(true)) }} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
             <img src="/logo.svg" alt="OffCats" style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0 }} />
             <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.5, whiteSpace: 'nowrap' }}>
               <span style={{ color: 'var(--primary)' }}>OFF</span>

@@ -8,6 +8,7 @@ import Footer from '../components/Footer'
 import type { Product } from '../types'
 import type { RootState, AppDispatch } from '../store'
 import { fetchProductsThunk } from '../store/productSlice'
+import { fetchCategoriesThunk } from '../store/categorySlice'
 
 const SLIDES = [
   {
@@ -117,6 +118,7 @@ export default function HomePage() {
 
   useEffect(() => {
     dispatch(fetchProductsThunk())
+    dispatch(fetchCategoriesThunk())
   }, [dispatch])
 
   useEffect(() => {

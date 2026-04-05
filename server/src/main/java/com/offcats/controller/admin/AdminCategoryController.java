@@ -14,8 +14,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/admin/categories")
 @PreAuthorize("hasRole('ADMIN')")
@@ -25,11 +23,6 @@ public class AdminCategoryController {
     private final CategoryService categoryService;
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
-
-    @GetMapping
-    public ResponseEntity<List<CategoryResponse>> listAll() {
-        return ResponseEntity.ok(categoryService.getNavCategories());
-    }
 
     @PostMapping
     public ResponseEntity<CategoryResponse> createCategory(@Valid @RequestBody CategoryRequest request) {

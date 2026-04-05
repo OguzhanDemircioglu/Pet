@@ -23,4 +23,7 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     @Query("SELECT DISTINCT p.category.id FROM Product p WHERE p.isActive = true")
     Set<Long> findCategoryIdsWithActiveProducts();
+
+    @Query("SELECT c FROM Category c WHERE c.isActive = true ORDER BY c.name ASC")
+    List<Category> findAllActiveOrderByName();
 }
