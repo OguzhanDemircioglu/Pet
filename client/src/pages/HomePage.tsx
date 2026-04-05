@@ -1,11 +1,13 @@
 import { useEffect, useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useSelector, useDispatch } from 'react-redux'
 import InfoBar from '../components/InfoBar'
 import Header from '../components/Header'
 import CategoryBar from '../components/CategoryBar'
 import Footer from '../components/Footer'
-import { productApi } from '../api/productApi'
 import type { Product } from '../types'
+import type { RootState, AppDispatch } from '../store'
+import { fetchProductsThunk } from '../store/productSlice'
 
 const SLIDES = [
   {
@@ -108,13 +110,14 @@ function ProductCard({ p }: { p: Product }) {
 
 export default function HomePage() {
   const [slideIdx, setSlideIdx] = useState(0)
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const dispatch = useDispatch<AppDispatch>()
+  const products = useSelector((s: RootState) => s.products.products)
+  const loading = useSelector((s: RootState) => s.products.loading)
 
   useEffect(() => {
-    productApi.list({}).then(p => setProducts(p.content)).catch(console.error).finally(() => setLoading(false))
-  }, [])
+    dispatch(fetchProductsThunk())
+  }, [dispatch])
 
   useEffect(() => {
     timerRef.current = setInterval(() => setSlideIdx(i => (i + 1) % SLIDES.length), 4500)
@@ -134,7 +137,8 @@ export default function HomePage() {
       <CategoryBar />
 
       {/* Campaign Carousel */}
-      <div style={{ position: 'relative', overflow: 'hidden', background: '#000' }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '16px 24px 0' }}>
+      <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 14 }}>
         <div style={{ display: 'flex', transition: 'transform 0.45s cubic-bezier(.4,0,.2,1)', transform: `translateX(-${slideIdx * 100}%)` }}>
           {SLIDES.map((s, i) => (
             <div key={i} style={{
@@ -166,6 +170,7 @@ export default function HomePage() {
             <div key={i} onClick={() => goSlide(i)} style={{ width: i === slideIdx ? 24 : 8, height: 8, borderRadius: i === slideIdx ? 4 : '50%', background: i === slideIdx ? '#fff' : 'rgba(255,255,255,.4)', cursor: 'pointer', transition: '0.2s' }} />
           ))}
         </div>
+      </div>
       </div>
 
       {/* Page Content */}
@@ -199,7 +204,7 @@ export default function HomePage() {
 
         {/* Why Section */}
         <div style={{ padding: '48px 0 52px' }}>
-          <SectionHead title="Neden PetToptan?" />
+          <SectionHead title="Neden OffCats?" />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 18 }}>
             {WHY_CARDS.map(w => (
               <div key={w.title} className="why-card" style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', padding: '26px 20px', textAlign: 'center', transition: '0.2s' }}>

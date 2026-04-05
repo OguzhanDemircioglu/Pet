@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Red rope segments -->
+  <circle cx="50" cy="50" r="43" fill="none" stroke="#dc2626" stroke-width="9"
+          stroke-dasharray="13 13" stroke-linecap="round"/>
+  <!-- Blue rope segments (braided offset) -->
+  <circle cx="50" cy="50" r="43" fill="none" stroke="#1e3a8a" stroke-width="9"
+          stroke-dasharray="13 13" stroke-dashoffset="13" stroke-linecap="round"/>
+
+  <!-- Map pin shadow/depth -->
+  <path d="M50 18 C35 18 24 29 24 42 C24 61 50 80 50 80 C50 80 76 61 76 42 C76 29 65 18 50 18Z" fill="#b91c1c"/>
+  <!-- Map pin main -->
+  <path d="M50 15 C35 15 23 27 23 41 C23 60 50 79 50 79 C50 79 77 60 77 41 C77 27 65 15 50 15Z" fill="#dc2626"/>
+  <!-- White circle inside pin -->
+  <circle cx="50" cy="38" r="14" fill="white"/>
+
+  <!-- Paw print (blue) inside white circle -->
+  <!-- Main central pad -->
+  <ellipse cx="50" cy="41" rx="6" ry="5" fill="#1e3a8a"/>
+  <!-- Toe pads (3 above) -->
+  <ellipse cx="43" cy="34.5" rx="3" ry="2.5" fill="#1e3a8a"/>
+  <ellipse cx="50" cy="32" rx="3" ry="2.5" fill="#1e3a8a"/>
+  <ellipse cx="57" cy="34.5" rx="3" ry="2.5" fill="#1e3a8a"/>
+</svg>

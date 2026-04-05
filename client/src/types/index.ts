@@ -20,6 +20,7 @@ export interface Product {
   sku: string
   shortDescription: string | null
   categoryName: string
+  categorySlug: string | null
   categoryId: number
   brandName: string | null
   basePrice: number
@@ -60,4 +61,14 @@ export interface Page<T> {
   totalPages: number
   number: number
   size: number
+}
+
+export interface AdminUser {
+  id: number
+  firstName: string
+  lastName: string
+  email: string
+  phone: string | null
+  role: 'ADMIN' | 'CUSTOMER'
+  createdAt: string
 }

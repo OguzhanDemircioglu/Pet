@@ -26,12 +26,6 @@ spring:
     defer-datasource-initialization: true
     open-in-view: false
 
-  sql:
-    init:
-      mode: always
-      data-locations: classpath:data.sql,classpath:seed-kopek-kuru-mamalar.sql
-      encoding: UTF-8
-
   servlet:
     multipart:
       max-file-size: 10MB

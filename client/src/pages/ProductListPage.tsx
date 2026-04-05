@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { productApi } from '../api/productApi'
+import { useSelector, useDispatch } from 'react-redux'
 import type { Product } from '../types'
+import type { RootState, AppDispatch } from '../store'
+import { fetchProductsThunk } from '../store/productSlice'
 import InfoBar from '../components/InfoBar'
 import Header from '../components/Header'
 import CategoryBar from '../components/CategoryBar'
@@ -19,22 +21,34 @@ const EMOJIS: Record<string, string> = { kedi: '🐱', kopek: '🐶', kus: '🐦
 
 export default function ProductListPage() {
   const [searchParams] = useSearchParams()
-  const navigate = useNavigate()
   const categorySlug = searchParams.get('kategori')
   const query = searchParams.get('q') || ''
-
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
-  const [total, setTotal] = useState(0)
   const [sort, setSort] = useState('default')
 
+  const dispatch = useDispatch<AppDispatch>()
+  const allProducts = useSelector((s: RootState) => s.products.products)
+  const loading = useSelector((s: RootState) => s.products.loading)
+
   useEffect(() => {
-    setLoading(true)
-    productApi.list({ q: query || undefined })
-      .then(page => { setProducts(page.content); setTotal(page.totalElements) })
-      .catch(console.error)
-      .finally(() => setLoading(false))
-  }, [categorySlug, query])
+    dispatch(fetchProductsThunk())
+  }, [dispatch])
+
+  const products = useMemo(() => {
+    let list = allProducts
+    if (categorySlug) list = list.filter(p => p.categorySlug === categorySlug)
+    if (query) {
+      const q = query.toLowerCase()
+      list = list.filter(p =>
+        p.name.toLowerCase().includes(q) ||
+        (p.brandName?.toLowerCase().includes(q) ?? false) ||
+        (p.shortDescription?.toLowerCase().includes(q) ?? false)
+      )
+    }
+    if (sort === 'price_asc') list = [...list].sort((a, b) => a.basePrice - b.basePrice)
+    else if (sort === 'price_desc') list = [...list].sort((a, b) => b.basePrice - a.basePrice)
+    else if (sort === 'name_asc') list = [...list].sort((a, b) => a.name.localeCompare(b.name, 'tr'))
+    return list
+  }, [allProducts, categorySlug, query, sort])
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
@@ -58,7 +72,7 @@ export default function ProductListPage() {
             <h1 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>
               {query ? `"${query}" için sonuçlar` : 'Tüm Ürünler'}
             </h1>
-            <span style={{ fontSize: 13, color: 'var(--text3)' }}>{total} ürün bulundu</span>
+            <span style={{ fontSize: 13, color: 'var(--text3)' }}>{products.length} ürün bulundu</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <label style={{ fontSize: 13, color: 'var(--text2)', fontWeight: 500 }}>Sırala:</label>

@@ -1,7 +1,4 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { categoryApi } from '../api/productApi'
-import type { Category } from '../types'
+import {useNavigate} from 'react-router-dom'
 
 const STATIC_CATS = [
   {
@@ -51,18 +48,17 @@ export default function CategoryBar() {
         height: 46,
         overflow: 'visible',
       }}>
-        <nav style={{ display: 'flex', alignItems: 'center', height: 46, flex: 1, overflow: 'visible' }}>
+        <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 46, flex: 1, overflow: 'visible' }}>
           {STATIC_CATS.map((cat) => (
             <div key={cat.slug} style={{ position: 'relative', height: '100%', display: 'flex', alignItems: 'center' }}
               className="cat-nav-item">
               <button
-                onClick={() => navigate(`/urunler?kategori=${cat.slug}`)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 5,
                   padding: '0 16px', height: '100%',
                   fontSize: 14, fontWeight: 600,
                   color: 'rgba(255,255,255,.88)',
-                  background: 'none', border: 'none', cursor: 'pointer',
+                  background: 'none', border: 'none', cursor: 'default',
                   transition: '0.15s', whiteSpace: 'nowrap',
                 }}
                 className="cat-nav-btn">

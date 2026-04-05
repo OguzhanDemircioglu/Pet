@@ -1,8 +1,8 @@
 -- ============================================================
--- OffCats — Köpek Kuru Mamaları Ürün Seed Data
--- Kaynak: pettoptan.com (30 ürün, ilk sayfa)
+-- offcats — Köpek Kuru Mamaları Ürün Seed Data
+-- Kaynak: offcats.com (30 ürün, ilk sayfa)
 -- Notlar:
---   - base_price değerleri pettoptan.com indirimli fiyatlarıdır (KDV dahil/hariç kontrol et)
+--   - base_price değerleri offcats.com indirimli fiyatlarıdır (KDV dahil/hariç kontrol et)
 --   - image_url alanları geçici placeholder — gerçek görselleri uploads/products/ altına yükle
 --   - stock_quantity varsayılan: 100 (admin güncelleyecek)
 --   - moq varsayılan: 1
@@ -393,216 +393,216 @@ SELECT 'Enjoy Kuzulu Yetişkin Köpek Maması 15 Kg',
 ON CONFLICT (sku) DO NOTHING;
 
 -- ─────────────────────────────────────────────
--- 4. ÜRÜN GÖRSELLERİ (Geçici: pettoptan.com CDN URL'leri)
+-- 4. ÜRÜN GÖRSELLERİ (Geçici: offcats.com CDN URL'leri)
 -- TODO: Görselleri indir → uploads/products/ altına koy → URL'leri güncelle
 -- ─────────────────────────────────────────────
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/511/caviara-kuzu-etli-ve-pirincli-orta-ve-buyuk-irk-kopek-mamasi-2-kg-27390_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/511/caviara-kuzu-etli-ve-pirincli-orta-ve-buyuk-irk-kopek-mamasi-2-kg-27390_min.jpg',
        true, 0, 'Caviara Kuzu Etli Orta Ve Büyük Irk Köpek Maması 2 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-001'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/508/caviara-hipoalerjenic-somonlu-buyuk-irk-yetiskin-kopek-mamasi-2-kg-27391_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/508/caviara-hipoalerjenic-somonlu-buyuk-irk-yetiskin-kopek-mamasi-2-kg-27391_min.jpg',
        true, 0, 'Caviara Hipoalerjenic Somonlu Büyük Irk Yetişkin Köpek Maması 2 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-002'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/507/caviara-tavuklu-mini-kucuk-irk-yetiskin-kopek-mamasi-2-kg-27442_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/507/caviara-tavuklu-mini-kucuk-irk-yetiskin-kopek-mamasi-2-kg-27442_min.jpg',
        true, 0, 'Caviara Tavuklu Mini Küçük Irk Yetişkin Köpek Maması 2 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-003'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/463/caviara-kuzu-etli-ve-pirincli-buyuk-irk-yetiskin-kopek-mamasi-12-kg-27300_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/463/caviara-kuzu-etli-ve-pirincli-buyuk-irk-yetiskin-kopek-mamasi-12-kg-27300_min.jpg',
        true, 0, 'Caviara Kuzu Etli Ve Pirinçli Büyük Irk Yetişkin Köpek Maması 12 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-004'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/149/reflex-duo-protein-somonlu-ve-kuzu-etli-orta-irk-yetiskin-kopek-mamasi-10-kg-27017_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/149/reflex-duo-protein-somonlu-ve-kuzu-etli-orta-irk-yetiskin-kopek-mamasi-10-kg-27017_min.jpg',
        true, 0, 'Reflex Duo Protein Somonlu ve Kuzu Etli Orta Irk Yetişkin Köpek Maması 10 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-005'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/527/enjoy-biftekli-yetiskin-kopek-mamasi-15-kg-26752_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/527/enjoy-biftekli-yetiskin-kopek-mamasi-15-kg-26752_min.jpg',
        true, 0, 'Enjoy Biftekli Yetişkin Köpek Maması 15 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-006'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/011/wanpy-tahilsiz-tavuklu-yetiskin-kopek-mamasi-1-5-kg-25613_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/011/wanpy-tahilsiz-tavuklu-yetiskin-kopek-mamasi-1-5-kg-25613_min.jpg',
        true, 0, 'Wanpy Tahılsız Tavuklu Yetişkin Köpek Maması 1,5 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-007'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/006/wanpy-tahilsiz-ordekli-yetiskin-kopek-mamasi-1-5-kg-25582_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/006/wanpy-tahilsiz-ordekli-yetiskin-kopek-mamasi-1-5-kg-25582_min.jpg',
        true, 0, 'Wanpy Tahılsız Ördekli Yetişkin Köpek Maması 1,5 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-008'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/999/pro-performance-kuzu-etli-ve-yaban-mersinli-kucuk-irk-kopek-mamasi-7-kg-25569_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/999/pro-performance-kuzu-etli-ve-yaban-mersinli-kucuk-irk-kopek-mamasi-7-kg-25569_min.jpg',
        true, 0, 'Pro Performance Kuzu Etli ve Yaban Mersinli Küçük Irk Köpek Maması 7 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-009'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/948/loi-hipoalerjenik-somonlu-yetiskin-kopek-mamasi-3-kg-25275_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/948/loi-hipoalerjenik-somonlu-yetiskin-kopek-mamasi-3-kg-25275_min.jpg',
        true, 0, 'Loi Hipoalerjenik Somonlu Yetişkin Köpek Maması 3 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-010'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/947/loi-hipoalerjenik-kuzu-etli-yavru-kopek-mamasi-3-kg-25268_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/947/loi-hipoalerjenik-kuzu-etli-yavru-kopek-mamasi-3-kg-25268_min.jpg',
        true, 0, 'Loi Hipoalerjenik Kuzu Etli Yavru Köpek Maması 3 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-011'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/946/loi-hipoalerjenik-kucuk-irk-yavru-kopek-mamasi-kuzu-etli-3-kg-25267_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/946/loi-hipoalerjenik-kucuk-irk-yavru-kopek-mamasi-kuzu-etli-3-kg-25267_min.jpg',
        true, 0, 'Loi Hipoalerjenik Küçük Irk Yavru Köpek Maması Kuzu Etli 3 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-012'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/933/loi-hipoalerjenik-yavru-kuzu-etli-kopek-mamasi-15-kg-25259_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/933/loi-hipoalerjenik-yavru-kuzu-etli-kopek-mamasi-15-kg-25259_min.jpg',
        true, 0, 'Loi Hipoalerjenik Yavru Kuzu Etli Köpek Maması 15 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-013'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/371/brit-care-puppy-somonlu-tahilsiz-yavru-kopek-mamasi-12kg-21924_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/371/brit-care-puppy-somonlu-tahilsiz-yavru-kopek-mamasi-12kg-21924_min.jpg',
        true, 0, 'Brit Care Grain Free Puppy Tahılsız Somonlu Yavru Köpek Maması 12 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-014'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/550/38_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/550/38_min.jpg',
        true, 0, 'Hills Lamb Rice Kuzu Etli Büyük Irk Yetişkin Köpek Maması 14 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-015'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/428/46_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/428/46_min.jpg',
        true, 0, 'Hills Puppy Kuzu Etli Yavru Köpek Maması 14 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-016'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/427/50_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/427/50_min.jpg',
        true, 0, 'Hills Mature +7 Lamb Kuzu Etli Yaşlı Köpek Maması 14 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-017'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/422/34_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/422/34_min.jpg',
        true, 0, 'Hills Small & Miniature Puppy Küçük Irk Kuzulu Yavru Köpek Maması 6 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-018'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/412/10_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/412/10_min.jpg',
        true, 0, 'Hills Small Mini Sensitive Küçük Irk Köpek Maması 1,5 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-019'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/409/1_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/409/1_min.jpg',
        true, 0, 'Hills Small & Miniature Puppy Küçük Irk Kuzulu Yavru Köpek Maması 1,5 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-020'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/236/royal-canin-x-small-puppy-kucuk-irk-yavru-kopek-mamasi-3-kg-9922-jpg_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/236/royal-canin-x-small-puppy-kucuk-irk-yavru-kopek-mamasi-3-kg-9922-jpg_min.jpg',
        true, 0, 'Royal Canin X-Small Puppy Küçük Irk Yavru Köpek Maması 3 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-021'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/234/royal-canin-x-small-kucuk-irk-kopek-mamasi-3-kg-9923-jpg_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/234/royal-canin-x-small-kucuk-irk-kopek-mamasi-3-kg-9923-jpg_min.jpg',
        true, 0, 'Royal Canin X-Small Küçük Irk Köpek Maması 3 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-022'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/218/nd-ocean-kopek-ringa-baligi-ve-portakal-yetiskin-mini-7-kg-9793-jpg_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/218/nd-ocean-kopek-ringa-baligi-ve-portakal-yetiskin-mini-7-kg-9793-jpg_min.jpg',
        true, 0, 'N&D Ocean Balıklı Küçük Irk Tahılsız Yetişkin Köpek Maması 7 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-023'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/204/nd-az-tahilli-tavuklu-yetiskin-medium-maxi-kopek-mamasi-12-3-kg-8050-jpeg_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/204/nd-az-tahilli-tavuklu-yetiskin-medium-maxi-kopek-mamasi-12-3-kg-8050-jpeg_min.jpg',
        true, 0, 'N&D Az Tahıllı Tavuklu Yetişkin Medium Maxi Köpek Maması 12+3 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-024'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/025/advance-tavuklu-orta-irk-yavru-kopek-mamasi-3-kg-5578-jpg_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/025/advance-tavuklu-orta-irk-yavru-kopek-mamasi-3-kg-5578-jpg_min.jpg',
        true, 0, 'Advance Tavuklu Orta Irk Yavru Köpek Maması 3 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-025'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/993/royal-canin-maxi-dermacomfort-yetiskin-kopek-mamasi-12-kg-9423-jpeg_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/993/royal-canin-maxi-dermacomfort-yetiskin-kopek-mamasi-12-kg-9423-jpeg_min.jpg',
        true, 0, 'Royal Canin Maxi Dermacomfort Yetişkin Köpek Maması 12 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-026'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/992/royal-canin-medium-dermacomfort-yetiskin-kopek-mamasi-12-kg-9417-jpeg_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/992/royal-canin-medium-dermacomfort-yetiskin-kopek-mamasi-12-kg-9417-jpeg_min.jpg',
        true, 0, 'Royal Canin Medium Dermacomfort Yetişkin Köpek Maması 12 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-027'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/953/proplan-adult-sensitive-somonlu-yetiskin-kopek-mamasi-14-kg-24468_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/953/proplan-adult-sensitive-somonlu-yetiskin-kopek-mamasi-14-kg-24468_min.jpg',
        true, 0, 'Pro Plan Adult Sensitive Somonlu Yetişkin Köpek Maması 14 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-028'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/786/brit-premium-sensitive-kuzu-etli-yetiskin-kopek-mamasi-8-kg-8053-jpg_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/786/brit-premium-sensitive-kuzu-etli-yetiskin-kopek-mamasi-8-kg-8053-jpg_min.jpg',
        true, 0, 'Brit Premium Sensitive Kuzu Etli Yetişkin Köpek Maması 8 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-029'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);
 
 INSERT INTO petshop.product_images (product_id, image_url, is_primary, display_order, alt_text, created_at)
 SELECT p.id,
-       'https://www.pettoptan.com/idea/ql/91/myassets/products/534/enjoy-kuzulu-yetiskin-kopek-mamasi-15-kg-8048-jpg_min.jpg',
+       'https://www.offcats.com/idea/ql/91/myassets/products/534/enjoy-kuzulu-yetiskin-kopek-mamasi-15-kg-8048-jpg_min.jpg',
        true, 0, 'Enjoy Kuzulu Yetişkin Köpek Maması 15 Kg', NOW()
 FROM petshop.products p WHERE p.sku = 'PT-KKM-030'
   AND NOT EXISTS (SELECT 1 FROM petshop.product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true);

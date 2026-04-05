@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
-import { useSelector } from 'react-redux'
-import type { RootState } from '../store'
+import { useSelector, useDispatch } from 'react-redux'
+import type { RootState, AppDispatch } from '../store'
+import { fetchProductsThunk } from '../store/productSlice'
 
 interface HeaderProps {
   showSearch?: boolean
@@ -11,6 +12,7 @@ interface HeaderProps {
 export default function Header({ showSearch = true }: HeaderProps) {
   const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
+  const dispatch = useDispatch<AppDispatch>()
   const user = useSelector((s: RootState) => s.auth.user)
   const [searchVal, setSearchVal] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
@@ -58,19 +60,11 @@ export default function Header({ showSearch = true }: HeaderProps) {
 
         {/* Logo + Theme Toggle */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginRight: 20 }}>
-          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            <div style={{
-              width: 44, height: 44,
-              background: 'linear-gradient(135deg,var(--primary),#ef4444)',
-              borderRadius: 8,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 22,
-              boxShadow: '0 2px 8px rgba(220,38,38,.35)',
-              flexShrink: 0,
-            }}>🐾</div>
+          <Link to="/" onClick={() => dispatch(fetchProductsThunk(true))} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            <img src="/logo.svg" alt="OffCats" style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0 }} />
             <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.5, whiteSpace: 'nowrap' }}>
-              <span style={{ color: 'var(--primary)' }}>Pet</span>
-              <span style={{ color: 'var(--accent)' }}>Toptan</span>
+              <span style={{ color: 'var(--primary)' }}>OFF</span>
+              <span style={{ color: 'var(--accent)' }}>Cats</span>
             </div>
           </Link>
           <button onClick={toggleTheme} title="Tema değiştir" style={{
@@ -206,7 +200,7 @@ export default function Header({ showSearch = true }: HeaderProps) {
           {user ? (
             <Link to="/profil" style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              fontSize: 13.5, fontWeight: 600, color: 'var(--text2)',
+              fontSize: 13.5, fontWeight: 700, color: 'var(--primary)',
               padding: '0 10px', height: 42, borderRadius: 'var(--r)',
               transition: '0.2s',
             }}>
@@ -222,6 +216,7 @@ export default function Header({ showSearch = true }: HeaderProps) {
               👤 <span>Üye Girişi</span>
             </Link>
           )}
+
 
           {/* Cart */}
           <button style={{

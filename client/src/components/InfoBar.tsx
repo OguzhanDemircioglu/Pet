@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react'
-import { authApi } from '../api/authApi'
-import type { AdminInfo } from '../types'
 
 const WA_SVG = (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="rgba(255,255,255,.9)" style={{ flexShrink: 0 }}>
@@ -8,25 +6,24 @@ const WA_SVG = (
   </svg>
 )
 
-function formatPhone(raw: string | null | undefined): string {
-  if (!raw) return ''
+const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_EMAIL || 'info@offcats.com.tr'
+const CONTACT_PHONE = import.meta.env.VITE_CONTACT_PHONE || '905527735994'
+
+function formatDisplayPhone(raw: string): string {
+  // raw: "905527735994" → "+90 552 773 59 94"
   const digits = raw.replace(/\D/g, '')
-  if (digits.length === 11) {
-    return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7, 9)} ${digits.slice(9, 11)}`
+  if (digits.startsWith('90') && digits.length === 12) {
+    const local = digits.slice(2) // "5527735994"
+    return `+90 ${local.slice(0, 3)} ${local.slice(3, 6)} ${local.slice(6, 8)} ${local.slice(8, 10)}`
   }
-  return raw
+  return `+${digits}`
 }
 
 export default function InfoBar() {
   const [cur, setCur] = useState(0)
-  const [adminInfo, setAdminInfo] = useState<AdminInfo | null>(null)
 
-  useEffect(() => {
-    authApi.adminInfo().then(setAdminInfo).catch(() => {})
-  }, [])
-
-  const adminEmail = adminInfo?.email ?? 'info@offcats.com.tr'
-  const adminPhone = adminInfo?.phone
+  const displayPhone = formatDisplayPhone(CONTACT_PHONE)
+  const waUrl = `https://wa.me/${CONTACT_PHONE}`
 
   const slides = [
     {
@@ -36,8 +33,9 @@ export default function InfoBar() {
             <rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
           </svg>
           Bize ulaşın:{' '}
-          <a href={`mailto:${adminEmail}`} style={{ color: 'rgba(255,255,255,.95)', textDecoration: 'underline', textUnderlineOffset: 2 }}>
-            {adminEmail}
+          <a href={`mailto:${CONTACT_EMAIL}`} target="_blank" rel="noopener noreferrer"
+            style={{ color: 'rgba(255,255,255,.95)', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+            {CONTACT_EMAIL}
           </a>
         </span>
       ),
@@ -46,18 +44,11 @@ export default function InfoBar() {
       content: (
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {WA_SVG}
-          {adminPhone ? (
-            <>
-              <a href={`https://wa.me/90${adminPhone.replace(/\D/g, '').slice(1)}`}
-                target="_blank" rel="noopener"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,.95)', textDecoration: 'none' }}>
-                <strong>WhatsApp:</strong> +90 {formatPhone(adminPhone).slice(1)}
-              </a>
-              <span style={{ color: 'rgba(255,255,255,.6)' }}>&nbsp;·&nbsp; Haftaiçi 09:00–18:00</span>
-            </>
-          ) : (
-            <span>WhatsApp desteği · Haftaiçi 09:00–18:00</span>
-          )}
+          <a href={waUrl} target="_blank" rel="noopener noreferrer"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,.95)', textDecoration: 'none' }}>
+            <strong>WhatsApp:</strong> {displayPhone}
+          </a>
+          <span style={{ color: 'rgba(255,255,255,.6)' }}>&nbsp;·&nbsp; Haftaiçi 09:00–18:00</span>
         </span>
       ),
     },
@@ -65,7 +56,12 @@ export default function InfoBar() {
       content: (
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {WA_SVG}
-          <strong>Satıcıya Sor</strong> — Her ürün sayfasında WhatsApp ile direkt satıcıya ulaşın
+          <strong>Satıcıya Sor</strong>
+          <span style={{ color: 'rgba(255,255,255,.6)' }}>—</span>
+          <a href={waUrl} target="_blank" rel="noopener noreferrer"
+            style={{ color: 'rgba(255,255,255,.95)', textDecoration: 'none', fontWeight: 600 }}>
+            {displayPhone}
+          </a>
         </span>
       ),
     },

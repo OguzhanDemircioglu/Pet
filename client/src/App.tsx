@@ -11,6 +11,7 @@ import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import ProductListPage from './pages/ProductListPage'
 import ProductDetailPage from './pages/ProductDetailPage'
+import ProfilePage from './pages/ProfilePage'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
 
@@ -28,6 +29,7 @@ function AppInner() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/urunler" element={<ProductListPage />} />
         <Route path="/urun/:slug" element={<ProductDetailPage />} />
+        <Route path="/profil" element={<ProfilePage />} />
       </Routes>
       <Toaster position="top-right" />
     </BrowserRouter>

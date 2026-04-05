@@ -46,7 +46,6 @@ function Stars({ count, size = 14 }: { count: number; size?: number }) {
 
 export default function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>()
-  const navigate = useNavigate()
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [qty, setQty] = useState(1)
@@ -228,14 +227,16 @@ export default function ProductDetailPage() {
               }}>
                 {addedToCart ? '✅ Sepete Eklendi!' : '🛒 Sepete Ekle'}
               </button>
-              <button style={{
-                width: '100%', background: '#22c55e', color: '#fff',
-                fontSize: 15, fontWeight: 700, padding: 14, borderRadius: 'var(--r)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                transition: '0.2s', boxShadow: '0 4px 12px rgba(34,197,94,.3)', border: 'none', cursor: 'pointer',
-              }}>
-                💬 Satıcıya Sor (WhatsApp)
-              </button>
+              <a href={`https://wa.me/${import.meta.env.VITE_CONTACT_PHONE || '905527735994'}?text=${encodeURIComponent(`Merhaba, "${product.name}" ürünü hakkında bilgi almak istiyorum.`)}`}
+                target="_blank" rel="noopener noreferrer"
+                style={{
+                  width: '100%', background: '#22c55e', color: '#fff',
+                  fontSize: 15, fontWeight: 700, padding: 14, borderRadius: 'var(--r)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  transition: '0.2s', boxShadow: '0 4px 12px rgba(34,197,94,.3)', textDecoration: 'none',
+                }}>
+                💬 Satıcıya Sor — +90 552 773 59 94
+              </a>
             </div>
 
             {/* Price Info */}
@@ -270,7 +271,7 @@ export default function ProductDetailPage() {
             <div>
               {product.shortDescription && <p style={{ fontSize: 15, color: 'var(--text2)', lineHeight: 1.75, marginBottom: 14 }}>{product.shortDescription}</p>}
               <div style={{ background: 'var(--primary-bg)', borderLeft: '4px solid var(--primary)', padding: '14px 18px', borderRadius: '0 var(--r) var(--r) 0', margin: '18px 0', fontSize: 14, color: 'var(--text2)', lineHeight: 1.6 }}>
-                🏆 PetToptan, en kaliteli pet ürünlerini toptan fiyatlarla sunan güvenilir platfromunuzdur.
+                🏆 OffCats, en kaliteli pet ürünlerini toptan fiyatlarla sunan güvenilir platfromunuzdur.
               </div>
               <p style={{ fontSize: 15, color: 'var(--text2)', lineHeight: 1.75, marginBottom: 14 }}>
                 <strong style={{ color: 'var(--text)' }}>Toptan alım avantajı:</strong> Bu ürün minimum {product.moq} adet ile özel toptan fiyatlarıyla sunulmaktadır. Pet shop, veteriner klinikleri ve işletmeler için ideal toptan çözüm.

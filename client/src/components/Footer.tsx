@@ -14,14 +14,10 @@ export default function Footer() {
           marginBottom: 24, flexWrap: 'wrap', gap: 16,
         }}>
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            <div style={{
-              width: 32, height: 32,
-              background: 'linear-gradient(135deg,var(--primary),#ef4444)',
-              borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17,
-            }}>🐾</div>
+            <img src="/logo.svg" alt="OffCats" style={{ width: 32, height: 32, objectFit: 'contain' }} />
             <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.5 }}>
-              <span style={{ color: 'var(--primary)' }}>Pet</span>
-              <span style={{ color: 'var(--accent)' }}>Toptan</span>
+              <span style={{ color: 'var(--primary)' }}>OFF</span>
+              <span style={{ color: 'var(--accent)' }}>Cats</span>
             </div>
           </Link>
           <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap' }}>
@@ -36,7 +32,7 @@ export default function Footer() {
           flexWrap: 'wrap', gap: 8,
         }}>
           <div style={{ fontSize: 12, color: 'var(--text3)' }}>
-            © 2024 PetToptan. Tüm hakları saklıdır. Türkiye'nin toptan pet ürünleri platformu.
+            © 2024 OffCats. Tüm hakları saklıdır. Türkiye'nin toptan pet ürünleri platformu.
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             {['iyzico', 'PayTR', 'SSL Güvenli'].map(b => (
