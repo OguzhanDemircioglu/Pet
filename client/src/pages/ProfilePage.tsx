@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import toast from 'react-hot-toast'
@@ -9,12 +9,12 @@ import Footer from '../components/Footer'
 import type { RootState, AppDispatch } from '../store'
 import { logout } from '../store/authSlice'
 import { fetchProductsThunk } from '../store/productSlice'
-import { productApi, categoryApi, userApi, type ProductForm } from '../api/productApi'
+import { productApi, brandApi, categoryApi, userApi, productImageApi, imgUrl, type ProductForm } from '../api/productApi'
 import { fetchCategoriesThunk } from '../store/categorySlice'
-import type { Product, Category, AdminUser } from '../types'
+import type { Product, ProductImage as ProductImageType, Brand, Category, AdminUser } from '../types'
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
-type Section = 'orders' | 'addresses' | 'info' | 'notifications' | 'products' | 'campaigns' | 'categories' | 'users'
+type Section = 'orders' | 'addresses' | 'info' | 'notifications' | 'products' | 'brands' | 'campaigns' | 'categories' | 'users'
 
 const NAV_CUSTOMER: { id: Section; label: string; icon: string }[] = [
   { id: 'orders', label: 'Siparişlerim', icon: '📦' },
@@ -24,6 +24,7 @@ const NAV_CUSTOMER: { id: Section; label: string; icon: string }[] = [
 ]
 const NAV_ADMIN: { id: Section; label: string; icon: string }[] = [
   { id: 'products', label: 'Ürün Yönetimi', icon: '🛍️' },
+  { id: 'brands', label: 'Markalar', icon: '🏷️' },
   { id: 'categories', label: 'Kategoriler', icon: '🗂️' },
   { id: 'campaigns', label: 'Kampanyalar', icon: '📢' },
   { id: 'users', label: 'Kullanıcılar', icon: '👥' },
@@ -32,7 +33,7 @@ const NAV_ADMIN: { id: Section; label: string; icon: string }[] = [
 const UNITS = ['adet', 'kg', 'lt', 'kutu', 'paket', 'çift']
 
 const EMPTY_FORM: ProductForm = {
-  name: '', sku: '', categoryId: 0, brandName: '',
+  name: '', sku: '', categoryId: 0, brandId: 0,
   basePrice: 0, vatRate: 20, moq: 1, stockQuantity: 0,
   unit: 'adet', shortDescription: '', isActive: true, isFeatured: false,
 }
@@ -48,10 +49,15 @@ export default function ProfilePage() {
   const isAdmin = user?.role === 'ADMIN'
 
   const [section, setSection] = useState<Section>(isAdmin ? 'products' : 'orders')
+  const [brands, setBrands] = useState<Brand[]>([])
 
   useEffect(() => {
     if (!user) navigate('/login')
   }, [user, navigate])
+
+  useEffect(() => {
+    if (isAdmin) brandApi.adminList().then(setBrands).catch(() => {})
+  }, [isAdmin])
 
   const handleLogout = () => {
     dispatch(logout())
@@ -117,7 +123,8 @@ export default function ProfilePage() {
           {section === 'addresses' && <AddressesSection />}
           {section === 'info' && <InfoSection user={user} />}
           {section === 'notifications' && <NotificationsSection />}
-          {section === 'products' && isAdmin && <AdminProductsSection products={allProducts} onRefresh={() => dispatch(fetchProductsThunk(true))} categories={categories} categoriesLoading={categoriesLoading} />}
+          {section === 'products' && isAdmin && <AdminProductsSection products={allProducts} onRefresh={() => dispatch(fetchProductsThunk(true))} categories={categories} categoriesLoading={categoriesLoading} brands={brands} />}
+          {section === 'brands' && isAdmin && <AdminBrandsSection brands={brands} onRefresh={() => brandApi.adminList().then(setBrands).catch(() => {})} />}
           {section === 'categories' && isAdmin && <AdminCategoriesSection categories={categories} onRefresh={() => dispatch(fetchCategoriesThunk(true))} />}
           {section === 'campaigns' && isAdmin && <AdminCampaignsSection />}
           {section === 'users' && isAdmin && <AdminUsersSection />}
@@ -305,22 +312,32 @@ function findParentForEdit(catId: number, cats: Category[]): number {
   return cat.parent_id
 }
 
-function AdminProductsSection({ products, onRefresh, categories, categoriesLoading }: {
+function AdminProductsSection({ products, onRefresh, categories, categoriesLoading, brands }: {
   products: Product[]
   onRefresh: () => void
   categories: Category[]
   categoriesLoading: boolean
+  brands: Brand[]
 }) {
   const [search, setSearch] = useState('')
   const [modal, setModal] = useState<null | 'add' | 'edit'>(null)
+  const [step, setStep] = useState<'details' | 'images'>('details')
   const [editing, setEditing] = useState<Product | null>(null)
+  const [savedProductId, setSavedProductId] = useState<number | null>(null)
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [form, setForm] = useState<ProductForm>({ ...EMPTY_FORM })
   const [parentCatId, setParentCatId] = useState<number>(0)
   const [saving, setSaving] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [imgSubmitted, setImgSubmitted] = useState(false)
+  const [productImages, setProductImages] = useState<ProductImageType[]>([])
+  const [imageUploading, setImageUploading] = useState(false)
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
+  const draggingIdx = useRef<number | null>(null)
 
   const rootCats = useMemo(() => categories.filter(c => c.parent_id === null), [categories])
   const childCats = useMemo(() => categories.filter(c => c.parent_id === parentCatId), [categories, parentCatId])
+  const hasChildren = childCats.length > 0
 
   const filtered = useMemo(() => {
     if (!search) return products
@@ -328,29 +345,103 @@ function AdminProductsSection({ products, onRefresh, categories, categoriesLoadi
     return products.filter(p => p.name.toLowerCase().includes(q) || (p.brandName?.toLowerCase().includes(q) ?? false) || p.sku.toLowerCase().includes(q))
   }, [products, search])
 
-  const openAdd = () => { setForm({ ...EMPTY_FORM }); setParentCatId(0); setEditing(null); setModal('add') }
+  const loadImages = async (productId: number) => {
+    try { setProductImages(await productImageApi.list(productId)) } catch {}
+  }
+
+  const openAdd = () => {
+    setForm({ ...EMPTY_FORM }); setParentCatId(0); setSubmitted(false); setImgSubmitted(false)
+    setEditing(null); setSavedProductId(null); setProductImages([]); setStep('details'); setModal('add')
+  }
   const openEdit = (p: Product) => {
     const pid = findParentForEdit(p.categoryId, categories)
     setParentCatId(pid > 0 ? pid : p.categoryId)
     setForm({
-      name: p.name, sku: p.sku, categoryId: p.categoryId, brandName: p.brandName || '',
+      name: p.name, sku: p.sku, categoryId: p.categoryId, brandId: p.brandId ?? 0,
       basePrice: p.basePrice, vatRate: p.vatRate, moq: p.moq, stockQuantity: p.availableStock,
       unit: p.unit, shortDescription: p.shortDescription || '', isActive: p.isActive, isFeatured: p.isFeatured,
     })
-    setEditing(p); setModal('edit')
+    setSubmitted(false); setImgSubmitted(false); setEditing(p); setSavedProductId(p.id)
+    setProductImages(p.images ?? []); setStep('details'); setModal('edit')
   }
 
+  const closeModal = () => { setModal(null); onRefresh() }
+
   const handleSave = async () => {
-    if (!form.name || !form.sku || !form.categoryId || !form.basePrice) {
-      toast.error('Zorunlu alanları doldurun'); return
-    }
+    setSubmitted(true)
+    if (!form.name.trim()) { toast.error('Ürün adı zorunlu'); return }
+    if (!form.sku.trim()) { toast.error('SKU zorunlu'); return }
+    if (!parentCatId) { toast.error('Ana kategori seçimi zorunlu'); return }
+    if (hasChildren && !form.categoryId) { toast.error('Alt kategori seçimi zorunlu'); return }
+    if (!form.brandId) { toast.error('Marka seçimi zorunlu'); return }
+    if (!form.basePrice) { toast.error('Fiyat zorunlu'); return }
     setSaving(true)
     try {
-      if (modal === 'add') { await productApi.adminCreate(form); toast.success('Ürün eklendi') }
-      else if (editing) { await productApi.adminUpdate(editing.id, form); toast.success('Ürün güncellendi') }
-      setModal(null); onRefresh()
+      if (modal === 'add') {
+        const created = await productApi.adminCreate(form)
+        setSavedProductId(created.id)
+        setProductImages([])
+        toast.success('Ürün eklendi')
+        setStep('images')
+      } else if (editing) {
+        await productApi.adminUpdate(editing.id, form)
+        toast.success('Ürün güncellendi')
+        setStep('images')
+      }
     } catch { toast.error('Bir hata oluştu') }
     finally { setSaving(false) }
+  }
+
+  const handleFinish = () => {
+    setImgSubmitted(true)
+    if (productImages.length === 0) { toast.error('En az 1 resim yüklenmeli'); return }
+    closeModal()
+  }
+
+  const handleUpload = async (files: FileList | null) => {
+    if (!files || !savedProductId) return
+    setImageUploading(true)
+    try {
+      for (const file of Array.from(files)) {
+        const img = await productImageApi.upload(savedProductId, file)
+        setProductImages(prev => [...prev, img])
+      }
+    } catch { toast.error('Resim yüklenemedi') }
+    finally { setImageUploading(false) }
+  }
+
+  const handleSetPrimary = async (imageId: number) => {
+    if (!savedProductId) return
+    try {
+      await productImageApi.setPrimary(savedProductId, imageId)
+      setProductImages(prev => prev.map(img => ({ ...img, isPrimary: img.id === imageId })))
+    } catch { toast.error('İşlem başarısız') }
+  }
+
+  const handleDeleteImage = async (imageId: number) => {
+    if (!savedProductId) return
+    try {
+      await productImageApi.delete(savedProductId, imageId)
+      setProductImages(prev => {
+        const remaining = prev.filter(img => img.id !== imageId)
+        const wasLast = prev.find(img => img.id === imageId)?.isPrimary
+        if (wasLast && remaining.length > 0) remaining[0] = { ...remaining[0], isPrimary: true }
+        return remaining
+      })
+    } catch { toast.error('Silinemedi') }
+  }
+
+  const handleDrop = async (toIdx: number) => {
+    const fromIdx = draggingIdx.current
+    if (fromIdx === null || fromIdx === toIdx || !savedProductId) return
+    const reordered = [...productImages]
+    const [moved] = reordered.splice(fromIdx, 1)
+    reordered.splice(toIdx, 0, moved)
+    setProductImages(reordered)
+    draggingIdx.current = null
+    setDragOverIdx(null)
+    try { await productImageApi.reorder(savedProductId, reordered.map(img => img.id)) }
+    catch { toast.error('Sıralama kaydedilemedi') }
   }
 
   const handleDelete = async (id: number) => {
@@ -385,8 +476,17 @@ function AdminProductsSection({ products, onRefresh, categories, categoriesLoadi
             {filtered.slice(0, 50).map((p, i) => (
               <tr key={p.id} style={{ borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : 'none', transition: '0.15s' }} className="admin-row">
                 <td style={{ padding: '12px 14px' }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>{p.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text3)' }}>SKU: {p.sku}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {p.primaryImageUrl ? (
+                      <img src={imgUrl(p.primaryImageUrl)} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)', flexShrink: 0 }} />
+                    ) : (
+                      <div style={{ width: 40, height: 40, borderRadius: 6, border: '1px dashed var(--border)', background: 'var(--bg3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>📦</div>
+                    )}
+                    <div>
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>{p.name}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text3)' }}>SKU: {p.sku}</div>
+                    </div>
+                  </div>
                 </td>
                 <td style={{ padding: '12px 14px', fontSize: 13, color: 'var(--text2)' }}>{p.categoryName}</td>
                 <td style={{ padding: '12px 14px', fontSize: 13, color: 'var(--text2)' }}>{p.brandName || '—'}</td>
@@ -423,82 +523,180 @@ function AdminProductsSection({ products, onRefresh, categories, categoriesLoadi
 
       {/* Add/Edit Modal */}
       {modal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setModal(null)}>
-          <div style={{ background: 'var(--bg2)', borderRadius: 'var(--r2)', width: '100%', maxWidth: 620, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,.3)' }} onClick={e => e.stopPropagation()}>
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <h3 style={{ fontSize: 17, fontWeight: 800 }}>{modal === 'add' ? 'Yeni Ürün Ekle' : 'Ürünü Düzenle'}</h3>
-              <button onClick={() => setModal(null)} style={{ background: 'none', border: 'none', fontSize: 22, color: 'var(--text3)', cursor: 'pointer', lineHeight: 1 }}>×</button>
-            </div>
-            <div style={{ padding: 24 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                <FormField label="Ürün Adı *" span2>
-                  <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} style={inputStyle} placeholder="Ürün adı" />
-                </FormField>
-                <FormField label="SKU *">
-                  <input value={form.sku} onChange={e => setForm(p => ({ ...p, sku: e.target.value }))} style={inputStyle} placeholder="Stok kodu" />
-                </FormField>
-                <FormField label="Ana Kategori *">
-                  <select value={parentCatId} disabled={categoriesLoading} onChange={e => {
-                    const pid = Number(e.target.value)
-                    setParentCatId(pid)
-                    const hasChildren = categories.some(c => c.parent_id === pid)
-                    setForm(p => ({ ...p, categoryId: hasChildren ? 0 : pid }))
-                  }} style={inputStyle}>
-                    <option value={0}>{categoriesLoading ? 'Yükleniyor...' : rootCats.length === 0 ? 'Kategori bulunamadı' : 'Seçiniz...'}</option>
-                    {rootCats.map(c => <option key={c.category_id} value={c.category_id}>{c.category_name}</option>)}
-                  </select>
-                </FormField>
-                {parentCatId > 0 && childCats.length > 0 && (
-                  <FormField label="Alt Kategori *">
-                    <select value={form.categoryId} onChange={e => setForm(p => ({ ...p, categoryId: Number(e.target.value) }))} style={inputStyle}>
-                      <option value={0}>Seçiniz...</option>
-                      {childCats.map(c => <option key={c.category_id} value={c.category_id}>{c.category_name}</option>)}
-                    </select>
-                  </FormField>
-                )}
-                <FormField label="Marka">
-                  <input value={form.brandName} onChange={e => setForm(p => ({ ...p, brandName: e.target.value }))} style={inputStyle} placeholder="Marka adı" />
-                </FormField>
-                <FormField label="Birim Fiyat (₺) *">
-                  <input type="number" value={form.basePrice} onChange={e => setForm(p => ({ ...p, basePrice: Number(e.target.value) }))} style={inputStyle} min={0} step={0.01} />
-                </FormField>
-                <FormField label="KDV Oranı (%)">
-                  <input type="number" value={form.vatRate} onChange={e => setForm(p => ({ ...p, vatRate: Number(e.target.value) }))} style={inputStyle} min={0} max={100} />
-                </FormField>
-                <FormField label="Min. Sipariş Adedi">
-                  <input type="number" value={form.moq} onChange={e => setForm(p => ({ ...p, moq: Number(e.target.value) }))} style={inputStyle} min={1} />
-                </FormField>
-                <FormField label="Stok Miktarı">
-                  <input type="number" value={form.stockQuantity} onChange={e => setForm(p => ({ ...p, stockQuantity: Number(e.target.value) }))} style={inputStyle} min={0} />
-                </FormField>
-                <FormField label="Birim">
-                  <select value={form.unit} onChange={e => setForm(p => ({ ...p, unit: e.target.value }))} style={inputStyle}>
-                    {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-                  </select>
-                </FormField>
-                <FormField label="Kısa Açıklama" span2>
-                  <input value={form.shortDescription} onChange={e => setForm(p => ({ ...p, shortDescription: e.target.value }))} style={inputStyle} placeholder="Kısa ürün açıklaması (opsiyonel)" />
-                </FormField>
-                <FormField label="" >
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                    <input type="checkbox" checked={form.isActive} onChange={e => setForm(p => ({ ...p, isActive: e.target.checked }))} />
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>Aktif</span>
-                  </label>
-                </FormField>
-                <FormField label="">
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                    <input type="checkbox" checked={form.isFeatured} onChange={e => setForm(p => ({ ...p, isFeatured: e.target.checked }))} />
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>Öne Çıkan</span>
-                  </label>
-                </FormField>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: 'var(--bg2)', borderRadius: 'var(--r2)', width: '100%', maxWidth: 660, maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,.3)' }} onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <h3 style={{ fontSize: 17, fontWeight: 800, margin: 0 }}>{modal === 'add' ? 'Yeni Ürün Ekle' : 'Ürünü Düzenle'}</h3>
+                {/* Step tabs */}
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <button onClick={() => setStep('details')} style={{ fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 20, border: 'none', cursor: 'pointer', background: step === 'details' ? 'var(--primary)' : 'var(--bg3)', color: step === 'details' ? '#fff' : 'var(--text3)' }}>1 · Detaylar</button>
+                  <button onClick={() => { if (savedProductId) setStep('images') }} style={{ fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 20, border: 'none', cursor: savedProductId ? 'pointer' : 'not-allowed', background: step === 'images' ? 'var(--primary)' : 'var(--bg3)', color: step === 'images' ? '#fff' : savedProductId ? 'var(--text2)' : 'var(--text3)', opacity: savedProductId ? 1 : 0.5 }}>2 · Resimler {savedProductId && productImages.length > 0 ? `(${productImages.length})` : ''}</button>
+                </div>
               </div>
+              <button onClick={closeModal} style={{ background: 'none', border: 'none', fontSize: 22, color: 'var(--text3)', cursor: 'pointer', lineHeight: 1 }}>×</button>
             </div>
-            <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button onClick={() => setModal(null)} style={{ padding: '9px 20px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>İptal</button>
-              <button onClick={handleSave} disabled={saving} style={{ padding: '9px 22px', borderRadius: 'var(--r)', border: 'none', background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
-                {saving ? 'Kaydediliyor...' : modal === 'add' ? 'Ekle' : 'Güncelle'}
-              </button>
-            </div>
+
+            {/* Step 1: Details */}
+            {step === 'details' && (
+              <>
+                <div style={{ padding: 24 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                    <FormField label="Ürün Adı *" span2>
+                      <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} style={{ ...inputStyle, borderColor: submitted && !form.name.trim() ? 'var(--primary)' : undefined }} placeholder="Ürün adı" />
+                    </FormField>
+                    <FormField label="SKU *">
+                      <input value={form.sku} onChange={e => setForm(p => ({ ...p, sku: e.target.value }))} style={{ ...inputStyle, borderColor: submitted && !form.sku.trim() ? 'var(--primary)' : undefined }} placeholder="Stok kodu" />
+                    </FormField>
+                    <FormField label="Marka *">
+                      <select value={form.brandId} onChange={e => setForm(p => ({ ...p, brandId: Number(e.target.value) }))} style={{ ...inputStyle, color: form.brandId === 0 ? 'var(--text3)' : 'var(--text)', borderColor: submitted && !form.brandId ? 'var(--primary)' : undefined }}>
+                        <option value={0}>— Seçiniz —</option>
+                        {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                      </select>
+                    </FormField>
+                    <FormField label="Üst Kategori *">
+                      <select value={parentCatId} disabled={categoriesLoading} onChange={e => {
+                        const pid = Number(e.target.value)
+                        setParentCatId(pid)
+                        const kids = categories.filter(c => c.parent_id === pid)
+                        setForm(p => ({ ...p, categoryId: kids.length > 0 ? 0 : pid }))
+                      }} style={{ ...inputStyle, color: parentCatId === 0 ? 'var(--text3)' : 'var(--text)', borderColor: submitted && !parentCatId ? 'var(--primary)' : undefined }}>
+                        <option value={0}>{categoriesLoading ? 'Yükleniyor...' : '— Seçiniz —'}</option>
+                        {rootCats.map(c => <option key={c.category_id} value={c.category_id}>{c.emoji} {c.category_name}</option>)}
+                      </select>
+                    </FormField>
+                    <FormField label="Alt Kategori *">
+                      <select disabled={!hasChildren} value={form.categoryId} onChange={e => setForm(p => ({ ...p, categoryId: Number(e.target.value) }))} style={{ ...inputStyle, color: form.categoryId === 0 ? 'var(--text3)' : 'var(--text)', borderColor: submitted && hasChildren && !form.categoryId ? 'var(--primary)' : undefined }}>
+                        <option value={0}>— Seçiniz —</option>
+                        {childCats.map(c => <option key={c.category_id} value={c.category_id}>{c.emoji} {c.category_name}</option>)}
+                      </select>
+                    </FormField>
+                    <FormField label="Birim Fiyat (₺) *">
+                      <input type="number" value={form.basePrice} onChange={e => setForm(p => ({ ...p, basePrice: Number(e.target.value) }))} style={{ ...inputStyle, borderColor: submitted && !form.basePrice ? 'var(--primary)' : undefined }} min={0} step={0.01} />
+                    </FormField>
+                    <FormField label="KDV Oranı (%)">
+                      <input type="number" value={form.vatRate} onChange={e => setForm(p => ({ ...p, vatRate: Number(e.target.value) }))} style={inputStyle} min={0} max={100} />
+                    </FormField>
+                    <FormField label="Min. Sipariş Adedi">
+                      <input type="number" value={form.moq} onChange={e => setForm(p => ({ ...p, moq: Number(e.target.value) }))} style={inputStyle} min={1} />
+                    </FormField>
+                    <FormField label="Stok Miktarı">
+                      <input type="number" value={form.stockQuantity} onChange={e => setForm(p => ({ ...p, stockQuantity: Number(e.target.value) }))} style={inputStyle} min={0} />
+                    </FormField>
+                    <FormField label="Birim">
+                      <select value={form.unit} onChange={e => setForm(p => ({ ...p, unit: e.target.value }))} style={inputStyle}>
+                        {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                      </select>
+                    </FormField>
+                    <FormField label="Kısa Açıklama" span2>
+                      <input value={form.shortDescription} onChange={e => setForm(p => ({ ...p, shortDescription: e.target.value }))} style={inputStyle} placeholder="Kısa ürün açıklaması (opsiyonel)" />
+                    </FormField>
+                    <FormField label="">
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                        <input type="checkbox" checked={form.isActive} onChange={e => setForm(p => ({ ...p, isActive: e.target.checked }))} />
+                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>Aktif</span>
+                      </label>
+                    </FormField>
+                    <FormField label="">
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                        <input type="checkbox" checked={form.isFeatured} onChange={e => setForm(p => ({ ...p, isFeatured: e.target.checked }))} />
+                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>Öne Çıkan</span>
+                      </label>
+                    </FormField>
+                  </div>
+                </div>
+                <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                  <button onClick={closeModal} style={{ padding: '9px 20px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>İptal</button>
+                  <button onClick={handleSave} disabled={saving} style={{ padding: '9px 22px', borderRadius: 'var(--r)', border: 'none', background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+                    {saving ? 'Kaydediliyor...' : 'Kaydet ve Devam →'}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Step 2: Images */}
+            {step === 'images' && savedProductId && (
+              <>
+                <div style={{ padding: 24 }}>
+                  <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 3 }}>Ürün Resimleri</div>
+                      <div style={{ fontSize: 12, color: 'var(--text3)' }}>En az 1 resim zorunlu · ★ ile vitrin resmi seçin · Max 10MB</div>
+                    </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'var(--primary)', color: '#fff', borderRadius: 'var(--r)', padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: imageUploading ? 'not-allowed' : 'pointer', opacity: imageUploading ? 0.7 : 1 }}>
+                      <input type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => handleUpload(e.target.files)} disabled={imageUploading} />
+                      {imageUploading ? 'Yükleniyor...' : '+ Resim Ekle'}
+                    </label>
+                  </div>
+
+                  {/* Image Grid */}
+                  {productImages.length === 0 ? (
+                    <div style={{ border: imgSubmitted ? '2px dashed var(--primary)' : '2px dashed var(--border)', borderRadius: 'var(--r2)', padding: '40px 20px', textAlign: 'center', color: imgSubmitted ? 'var(--primary)' : 'var(--text3)' }}>
+                      <div style={{ fontSize: 36, marginBottom: 8 }}>🖼️</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{imgSubmitted ? 'En az 1 resim yüklenmeli!' : 'Henüz resim yok'}</div>
+                      <div style={{ fontSize: 12 }}>Yukarıdaki butona tıklayarak resim ekleyin</div>
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 8 }}>Sürükleyerek sıralayın · ★ ile vitrin resmi seçin</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 10 }}>
+                        {productImages.map((img, idx) => (
+                          <div
+                            key={img.id}
+                            draggable
+                            onDragStart={() => { draggingIdx.current = idx }}
+                            onDragOver={e => { e.preventDefault(); setDragOverIdx(idx) }}
+                            onDragLeave={() => setDragOverIdx(null)}
+                            onDrop={() => handleDrop(idx)}
+                            onDragEnd={() => { draggingIdx.current = null; setDragOverIdx(null) }}
+                            style={{
+                              position: 'relative', borderRadius: 'var(--r)', overflow: 'hidden',
+                              border: img.isPrimary ? '2.5px solid var(--primary)' : dragOverIdx === idx ? '2px dashed #38bdf8' : '1.5px solid var(--border)',
+                              background: 'var(--bg3)', cursor: 'grab',
+                              opacity: draggingIdx.current === idx ? 0.4 : 1,
+                              transition: 'border-color 0.15s, opacity 0.15s',
+                            }}
+                          >
+                            <img src={imgUrl(img.imageUrl)} alt="" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block', pointerEvents: 'none' }} />
+
+                            {/* Primary badge */}
+                            {img.isPrimary && (
+                              <div style={{ position: 'absolute', top: 5, left: 5, background: 'var(--primary)', color: '#fff', fontSize: 10, fontWeight: 800, padding: '2px 7px', borderRadius: 4, letterSpacing: 0.3, pointerEvents: 'none' }}>VİTRİN</div>
+                            )}
+
+                            {/* Action buttons — bottom bar */}
+                            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, display: 'flex', background: 'rgba(0,0,0,.6)', backdropFilter: 'blur(4px)' }}>
+                              <button
+                                title={img.isPrimary ? 'Vitrin resmi' : 'Vitrin yap'}
+                                onClick={e => { e.stopPropagation(); if (!img.isPrimary) handleSetPrimary(img.id) }}
+                                style={{
+                                  flex: 1, height: 30, border: 'none', borderRight: '1px solid rgba(255,255,255,.15)',
+                                  background: 'none', cursor: img.isPrimary ? 'default' : 'pointer',
+                                  color: img.isPrimary ? '#fbbf24' : 'rgba(255,255,255,.6)',
+                                  fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  transition: 'color 0.15s',
+                                }}
+                              >★</button>
+                              <button
+                                title="Sil"
+                                onClick={e => { e.stopPropagation(); handleDeleteImage(img.id) }}
+                                style={{ flex: 1, height: 30, border: 'none', background: 'none', cursor: 'pointer', color: 'rgba(255,255,255,.7)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'color 0.15s' }}
+                              >×</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, justifyContent: 'space-between' }}>
+                  <button onClick={() => setStep('details')} style={{ padding: '9px 20px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>← Detaylar</button>
+                  <button onClick={handleFinish} style={{ padding: '9px 22px', borderRadius: 'var(--r)', border: 'none', background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Tamamla</button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -640,33 +838,204 @@ function AdminCampaignsSection() {
 }
 
 // ─── Admin Categories Section ──────────────────────────────────────────────────
-type CatFlat = { id: number; name: string; parentId: number | null; childCount: number }
+// ─── Admin Brands Section ──────────────────────────────────────────────────────
+function AdminBrandsSection({ brands, onRefresh }: { brands: Brand[]; onRefresh: () => void }) {
+  const [modal, setModal] = useState<null | 'add' | 'edit'>(null)
+  const [editBrand, setEditBrand] = useState<Brand | null>(null)
+  const [form, setForm] = useState({ name: '', isActive: true })
+  const [saving, setSaving] = useState(false)
+  const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [submitted, setSubmitted] = useState(false)
+
+  const openAdd = () => { setForm({ name: '', isActive: true }); setSubmitted(false); setEditBrand(null); setModal('add') }
+  const openEdit = (b: Brand) => { setForm({ name: b.name, isActive: b.isActive }); setSubmitted(false); setEditBrand(b); setModal('edit') }
+
+  const handleSave = async () => {
+    setSubmitted(true)
+    if (!form.name.trim()) { toast.error('Marka adı zorunlu'); return }
+    setSaving(true)
+    try {
+      if (modal === 'add') { await brandApi.adminCreate(form); toast.success('Marka eklendi') }
+      else if (editBrand) { await brandApi.adminUpdate(editBrand.id, form); toast.success('Marka güncellendi') }
+      setModal(null); onRefresh()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Bir hata oluştu')
+    } finally { setSaving(false) }
+  }
+
+  const handleDelete = async (id: number) => {
+    try { await brandApi.adminDelete(id); toast.success('Marka silindi'); onRefresh() }
+    catch (err: any) { toast.error(err?.response?.data?.message || 'Silinemedi — markada ürün mevcut olabilir') }
+    setDeleteId(null)
+  }
+
+  return (
+    <div>
+      <SectionHead title="Marka Yönetimi" sub={`${brands.length} marka`} action={
+        <button onClick={openAdd} style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--r)', padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>+ Yeni Marka</button>
+      } />
+
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', overflow: 'hidden' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: 'var(--bg3)', borderBottom: '1px solid var(--border)' }}>
+              {['Marka Adı', 'Durum', ''].map(h => (
+                <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {brands.map((b, i) => (
+              <tr key={b.id} style={{ borderBottom: i < brands.length - 1 ? '1px solid var(--border)' : 'none' }} className="admin-row">
+                <td style={{ padding: '12px 14px', fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>🏷️ {b.name}</td>
+                <td style={{ padding: '12px 14px' }}>
+                  <span style={{ display: 'inline-block', padding: '2px 9px', borderRadius: 20, fontSize: 11.5, fontWeight: 700, background: b.isActive ? '#f0fdf4' : 'var(--bg3)', color: b.isActive ? '#16a34a' : 'var(--text3)' }}>
+                    {b.isActive ? 'Aktif' : 'Pasif'}
+                  </span>
+                </td>
+                <td style={{ padding: '12px 14px' }}>
+                  {deleteId === b.id ? (
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <span style={{ fontSize: 12, color: 'var(--text2)' }}>Emin misin?</span>
+                      <button onClick={() => handleDelete(b.id)} style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: 'var(--primary)', border: 'none', borderRadius: 5, padding: '3px 9px', cursor: 'pointer' }}>Evet</button>
+                      <button onClick={() => setDeleteId(null)} style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '3px 9px', cursor: 'pointer' }}>Hayır</button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={() => openEdit(b)} style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 10px', cursor: 'pointer' }}>Düzenle</button>
+                      <button onClick={() => setDeleteId(b.id)} style={{ fontSize: 12, color: 'var(--primary)', background: 'var(--primary-bg)', border: '1px solid rgba(220,38,38,.2)', borderRadius: 5, padding: '4px 10px', cursor: 'pointer' }}>Sil</button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {brands.length === 0 && (
+              <tr><td colSpan={4} style={{ padding: 40, textAlign: 'center', color: 'var(--text3)', fontSize: 14 }}>Henüz marka yok</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {modal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setModal(null)}>
+          <div style={{ background: 'var(--bg2)', borderRadius: 'var(--r2)', width: '100%', maxWidth: 400, boxShadow: '0 20px 60px rgba(0,0,0,.3)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h3 style={{ fontSize: 17, fontWeight: 800 }}>{modal === 'add' ? 'Yeni Marka' : 'Markayı Düzenle'}</h3>
+              <button onClick={() => setModal(null)} style={{ background: 'none', border: 'none', fontSize: 22, color: 'var(--text3)', cursor: 'pointer', lineHeight: 1 }}>×</button>
+            </div>
+            <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <FormField label="Marka Adı *">
+                <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} style={{ ...inputStyle, borderColor: submitted && !form.name.trim() ? 'var(--primary)' : undefined }} placeholder="Marka adı" autoFocus />
+              </FormField>
+              <FormField label="">
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={form.isActive} onChange={e => setForm(p => ({ ...p, isActive: e.target.checked }))} />
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>Aktif</span>
+                </label>
+              </FormField>
+            </div>
+            <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button onClick={() => setModal(null)} style={{ padding: '9px 20px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>İptal</button>
+              <button onClick={handleSave} disabled={saving} style={{ padding: '9px 22px', borderRadius: 'var(--r)', border: 'none', background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+                {saving ? 'Kaydediliyor...' : modal === 'add' ? 'Ekle' : 'Güncelle'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`.admin-row:hover { background: var(--bg3) !important; }`}</style>
+    </div>
+  )
+}
+
+// ─── Admin Categories Section ──────────────────────────────────────────────────
+const EMOJI_GROUPS = [
+  { label: 'Hayvanlar', emojis: ['🐱','🐶','🐦','🐟','🐹','🦎','🐰','🐾','🐠','🐡','🦜','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🦋','🐢','🦖','🐕','🐩','🐈','🐇','🐿️','🦔','🐓','🦆','🦢','🦩','🦚'] },
+  { label: 'Mama & İçecek', emojis: ['🥩','🥫','🍖','🍗','🦴','🥚','🧀','🥕','🌽','🥦','🍎','🍓','🫐','🍇','🥜','🫘','🌾','🍬','🥛','🧃','🫙','🍽️'] },
+  { label: 'Bakım & Sağlık', emojis: ['🚿','🛁','🪮','🧴','🧼','💊','🩺','🏥','🌡️','🩹','🧹','✂️','🪥','🧽'] },
+  { label: 'Ev & Aksesuarlar', emojis: ['🛏️','🪣','🏠','🪴','🛒','🧺','📿','🎾','🧶','🎁','🎀','🏮','🪃','🚪','🪟','🪑'] },
+  { label: 'Diğer', emojis: ['⭐','💫','✨','🎯','🏆','🎖️','🌸','🌺','🌻','💐','🌱','🍃','🌿','💎','❤️','🔔','🎪','🌈'] },
+]
+
+type CatFlat = { id: number; name: string; emoji: string; parentId: number | null; childCount: number; displayOrder: number }
 
 function AdminCategoriesSection({ categories, onRefresh }: { categories: Category[]; onRefresh: () => void }) {
   const [modal, setModal] = useState<null | 'add' | 'edit'>(null)
   const [editCat, setEditCat] = useState<CatFlat | null>(null)
-  const [form, setForm] = useState({ name: '', parentId: 0, displayOrder: 0 })
+  const [form, setForm] = useState({ name: '', emoji: '', parentId: -1, displayOrder: 1 })
   const [saving, setSaving] = useState(false)
   const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
 
-  const flat: CatFlat[] = useMemo(() =>
-    categories.map(c => ({
-      id: c.category_id,
-      name: c.category_name,
-      parentId: c.parent_id,
-      childCount: categories.filter(ch => ch.parent_id === c.category_id).length,
-    })), [categories])
+  const flat: CatFlat[] = useMemo(() => {
+    const roots = categories.filter(c => c.parent_id === null)
+      .sort((a, b) => a.display_order - b.display_order)
+    const result: CatFlat[] = []
+    for (const root of roots) {
+      result.push({ id: root.category_id, name: root.category_name, emoji: root.emoji ?? '', parentId: null, childCount: categories.filter(ch => ch.parent_id === root.category_id).length, displayOrder: root.display_order })
+      categories.filter(c => c.parent_id === root.category_id)
+        .sort((a, b) => a.display_order - b.display_order)
+        .forEach(child => result.push({ id: child.category_id, name: child.category_name, emoji: child.emoji ?? '', parentId: child.parent_id, childCount: 0, displayOrder: child.display_order }))
+    }
+    return result
+  }, [categories])
 
   const rootCats = useMemo(() => categories.filter(c => c.parent_id === null), [categories])
 
-  const openAdd = () => { setForm({ name: '', parentId: 0, displayOrder: 0 }); setEditCat(null); setModal('add') }
-  const openEdit = (c: CatFlat) => { setForm({ name: c.name, parentId: c.parentId ?? 0, displayOrder: 0 }); setEditCat(c); setModal('edit') }
+  // Başka kategorilerin kullandığı emojiler (kendi emojisin hariç)
+  const usedEmojis = useMemo(() => {
+    const ownEmoji = editCat?.emoji ?? ''
+    return new Set(categories.map(c => c.emoji).filter((e): e is string => !!e && e !== ownEmoji))
+  }, [categories, editCat])
+
+  // Seçilen parent'ın kardeşleri (mevcut edit öğesi hariç)
+  const formSiblings = useMemo(() => {
+    if (form.parentId === -1) return []
+    const pid = form.parentId === 0 ? null : form.parentId
+    return categories.filter(c => c.parent_id === pid && c.category_id !== (editCat?.id ?? -1))
+      .sort((a, b) => a.display_order - b.display_order)
+  }, [categories, form.parentId, editCat])
+
+  const displayOrderOptions = useMemo(() =>
+    Array.from({ length: formSiblings.length + 1 }, (_, i) => i + 1)
+  , [formSiblings])
+
+  const calcNextOrder = (parentId: number) => {
+    if (parentId === -1) return 1
+    const pid = parentId === 0 ? null : parentId
+    return categories.filter(c => c.parent_id === pid).length + 1
+  }
+
+  const openAdd = () => {
+    setForm({ name: '', emoji: '', parentId: -1, displayOrder: 1 })
+    setEmojiPickerOpen(false); setSubmitted(false)
+    setEditCat(null); setModal('add')
+  }
+  const openEdit = (c: CatFlat) => {
+    setForm({ name: c.name, emoji: c.emoji, parentId: c.parentId ?? 0, displayOrder: c.displayOrder })
+    setEmojiPickerOpen(false); setSubmitted(false)
+    setEditCat(c); setModal('edit')
+  }
 
   const handleSave = async () => {
+    setSubmitted(true)
     if (!form.name.trim()) { toast.error('Kategori adı zorunlu'); return }
+    if (!form.emoji) { toast.error('Emoji seçimi zorunlu'); return }
+    if (form.parentId === -1) { toast.error('Üst kategori seçimi zorunlu'); return }
     setSaving(true)
     try {
-      const data = { name: form.name.trim(), parentId: form.parentId || null, displayOrder: form.displayOrder }
+      // Seçilen sıraya başka biri oturuyorsa onu sona taşı
+      const displaced = formSiblings.find(s => s.display_order === form.displayOrder)
+      if (displaced) {
+        const endOrder = formSiblings.length + 1
+        await categoryApi.adminUpdate(displaced.category_id, {
+          name: displaced.category_name, emoji: displaced.emoji || undefined,
+          parentId: displaced.parent_id, displayOrder: endOrder,
+        })
+      }
+      const data = { name: form.name.trim(), emoji: form.emoji || undefined, parentId: form.parentId > 0 ? form.parentId : null, displayOrder: form.displayOrder }
       if (modal === 'add') { await categoryApi.adminCreate(data); toast.success('Kategori eklendi') }
       else if (editCat) { await categoryApi.adminUpdate(editCat.id, data); toast.success('Kategori güncellendi') }
       setModal(null); onRefresh()
@@ -693,7 +1062,7 @@ function AdminCategoriesSection({ categories, onRefresh }: { categories: Categor
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--bg3)', borderBottom: '1px solid var(--border)' }}>
-              {['Kategori Adı', 'Tür', 'Alt Kategori', 'Ürün', ''].map(h => (
+              {['#', 'Kategori Adı', 'Tür', 'Alt Kategori', 'Ürün', ''].map(h => (
                 <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</th>
               ))}
             </tr>
@@ -701,14 +1070,15 @@ function AdminCategoriesSection({ categories, onRefresh }: { categories: Categor
           <tbody>
             {flat.map((c, i) => (
               <tr key={c.id} style={{ borderBottom: i < flat.length - 1 ? '1px solid var(--border)' : 'none' }} className="admin-row">
+                <td style={{ padding: '12px 14px', fontSize: 12, color: 'var(--text3)', width: 32 }}>{c.displayOrder}</td>
                 <td style={{ padding: '12px 14px' }}>
                   <span style={{ marginLeft: c.parentId ? 20 : 0, fontSize: 13.5, fontWeight: c.parentId ? 500 : 700, color: 'var(--text)' }}>
-                    {c.parentId ? '└ ' : ''}{c.name}
+                    {c.parentId ? '└ ' : ''}{c.emoji} {c.name}
                   </span>
                 </td>
                 <td style={{ padding: '12px 14px' }}>
                   <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 12, fontSize: 11.5, fontWeight: 700, background: c.parentId ? 'var(--bg3)' : 'var(--primary-bg)', color: c.parentId ? 'var(--text3)' : 'var(--primary)' }}>
-                    {c.parentId ? 'Alt' : 'Ana'}
+                    {c.parentId ? 'Alt' : 'Üst'}
                   </span>
                 </td>
                 <td style={{ padding: '12px 14px', fontSize: 13, color: 'var(--text3)' }}>{c.childCount > 0 ? `${c.childCount} alt` : '—'}</td>
@@ -719,10 +1089,17 @@ function AdminCategoriesSection({ categories, onRefresh }: { categories: Categor
                 </td>
                 <td style={{ padding: '12px 14px' }}>
                   {deleteId === c.id ? (
-                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                      <span style={{ fontSize: 12, color: 'var(--text2)' }}>Emin misin?</span>
-                      <button onClick={() => handleDelete(c.id)} style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: 'var(--primary)', border: 'none', borderRadius: 5, padding: '3px 9px', cursor: 'pointer' }}>Evet</button>
-                      <button onClick={() => setDeleteId(null)} style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '3px 9px', cursor: 'pointer' }}>Hayır</button>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {!c.parentId && c.childCount > 0 && (
+                        <span style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 600, background: 'var(--primary-bg)', borderRadius: 5, padding: '3px 7px' }}>
+                          ⚠️ Bağlı {c.childCount} alt kategori de silinecek
+                        </span>
+                      )}
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <span style={{ fontSize: 12, color: 'var(--text2)' }}>Onaylıyor musunuz?</span>
+                        <button onClick={() => handleDelete(c.id)} style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: 'var(--primary)', border: 'none', borderRadius: 5, padding: '3px 9px', cursor: 'pointer' }}>Evet</button>
+                        <button onClick={() => setDeleteId(null)} style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '3px 9px', cursor: 'pointer' }}>Hayır</button>
+                      </div>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', gap: 6 }}>
@@ -734,7 +1111,7 @@ function AdminCategoriesSection({ categories, onRefresh }: { categories: Categor
               </tr>
             ))}
             {flat.length === 0 && (
-              <tr><td colSpan={5} style={{ padding: 40, textAlign: 'center', color: 'var(--text3)', fontSize: 14 }}>Henüz kategori yok</td></tr>
+              <tr><td colSpan={6} style={{ padding: 40, textAlign: 'center', color: 'var(--text3)', fontSize: 14 }}>Henüz kategori yok</td></tr>
             )}
           </tbody>
         </table>
@@ -749,17 +1126,72 @@ function AdminCategoriesSection({ categories, onRefresh }: { categories: Categor
             </div>
             <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
               <FormField label="Kategori Adı *">
-                <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} style={inputStyle} placeholder="Kategori adı" autoFocus />
+                <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} style={{ ...inputStyle, borderColor: submitted && !form.name.trim() ? 'var(--primary)' : undefined }} placeholder="Kategori adı" autoFocus />
               </FormField>
-              <FormField label="Üst Kategori (Ana kategori için boş bırakın)">
-                <select value={form.parentId} onChange={e => setForm(p => ({ ...p, parentId: Number(e.target.value) }))} style={inputStyle}>
-                  <option value={0}>— Ana Kategori —</option>
-                  {rootCats.map(c => <option key={c.category_id} value={c.category_id}>{c.category_name}</option>)}
+
+              <FormField label="Emoji *">
+                <div style={{ position: 'relative' }}>
+                  <button type="button" onClick={() => setEmojiPickerOpen(p => !p)} style={{ width: '100%', height: 40, border: `1.5px solid ${submitted && !form.emoji ? 'var(--primary)' : emojiPickerOpen ? 'var(--primary)' : 'var(--border)'}`, borderRadius: 'var(--r)', background: 'var(--bg2)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px', fontFamily: 'inherit' }}>
+                    {form.emoji
+                      ? <span style={{ fontSize: 22, lineHeight: 1 }}>{form.emoji}</span>
+                      : <span style={{ fontSize: 13, color: 'var(--text3)' }}>Emoji seç...</span>}
+                    <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text3)' }}>▾</span>
+                  </button>
+                  {emojiPickerOpen && (
+                    <>
+                      <div style={{ position: 'fixed', inset: 0, zIndex: 10 }} onClick={() => setEmojiPickerOpen(false)} />
+                      <div style={{ position: 'absolute', top: 44, left: 0, right: 0, background: 'var(--bg2)', border: '1.5px solid var(--border)', borderRadius: 'var(--r)', boxShadow: '0 8px 24px rgba(0,0,0,.2)', zIndex: 11, maxHeight: 240, overflowY: 'auto', padding: '6px 10px 10px' }}>
+                        {EMOJI_GROUPS.map(g => (
+                          <div key={g.label}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.5, margin: '8px 0 4px' }}>{g.label}</div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                              {g.emojis.map(em => {
+                                const isUsed = usedEmojis.has(em)
+                                const isSelected = form.emoji === em
+                                return (
+                                  <button key={em} type="button" disabled={isUsed} onClick={() => { setForm(p => ({ ...p, emoji: em })); setEmojiPickerOpen(false) }}
+                                    title={isUsed ? 'Kullanımda' : em}
+                                    style={{ width: 32, height: 32, border: isSelected ? '1.5px solid var(--primary)' : '1px solid transparent', borderRadius: 6, background: isSelected ? 'var(--primary-bg)' : 'transparent', cursor: isUsed ? 'not-allowed' : 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: isUsed ? 0.25 : 1 }}>
+                                    {em}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                        {form.emoji && (
+                          <button type="button" onClick={() => { setForm(p => ({ ...p, emoji: '' })); setEmojiPickerOpen(false) }}
+                            style={{ marginTop: 8, width: '100%', padding: '5px', fontSize: 12, color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            Emoji kaldır ×
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </FormField>
+
+              <FormField label="Üst Kategori *">
+                <select value={form.parentId} onChange={e => {
+                  const pid = Number(e.target.value)
+                  setForm(p => ({ ...p, parentId: pid, displayOrder: calcNextOrder(pid) }))
+                }} style={{ ...inputStyle, color: form.parentId === -1 ? 'var(--text3)' : 'var(--text)', borderColor: submitted && form.parentId === -1 ? 'var(--primary)' : undefined }}>
+                  <option value={-1} disabled>— Seçiniz —</option>
+                  <option value={0}>Ana Kategori (Kök Seviye)</option>
+                  {rootCats.map(c => <option key={c.category_id} value={c.category_id}>{c.emoji} {c.category_name}</option>)}
                 </select>
               </FormField>
-              <FormField label="Sıralama">
-                <input type="number" value={form.displayOrder} onChange={e => setForm(p => ({ ...p, displayOrder: Number(e.target.value) }))} style={inputStyle} min={0} />
-              </FormField>
+
+              {form.parentId !== -1 && (
+                <FormField label={`Sıra (${formSiblings.length + 1} slot mevcut)`}>
+                  <select value={form.displayOrder} onChange={e => setForm(p => ({ ...p, displayOrder: Number(e.target.value) }))} style={inputStyle}>
+                    {displayOrderOptions.map(n => {
+                      const occupied = formSiblings.find(s => s.display_order === n)
+                      return <option key={n} value={n}>{n}{occupied ? ` — (${occupied.emoji} ${occupied.category_name} sona taşınır)` : n === formSiblings.length + 1 ? ' — (sona ekle)' : ''}</option>
+                    })}
+                  </select>
+                </FormField>
+              )}
             </div>
             <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button onClick={() => setModal(null)} style={{ padding: '9px 20px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>İptal</button>

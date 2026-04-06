@@ -32,8 +32,10 @@ public class CategoryService {
                 .map(c -> new CategoryFlatResponse(
                         c.getId(),
                         c.getName(),
+                        c.getEmoji(),
                         c.getSlug(),
                         c.getParent() != null ? c.getParent().getId() : null,
+                        c.getDisplayOrder(),
                         withProducts.contains(c.getId())
                 ))
                 .toList();

@@ -1,11 +1,15 @@
 import api from './axios'
-import type { Product, Category, Page, AdminUser } from '../types'
+import type { Product, ProductImage, Brand, Category, Page, AdminUser } from '../types'
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+export const imgUrl = (path: string | null | undefined): string | undefined =>
+  path ? (path.startsWith('http') ? path : `${API_BASE}${path}`) : undefined
 
 export interface ProductForm {
   name: string
   sku: string
   categoryId: number
-  brandName: string
+  brandId: number
   basePrice: number
   vatRate: number
   moq: number
@@ -26,7 +30,6 @@ export const productApi = {
   getBySlug: (slug: string) =>
     api.get<Product>(`/products/${slug}`).then(r => r.data),
 
-  // Admin
   adminList: (params?: { page?: number; size?: number }) =>
     api.get<Page<Product>>('/admin/products', { params }).then(r => r.data),
 
@@ -40,6 +43,23 @@ export const productApi = {
     api.delete(`/admin/products/${id}`),
 }
 
+export const brandApi = {
+  list: () =>
+    api.get<Brand[]>('/brands').then(r => r.data),
+
+  adminList: () =>
+    api.get<Brand[]>('/admin/brands').then(r => r.data),
+
+  adminCreate: (data: { name: string; isActive?: boolean }) =>
+    api.post<Brand>('/admin/brands', data).then(r => r.data),
+
+  adminUpdate: (id: number, data: { name: string; isActive?: boolean }) =>
+    api.put<Brand>(`/admin/brands/${id}`, data).then(r => r.data),
+
+  adminDelete: (id: number) =>
+    api.delete(`/admin/brands/${id}`),
+}
+
 export const categoryApi = {
   list: () =>
     api.get<Category[]>('/categories').then(r => r.data),
@@ -47,14 +67,36 @@ export const categoryApi = {
   getBySlug: (slug: string) =>
     api.get<Category>(`/categories/${slug}`).then(r => r.data),
 
-  adminCreate: (data: { name: string; parentId?: number | null; displayOrder?: number }) =>
+  adminCreate: (data: { name: string; emoji?: string; parentId?: number | null; displayOrder?: number }) =>
     api.post<Category>('/admin/categories', data).then(r => r.data),
 
-  adminUpdate: (id: number, data: { name: string; parentId?: number | null; displayOrder?: number }) =>
+  adminUpdate: (id: number, data: { name: string; emoji?: string; parentId?: number | null; displayOrder?: number }) =>
     api.put<Category>(`/admin/categories/${id}`, data).then(r => r.data),
 
   adminDelete: (id: number) =>
     api.delete(`/admin/categories/${id}`),
+}
+
+export const productImageApi = {
+  list: (productId: number) =>
+    api.get<ProductImage[]>(`/admin/products/${productId}/images`).then(r => r.data),
+
+  upload: (productId: number, file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return api.post<ProductImage>(`/admin/products/${productId}/images`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(r => r.data)
+  },
+
+  setPrimary: (productId: number, imageId: number) =>
+    api.put(`/admin/products/${productId}/images/${imageId}/primary`),
+
+  reorder: (productId: number, orderedIds: number[]) =>
+    api.put(`/admin/products/${productId}/images/reorder`, orderedIds),
+
+  delete: (productId: number, imageId: number) =>
+    api.delete(`/admin/products/${productId}/images/${imageId}`),
 }
 
 export const userApi = {

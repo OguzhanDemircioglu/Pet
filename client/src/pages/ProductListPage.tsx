@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams, useNavigate, Link } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import type { Product } from '../types'
 import type { RootState, AppDispatch } from '../store'
 import { fetchProductsThunk } from '../store/productSlice'
+import { fetchCategoriesThunk } from '../store/categorySlice'
+import { imgUrl } from '../api/productApi'
 import InfoBar from '../components/InfoBar'
 import Header from '../components/Header'
 import CategoryBar from '../components/CategoryBar'
@@ -21,21 +23,51 @@ const EMOJIS: Record<string, string> = { kedi: '🐱', kopek: '🐶', kus: '🐦
 
 export default function ProductListPage() {
   const [searchParams] = useSearchParams()
-  const categorySlug = searchParams.get('kategori')
+  // slug= (yeni) veya kategori= (eski bağlantı uyumu)
+  const slugParam = searchParams.get('slug') || searchParams.get('kategori') || ''
   const query = searchParams.get('q') || ''
   const [sort, setSort] = useState('default')
 
   const dispatch = useDispatch<AppDispatch>()
   const allProducts = useSelector((s: RootState) => s.products.products)
   const loading = useSelector((s: RootState) => s.products.loading)
+  const categories = useSelector((s: RootState) => s.categories.categories)
 
   useEffect(() => {
     dispatch(fetchProductsThunk())
+    dispatch(fetchCategoriesThunk())
   }, [dispatch])
+
+  // Seçili kategori ve hiyerarşi
+  const currentCat = useMemo(
+    () => categories.find(c => c.category_slug === slugParam) ?? null,
+    [categories, slugParam]
+  )
+  const isRoot = currentCat ? currentCat.parent_id === null : false
+  const parentCat = useMemo(
+    () => (currentCat && currentCat.parent_id != null ? categories.find(c => c.category_id === currentCat.parent_id) ?? null : null),
+    [categories, currentCat]
+  )
+
+  // Üst kategoriye ait alt kategori ID'leri
+  const childCatIds = useMemo(() => {
+    if (!currentCat || !isRoot) return null
+    return new Set(categories.filter(c => c.parent_id === currentCat.category_id).map(c => c.category_id))
+  }, [categories, currentCat, isRoot])
 
   const products = useMemo(() => {
     let list = allProducts
-    if (categorySlug) list = list.filter(p => p.categorySlug === categorySlug)
+
+    if (slugParam) {
+      if (isRoot && childCatIds) {
+        // Üst kategoriye tıklandı → tüm alt kategorilerin ürünleri
+        list = list.filter(p => childCatIds.has(p.categoryId))
+      } else if (currentCat) {
+        // Alt kategoriye tıklandı → sadece o kategorinin ürünleri
+        list = list.filter(p => p.categoryId === currentCat.category_id)
+      }
+    }
+
     if (query) {
       const q = query.toLowerCase()
       list = list.filter(p =>
@@ -44,11 +76,17 @@ export default function ProductListPage() {
         (p.shortDescription?.toLowerCase().includes(q) ?? false)
       )
     }
+
     if (sort === 'price_asc') list = [...list].sort((a, b) => a.basePrice - b.basePrice)
     else if (sort === 'price_desc') list = [...list].sort((a, b) => b.basePrice - a.basePrice)
     else if (sort === 'name_asc') list = [...list].sort((a, b) => a.name.localeCompare(b.name, 'tr'))
     return list
-  }, [allProducts, categorySlug, query, sort])
+  }, [allProducts, slugParam, currentCat, isRoot, childCatIds, query, sort])
+
+  const pageTitle = query
+    ? `"${query}" için sonuçlar`
+    : currentCat ? currentCat.category_name
+    : 'Tüm Ürünler'
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
@@ -57,20 +95,37 @@ export default function ProductListPage() {
       <CategoryBar />
 
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 24px' }}>
+
         {/* Breadcrumb */}
         <nav style={{ padding: '16px 0 10px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-          <a href="/" style={{ fontSize: 13, color: 'var(--text2)' }}>Ana Sayfa</a>
-          <span style={{ color: 'var(--text3)', fontSize: 11 }}>›</span>
-          <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>
-            {query ? `"${query}" için sonuçlar` : categorySlug ? categorySlug.charAt(0).toUpperCase() + categorySlug.slice(1) : 'Tüm Ürünler'}
-          </span>
+          <Link to="/" style={{ fontSize: 13, color: 'var(--text2)' }}>Ana Sayfa</Link>
+          {parentCat && (
+            <>
+              <span style={{ color: 'var(--text3)', fontSize: 11 }}>›</span>
+              <Link to={`/urunler?slug=${parentCat.category_slug}`} style={{ fontSize: 13, color: 'var(--text2)' }}>
+                {parentCat.category_name}
+              </Link>
+            </>
+          )}
+          {currentCat && (
+            <>
+              <span style={{ color: 'var(--text3)', fontSize: 11 }}>›</span>
+              <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>{currentCat.category_name}</span>
+            </>
+          )}
+          {!currentCat && (
+            <>
+              <span style={{ color: 'var(--text3)', fontSize: 11 }}>›</span>
+              <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>{pageTitle}</span>
+            </>
+          )}
         </nav>
 
         {/* Header row */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <div>
             <h1 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>
-              {query ? `"${query}" için sonuçlar` : 'Tüm Ürünler'}
+              {currentCat?.emoji ? `${currentCat.emoji} ` : ''}{pageTitle}
             </h1>
             <span style={{ fontSize: 13, color: 'var(--text3)' }}>{products.length} ürün bulundu</span>
           </div>
@@ -132,7 +187,7 @@ function ProductCard({ p }: { p: Product }) {
     >
       <div style={{ height: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 56, background: bg, position: 'relative', flexShrink: 0 }}>
         {p.primaryImageUrl
-          ? <img src={p.primaryImageUrl} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 8 }} />
+          ? <img src={imgUrl(p.primaryImageUrl)} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 8 }} />
           : <span>{emoji}</span>
         }
       </div>

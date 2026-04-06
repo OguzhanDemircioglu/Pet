@@ -28,9 +28,10 @@ public class AdminCategoryController {
     public ResponseEntity<CategoryResponse> createCategory(@Valid @RequestBody CategoryRequest request) {
         Category category = new Category();
         category.setName(request.name());
+        category.setEmoji(request.emoji());
         category.setSlug(toSlug(request.name()));
         category.setDescription(request.description());
-        category.setDisplayOrder(request.displayOrder() != null ? request.displayOrder() : 0);
+        category.setDisplayOrder(request.displayOrder() != null ? request.displayOrder() : 1);
         category.setIsActive(true);
 
         if (request.parentId() != null) {
@@ -52,6 +53,7 @@ public class AdminCategoryController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Kategori bulunamadı: " + id));
 
         category.setName(request.name());
+        category.setEmoji(request.emoji());
         category.setSlug(toSlug(request.name()));
         category.setDescription(request.description());
         if (request.displayOrder() != null) {

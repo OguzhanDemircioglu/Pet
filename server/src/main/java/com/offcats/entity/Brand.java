@@ -20,12 +20,6 @@ public class Brand {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(nullable = false, length = 150)
-    private String slug;
-
-    @Column(name = "logo_url", length = 500)
-    private String logoUrl;
-
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 

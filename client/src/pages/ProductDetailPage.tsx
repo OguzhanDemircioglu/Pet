@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { productApi } from '../api/productApi'
+import { useSelector, useDispatch } from 'react-redux'
+import { productApi, imgUrl } from '../api/productApi'
+import { fetchCategoriesThunk } from '../store/categorySlice'
+import type { RootState, AppDispatch } from '../store'
 import type { Product } from '../types'
 import InfoBar from '../components/InfoBar'
 import Header from '../components/Header'
@@ -46,12 +49,19 @@ function Stars({ count, size = 14 }: { count: number; size?: number }) {
 
 export default function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>()
+  const dispatch = useDispatch<AppDispatch>()
+  const categories = useSelector((s: RootState) => s.categories.categories)
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [qty, setQty] = useState(1)
+  const [activeImgIdx, setActiveImgIdx] = useState(0)
   const [thumbIdx, setThumbIdx] = useState(0)
   const [activeTab, setActiveTab] = useState<'desc' | 'specs' | 'reviews'>('desc')
   const [addedToCart, setAddedToCart] = useState(false)
+
+  useEffect(() => {
+    dispatch(fetchCategoriesThunk())
+  }, [dispatch])
 
   useEffect(() => {
     if (!slug) return
@@ -89,8 +99,20 @@ export default function ProductDetailPage() {
     setTimeout(() => setAddedToCart(false), 1800)
   }
 
+  const currentCat = categories.find(c => c.category_id === product.categoryId)
+  const parentCat = currentCat?.parent_id != null
+    ? categories.find(c => c.category_id === currentCat.parent_id)
+    : null
+
+  const productImgs = (product.images ?? []).slice().sort((a, b) => {
+    if (a.isPrimary && !b.isPrimary) return -1
+    if (!a.isPrimary && b.isPrimary) return 1
+    return a.displayOrder - b.displayOrder
+  })
+  const hasRealImages = productImgs.length > 0
+  const activeImg = hasRealImages ? productImgs[activeImgIdx] : null
   const mainBg = THUMB_BG[thumbIdx]
-  const mainEmoji = product.primaryImageUrl ? null : THUMB_EMOJIS[thumbIdx]
+  const mainEmoji = hasRealImages ? null : THUMB_EMOJIS[thumbIdx]
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
@@ -103,8 +125,14 @@ export default function ProductDetailPage() {
         {/* Breadcrumb */}
         <nav style={{ padding: '16px 0 10px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           <Link to="/" style={{ fontSize: 13, color: 'var(--text2)' }}>Ana Sayfa</Link>
+          {parentCat && (
+            <>
+              <span style={{ color: 'var(--text3)', fontSize: 11 }}>›</span>
+              <Link to={`/urunler?slug=${parentCat.category_slug}`} style={{ fontSize: 13, color: 'var(--text2)' }}>{parentCat.category_name}</Link>
+            </>
+          )}
           <span style={{ color: 'var(--text3)', fontSize: 11 }}>›</span>
-          <Link to={`/urunler?kategori=${product.categoryName}`} style={{ fontSize: 13, color: 'var(--text2)' }}>{product.categoryName}</Link>
+          <Link to={`/urunler?slug=${product.categorySlug}`} style={{ fontSize: 13, color: 'var(--text2)' }}>{product.categoryName}</Link>
           <span style={{ color: 'var(--text3)', fontSize: 11 }}>›</span>
           <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>{product.name}</span>
         </nav>
@@ -115,32 +143,45 @@ export default function ProductDetailPage() {
           {/* LEFT: Gallery */}
           <div>
             <div style={{
-              background: mainBg,
+              background: hasRealImages ? 'var(--bg2)' : mainBg,
               borderRadius: 'var(--r2)',
               border: '1px solid var(--border)',
               height: 380,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 110, marginBottom: 12, position: 'relative', overflow: 'hidden', cursor: 'zoom-in',
             }}>
-              {product.primaryImageUrl
-                ? <img src={product.primaryImageUrl} alt={product.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', padding: 16 }} />
+              {activeImg
+                ? <img src={imgUrl(activeImg.imageUrl)} alt={product.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', padding: 16 }} />
                 : <span>{mainEmoji}</span>
               }
-              <div style={{ position: 'absolute', top: 14, left: 14, background: 'var(--primary)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 5 }}>%12 İndirim</div>
-              <div style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(0,0,0,.35)', color: '#fff', fontSize: 12, padding: '4px 9px', borderRadius: 5, backdropFilter: 'blur(4px)' }}>🔍 Yakınlaştır</div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 9 }}>
-              {THUMB_BG.map((bg, i) => (
-                <div key={i} onClick={() => setThumbIdx(i)} style={{
-                  borderRadius: 'var(--r)', border: `2px solid ${i === thumbIdx ? 'var(--primary)' : 'var(--border)'}`,
-                  height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 34, cursor: 'pointer', transition: '0.18s', background: bg,
-                  boxShadow: i === thumbIdx ? '0 0 0 2px rgba(220,38,38,.25)' : 'none',
-                }}>
-                  {THUMB_EMOJIS[i]}
-                </div>
-              ))}
-            </div>
+            {hasRealImages ? (
+              <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
+                {productImgs.map((img, i) => (
+                  <div key={img.id} onClick={() => setActiveImgIdx(i)} style={{
+                    width: 72, height: 72, borderRadius: 'var(--r)',
+                    border: `2.5px solid ${i === activeImgIdx ? 'var(--primary)' : 'var(--border)'}`,
+                    overflow: 'hidden', cursor: 'pointer', flexShrink: 0,
+                    boxShadow: i === activeImgIdx ? '0 0 0 2px rgba(220,38,38,.2)' : 'none',
+                  }}>
+                    <img src={imgUrl(img.imageUrl)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 9 }}>
+                {THUMB_BG.map((bg, i) => (
+                  <div key={i} onClick={() => setThumbIdx(i)} style={{
+                    borderRadius: 'var(--r)', border: `2px solid ${i === thumbIdx ? 'var(--primary)' : 'var(--border)'}`,
+                    height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 34, cursor: 'pointer', transition: '0.18s', background: bg,
+                    boxShadow: i === thumbIdx ? '0 0 0 2px rgba(220,38,38,.25)' : 'none',
+                  }}>
+                    {THUMB_EMOJIS[i]}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* RIGHT: Product Info */}

@@ -7,7 +7,7 @@ public record CreateProductRequest(
         @NotBlank String name,
         @NotBlank String sku,
         @NotNull Long categoryId,
-        String brandName,
+        Long brandId,
         @NotNull @DecimalMin("0.01") BigDecimal basePrice,
         BigDecimal vatRate,
         Integer moq,

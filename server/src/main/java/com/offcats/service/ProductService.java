@@ -27,10 +27,6 @@ public class ProductService {
     private final BrandRepository brandRepository;
     private final CategoryRepository categoryRepository;
 
-    // ------------------------------------------------------------------ //
-    // Public read methods
-    // ------------------------------------------------------------------ //
-
     public Page<ProductResponse> listByCategory(Long categoryId, Pageable pageable) {
         return productRepository.findByIsActiveTrueAndCategoryId(categoryId, pageable)
                 .map(ProductResponse::from);
@@ -58,17 +54,9 @@ public class ProductService {
                 .stream().map(ProductResponse::from).toList();
     }
 
-    // ------------------------------------------------------------------ //
-    // Admin read methods
-    // ------------------------------------------------------------------ //
-
     public Page<ProductResponse> listAll(Pageable pageable) {
         return productRepository.findAll(pageable).map(ProductResponse::from);
     }
-
-    // ------------------------------------------------------------------ //
-    // Admin write methods
-    // ------------------------------------------------------------------ //
 
     @Transactional
     public ProductResponse create(CreateProductRequest req) {
@@ -78,16 +66,9 @@ public class ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Kategori", req.categoryId()));
 
         Brand brand = null;
-        if (req.brandName() != null && !req.brandName().isBlank()) {
-            String brandSlug = toSlug(req.brandName());
-            brand = brandRepository.findBySlug(brandSlug)
-                    .orElseGet(() -> brandRepository.save(
-                            Brand.builder()
-                                    .name(req.brandName().trim())
-                                    .slug(brandSlug)
-                                    .isActive(true)
-                                    .build()
-                    ));
+        if (req.brandId() != null) {
+            brand = brandRepository.findById(req.brandId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Marka", req.brandId()));
         }
 
         Product product = Product.builder()
@@ -121,46 +102,23 @@ public class ProductService {
         product.setSku(req.sku());
         product.setBasePrice(req.basePrice());
 
-        if (req.vatRate() != null) {
-            product.setVatRate(req.vatRate());
-        }
-        if (req.moq() != null) {
-            product.setMoq(req.moq());
-        }
-        if (req.stockQuantity() != null) {
-            product.setStockQuantity(req.stockQuantity());
-        }
-        if (req.unit() != null) {
-            product.setUnit(req.unit());
-        }
-        if (req.shortDescription() != null) {
-            product.setShortDescription(req.shortDescription());
-        }
-        if (req.description() != null) {
-            product.setDescription(req.description());
-        }
-        if (req.isActive() != null) {
-            product.setIsActive(req.isActive());
-        }
-        if (req.isFeatured() != null) {
-            product.setIsFeatured(req.isFeatured());
-        }
+        if (req.vatRate() != null) product.setVatRate(req.vatRate());
+        if (req.moq() != null) product.setMoq(req.moq());
+        if (req.stockQuantity() != null) product.setStockQuantity(req.stockQuantity());
+        if (req.unit() != null) product.setUnit(req.unit());
+        if (req.shortDescription() != null) product.setShortDescription(req.shortDescription());
+        if (req.description() != null) product.setDescription(req.description());
+        if (req.isActive() != null) product.setIsActive(req.isActive());
+        if (req.isFeatured() != null) product.setIsFeatured(req.isFeatured());
 
         Category category = categoryRepository.findById(req.categoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Kategori", req.categoryId()));
         product.setCategory(category);
 
         Brand brand = null;
-        if (req.brandName() != null && !req.brandName().isBlank()) {
-            String brandSlug = toSlug(req.brandName());
-            brand = brandRepository.findBySlug(brandSlug)
-                    .orElseGet(() -> brandRepository.save(
-                            Brand.builder()
-                                    .name(req.brandName().trim())
-                                    .slug(brandSlug)
-                                    .isActive(true)
-                                    .build()
-                    ));
+        if (req.brandId() != null) {
+            brand = brandRepository.findById(req.brandId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Marka", req.brandId()));
         }
         product.setBrand(brand);
 
@@ -175,26 +133,14 @@ public class ProductService {
         productRepository.deleteById(id);
     }
 
-    // ------------------------------------------------------------------ //
-    // Helpers
-    // ------------------------------------------------------------------ //
-
     private String toSlug(String input) {
         if (input == null) return "";
         String result = input.trim().toLowerCase();
         result = result
-                .replace('ş', 's')
-                .replace('ç', 'c')
-                .replace('ğ', 'g')
-                .replace('ü', 'u')
-                .replace('ö', 'o')
-                .replace('ı', 'i')
-                .replace('İ', 'i')
-                .replace('Ş', 's')
-                .replace('Ç', 'c')
-                .replace('Ğ', 'g')
-                .replace('Ü', 'u')
-                .replace('Ö', 'o');
+                .replace('ş', 's').replace('ç', 'c').replace('ğ', 'g')
+                .replace('ü', 'u').replace('ö', 'o').replace('ı', 'i')
+                .replace('İ', 'i').replace('Ş', 's').replace('Ç', 'c')
+                .replace('Ğ', 'g').replace('Ü', 'u').replace('Ö', 'o');
         result = result.replaceAll("[^a-z0-9\\s-]", "");
         result = result.replaceAll("[\\s]+", "-");
         result = result.replaceAll("-{2,}", "-");

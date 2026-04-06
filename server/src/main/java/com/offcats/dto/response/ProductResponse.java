@@ -2,7 +2,6 @@ package com.offcats.dto.response;
 
 import com.offcats.entity.Product;
 import com.offcats.entity.ProductImage;
-import com.offcats.entity.ProductPriceTier;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -16,6 +15,7 @@ public record ProductResponse(
         String categoryName,
         String categorySlug,
         Long categoryId,
+        Long brandId,
         String brandName,
         BigDecimal basePrice,
         BigDecimal vatRate,
@@ -26,9 +26,11 @@ public record ProductResponse(
         Boolean isFeatured,
         String primaryImageUrl,
         List<PriceTierDto> priceTiers,
-        Double averageRating
+        Double averageRating,
+        List<ImageDto> images
 ) {
     public record PriceTierDto(Integer minQuantity, Integer maxQuantity, BigDecimal unitPrice) {}
+    public record ImageDto(Long id, String imageUrl, Boolean isPrimary, Integer displayOrder) {}
 
     public static ProductResponse from(Product p) {
         String primaryImage = p.getImages().stream()
@@ -41,17 +43,22 @@ public record ProductResponse(
                 .map(t -> new PriceTierDto(t.getMinQuantity(), t.getMaxQuantity(), t.getUnitPrice()))
                 .toList();
 
+        List<ImageDto> images = p.getImages().stream()
+                .map(i -> new ImageDto(i.getId(), i.getImageUrl(), i.getIsPrimary(), i.getDisplayOrder()))
+                .toList();
+
         return new ProductResponse(
                 p.getId(), p.getName(), p.getSlug(), p.getSku(),
                 p.getShortDescription(),
                 p.getCategory() != null ? p.getCategory().getName() : null,
                 p.getCategory() != null ? p.getCategory().getSlug() : null,
                 p.getCategory() != null ? p.getCategory().getId() : null,
+                p.getBrand() != null ? p.getBrand().getId() : null,
                 p.getBrand() != null ? p.getBrand().getName() : null,
                 p.getBasePrice(), p.getVatRate(), p.getMoq(),
                 p.getAvailableStock(), p.getUnit(),
                 p.getIsActive(), p.getIsFeatured(),
-                primaryImage, tiers, null
+                primaryImage, tiers, null, images
         );
     }
 }

@@ -9,6 +9,7 @@ import type { Product } from '../types'
 import type { RootState, AppDispatch } from '../store'
 import { fetchProductsThunk } from '../store/productSlice'
 import { fetchCategoriesThunk } from '../store/categorySlice'
+import { imgUrl } from '../api/productApi'
 
 const SLIDES = [
   {
@@ -86,7 +87,7 @@ function ProductCard({ p }: { p: Product }) {
     }}>
       <div style={{ height: 165, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64, position: 'relative', flexShrink: 0, background: bg }}>
         {p.primaryImageUrl
-          ? <img src={p.primaryImageUrl} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 8 }} />
+          ? <img src={imgUrl(p.primaryImageUrl)} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 8 }} />
           : <span>{emoji}</span>
         }
       </div>

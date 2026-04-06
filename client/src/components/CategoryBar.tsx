@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
-import { RootState } from '../store'
+import type { RootState } from '../store'
 
 export default function CategoryBar() {
   const navigate = useNavigate()
@@ -33,16 +33,17 @@ export default function CategoryBar() {
               <div key={cat.category_id} style={{ position: 'relative', height: '100%', display: 'flex', alignItems: 'center' }}
                 className="cat-nav-item">
                 <button
+                  onClick={() => navigate(`/urunler?slug=${cat.category_slug}`)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 5,
                     padding: '0 16px', height: '100%',
                     fontSize: 14, fontWeight: 600,
                     color: 'rgba(255,255,255,.88)',
-                    background: 'none', border: 'none', cursor: 'default',
+                    background: 'none', border: 'none', cursor: 'pointer',
                     transition: '0.15s', whiteSpace: 'nowrap',
                   }}
                   className="cat-nav-btn">
-                  {cat.category_name} <span style={{ fontSize: 9, opacity: 0.6 }}>▾</span>
+                  {cat.emoji} {cat.category_name} {subs.length > 0 && <span style={{ fontSize: 9, opacity: 0.6 }}>▾</span>}
                 </button>
 
                 {subs.length > 0 && (
@@ -65,8 +66,8 @@ export default function CategoryBar() {
                         color: 'var(--text)',
                         cursor: 'pointer', transition: '0.15s',
                       }} className="drop-item"
-                        onClick={() => navigate(`/urunler?kategori=${sub.category_slug}`)}>
-                        {sub.category_name}
+                        onClick={() => navigate(`/urunler?slug=${sub.category_slug}`)}>
+                        {sub.emoji} {sub.category_name}
                       </div>
                     ))}
                   </div>

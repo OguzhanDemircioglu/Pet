@@ -1,10 +1,8 @@
-import { useState, useRef, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { useTheme } from '../context/ThemeContext'
-import { useSelector, useDispatch } from 'react-redux'
-import type { RootState, AppDispatch } from '../store'
-import { fetchProductsThunk } from '../store/productSlice'
-import { fetchCategoriesThunk } from '../store/categorySlice'
+import {useEffect, useRef, useState} from 'react'
+import {Link, useNavigate} from 'react-router-dom'
+import {useTheme} from '../context/ThemeContext'
+import {useSelector} from 'react-redux'
+import type {RootState} from '../store'
 
 interface HeaderProps {
   showSearch?: boolean
@@ -13,10 +11,8 @@ interface HeaderProps {
 export default function Header({ showSearch = true }: HeaderProps) {
   const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
-  const dispatch = useDispatch<AppDispatch>()
   const user = useSelector((s: RootState) => s.auth.user)
   const [searchVal, setSearchVal] = useState('')
-  const [searchOpen, setSearchOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const notifRef = useRef<HTMLDivElement>(null)
 
@@ -34,7 +30,6 @@ export default function Header({ showSearch = true }: HeaderProps) {
     e.preventDefault()
     if (searchVal.trim()) {
       navigate(`/urunler?q=${encodeURIComponent(searchVal.trim())}`)
-      setSearchOpen(false)
     }
   }
 
@@ -61,7 +56,7 @@ export default function Header({ showSearch = true }: HeaderProps) {
 
         {/* Logo + Theme Toggle */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginRight: 20 }}>
-          <Link to="/" onClick={() => { dispatch(fetchProductsThunk(true)); dispatch(fetchCategoriesThunk(true)) }} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
             <img src="/logo.svg" alt="OffCats" style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0 }} />
             <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.5, whiteSpace: 'nowrap' }}>
               <span style={{ color: 'var(--primary)' }}>OFF</span>
@@ -94,8 +89,6 @@ export default function Header({ showSearch = true }: HeaderProps) {
               type="text"
               value={searchVal}
               onChange={e => setSearchVal(e.target.value)}
-              onFocus={() => setSearchOpen(true)}
-              onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
               placeholder="Ürün, kategori veya marka ara..."
               autoComplete="off"
               style={{

@@ -22,6 +22,9 @@ public class Category {
     @Column(nullable = false, length = 100)
     private String name;
 
+    @Column(length = 10)
+    private String emoji;
+
     @Column(nullable = false, length = 150)
     private String slug;
 
