@@ -9,43 +9,25 @@ import type { Product } from '../types'
 import type { RootState, AppDispatch } from '../store'
 import { fetchProductsThunk } from '../store/productSlice'
 import { fetchCategoriesThunk } from '../store/categorySlice'
+import { addToCart } from '../store/cartSlice'
 import { imgUrl } from '../api/productApi'
+import { campaignApi } from '../api/campaignApi'
+import toast from 'react-hot-toast'
 
-const SLIDES = [
-  {
-    bg: 'linear-gradient(130deg,#dc2626 0%,#991b1b 50%,#7f1d1d 100%)',
-    badge: '🔥 Mart Kampanyası',
-    title: 'Royal Canin\'de\n%20 Toptan İndirim',
-    sub: 'Tüm Royal Canin ürünlerinde geçerli özel toptan fiyatları. 10+ adet alımlarda ekstra %5 indirim!',
-    btnColor: '#dc2626',
-    emoji: '🐱',
-    sticker: '%20 İndirim',
-  },
-  {
-    bg: 'linear-gradient(130deg,#1e3a5f 0%,#0f2035 50%,#0a1628 100%)',
-    badge: '🚚 Ücretsiz Kargo',
-    title: '750 ₺ Üzeri\nÜcretsiz Kargo',
-    sub: 'Tüm siparişlerinizde 750 ₺ ve üzeri alımlarda ücretsiz hızlı kargo fırsatı. Tüm Türkiye\'ye teslimat!',
-    btnColor: '#1e3a5f',
-    emoji: '🚚',
-  },
-  {
-    bg: 'linear-gradient(130deg,#0f766e 0%,#0d5c56 50%,#0a4a44 100%)',
-    badge: '🐟 Akvaryum Sezonu',
-    title: 'Yeni Akvaryum\nÜrünleri Geldi!',
-    sub: 'JBL, Tetra ve Sera markalarında yeni sezon ürünler. Filtre, ışıklandırma ve yem çeşitlerinde toptan fiyatlar.',
-    btnColor: '#0f766e',
-    emoji: '🐟',
-  },
-  {
-    bg: 'linear-gradient(130deg,#7c3aed 0%,#6d28d9 50%,#5b21b6 100%)',
-    badge: '💜 Özel Teklif',
-    title: 'Hill\'s Science Plan\nStok Fiyatına!',
-    sub: 'Hill\'s Science Plan kedi ve köpek mamalarında sınırlı stok fırsatı. Erken davranın, stoklar tükeniyor!',
-    btnColor: '#7c3aed',
-    emoji: '🐶',
-    sticker: 'Son Stoklar',
-  },
+interface Slide {
+  bg: string; badge: string; title: string; sub: string; btnColor: string; emoji: string; sticker?: string
+}
+
+const extractFirstColor = (gradient: string): string => {
+  const m = gradient.match(/#[0-9a-fA-F]{6}/)
+  return m ? m[0] : '#dc2626'
+}
+
+const FALLBACK_SLIDES: Slide[] = [
+  { bg: 'linear-gradient(130deg,#dc2626 0%,#991b1b 50%,#7f1d1d 100%)', badge: '🔥 Mart Kampanyası', title: "Royal Canin'de\n%20 Toptan İndirim", sub: 'Tüm Royal Canin ürünlerinde geçerli özel toptan fiyatları.', btnColor: '#dc2626', emoji: '🐱', sticker: '%20 İndirim' },
+  { bg: 'linear-gradient(130deg,#1e3a5f 0%,#0f2035 50%,#0a1628 100%)', badge: '🚚 Ücretsiz Kargo', title: '750 ₺ Üzeri\nÜcretsiz Kargo', sub: 'Tüm siparişlerinizde 750 ₺ ve üzeri alımlarda ücretsiz hızlı kargo fırsatı.', btnColor: '#1e3a5f', emoji: '🚚' },
+  { bg: 'linear-gradient(130deg,#0f766e 0%,#0d5c56 50%,#0a4a44 100%)', badge: '🐟 Akvaryum Sezonu', title: 'Yeni Akvaryum\nÜrünleri Geldi!', sub: 'JBL, Tetra ve Sera markalarında yeni sezon ürünler.', btnColor: '#0f766e', emoji: '🐟' },
+  { bg: 'linear-gradient(130deg,#7c3aed 0%,#6d28d9 50%,#5b21b6 100%)', badge: '💜 Özel Teklif', title: "Hill's Science Plan\nStok Fiyatına!", sub: "Hill's Science Plan kedi ve köpek mamalarında sınırlı stok fırsatı.", btnColor: '#7c3aed', emoji: '🐶', sticker: 'Son Stoklar' },
 ]
 
 const CAT_CARDS = [
@@ -66,6 +48,7 @@ const WHY_CARDS = [
 
 function ProductCard({ p }: { p: Product }) {
   const navigate = useNavigate()
+  const dispatch = useDispatch<AppDispatch>()
   const BG_COLORS = [
     'linear-gradient(135deg,#fce7f3,#fdf2f8)',
     'linear-gradient(135deg,#dbeafe,#eff6ff)',
@@ -100,7 +83,11 @@ function ProductCard({ p }: { p: Product }) {
             <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--primary)' }}>₺{p.basePrice.toFixed(2)}</div>
           </div>
         </div>
-        <button style={{
+        <button onClick={e => {
+          e.stopPropagation(); e.preventDefault()
+          dispatch(addToCart({ productId: p.id, name: p.name, slug: p.slug, brandName: p.brandName, basePrice: p.basePrice, unit: p.unit, moq: p.moq, primaryImageUrl: p.primaryImageUrl }))
+          toast.success('Sepete eklendi')
+        }} style={{
           width: '100%', background: 'var(--primary)', color: '#fff',
           fontSize: 13, fontWeight: 700, padding: '9px 0',
           borderRadius: 'var(--r)', border: 'none', cursor: 'pointer', transition: '0.2s',
@@ -112,6 +99,7 @@ function ProductCard({ p }: { p: Product }) {
 
 export default function HomePage() {
   const [slideIdx, setSlideIdx] = useState(0)
+  const [slides, setSlides] = useState<Slide[]>(FALLBACK_SLIDES)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const dispatch = useDispatch<AppDispatch>()
   const products = useSelector((s: RootState) => s.products.products)
@@ -120,17 +108,30 @@ export default function HomePage() {
   useEffect(() => {
     dispatch(fetchProductsThunk())
     dispatch(fetchCategoriesThunk())
+    campaignApi.getActiveCampaigns().then(data => {
+      if (data.length > 0) {
+        setSlides(data.map(c => ({
+          bg: c.bgColor,
+          badge: c.badge,
+          title: c.title,
+          sub: c.description || '',
+          btnColor: extractFirstColor(c.bgColor),
+          emoji: c.emoji || '📢',
+          sticker: c.sticker || undefined,
+        })))
+      }
+    }).catch(() => {})
   }, [dispatch])
 
   useEffect(() => {
-    timerRef.current = setInterval(() => setSlideIdx(i => (i + 1) % SLIDES.length), 4500)
+    timerRef.current = setInterval(() => setSlideIdx(i => (i + 1) % slides.length), 4500)
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
-  }, [])
+  }, [slides.length])
 
   const goSlide = (i: number) => {
     setSlideIdx(i)
     if (timerRef.current) clearInterval(timerRef.current)
-    timerRef.current = setInterval(() => setSlideIdx(x => (x + 1) % SLIDES.length), 4500)
+    timerRef.current = setInterval(() => setSlideIdx(x => (x + 1) % slides.length), 4500)
   }
 
   return (
@@ -143,7 +144,7 @@ export default function HomePage() {
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '16px 24px 0' }}>
       <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 14 }}>
         <div style={{ display: 'flex', transition: 'transform 0.45s cubic-bezier(.4,0,.2,1)', transform: `translateX(-${slideIdx * 100}%)` }}>
-          {SLIDES.map((s, i) => (
+          {slides.map((s, i) => (
             <div key={i} style={{
               minWidth: '100%', height: 320,
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -165,11 +166,11 @@ export default function HomePage() {
           ))}
         </div>
 
-        <button onClick={() => goSlide((slideIdx - 1 + SLIDES.length) % SLIDES.length)} style={{ position: 'absolute', top: '50%', left: 16, transform: 'translateY(-50%)', width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,.2)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,.3)', color: '#fff', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}>‹</button>
-        <button onClick={() => goSlide((slideIdx + 1) % SLIDES.length)} style={{ position: 'absolute', top: '50%', right: 16, transform: 'translateY(-50%)', width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,.2)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,.3)', color: '#fff', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}>›</button>
+        <button onClick={() => goSlide((slideIdx - 1 + slides.length) % slides.length)} style={{ position: 'absolute', top: '50%', left: 16, transform: 'translateY(-50%)', width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,.2)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,.3)', color: '#fff', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}>‹</button>
+        <button onClick={() => goSlide((slideIdx + 1) % slides.length)} style={{ position: 'absolute', top: '50%', right: 16, transform: 'translateY(-50%)', width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,.2)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,.3)', color: '#fff', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}>›</button>
 
         <div style={{ position: 'absolute', bottom: 14, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 7, zIndex: 10 }}>
-          {SLIDES.map((_, i) => (
+          {slides.map((_, i) => (
             <div key={i} onClick={() => goSlide(i)} style={{ width: i === slideIdx ? 24 : 8, height: 8, borderRadius: i === slideIdx ? 4 : '50%', background: i === slideIdx ? '#fff' : 'rgba(255,255,255,.4)', cursor: 'pointer', transition: '0.2s' }} />
           ))}
         </div>

@@ -5,7 +5,9 @@ import type { Product } from '../types'
 import type { RootState, AppDispatch } from '../store'
 import { fetchProductsThunk } from '../store/productSlice'
 import { fetchCategoriesThunk } from '../store/categorySlice'
+import { addToCart } from '../store/cartSlice'
 import { imgUrl } from '../api/productApi'
+import toast from 'react-hot-toast'
 import InfoBar from '../components/InfoBar'
 import Header from '../components/Header'
 import CategoryBar from '../components/CategoryBar'
@@ -172,6 +174,7 @@ export default function ProductListPage() {
 
 function ProductCard({ p }: { p: Product }) {
   const navigate = useNavigate()
+  const dispatch = useDispatch<AppDispatch>()
   const bg = BG_COLORS[p.name.charCodeAt(0) % BG_COLORS.length]
   const emoji = (p.categoryName && EMOJIS[p.categoryName.toLowerCase()]) || '🐾'
 
@@ -197,7 +200,11 @@ function ProductCard({ p }: { p: Product }) {
         <div style={{ fontSize: 16, fontWeight: 900, color: 'var(--primary)', marginBottom: 8 }}>₺{p.basePrice.toFixed(2)}</div>
         <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 8 }}>Min. {p.moq} {p.unit}</div>
         <button
-          onClick={e => { e.stopPropagation() }}
+          onClick={e => {
+            e.stopPropagation(); e.preventDefault()
+            dispatch(addToCart({ productId: p.id, name: p.name, slug: p.slug, brandName: p.brandName, basePrice: p.basePrice, unit: p.unit, moq: p.moq, primaryImageUrl: p.primaryImageUrl }))
+            toast.success('Sepete eklendi')
+          }}
           style={{ width: '100%', background: 'var(--primary)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '8px 0', borderRadius: 'var(--r)', border: 'none', cursor: 'pointer', transition: '0.2s' }}>
           Sepete Ekle
         </button>

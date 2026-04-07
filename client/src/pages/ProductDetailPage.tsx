@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
-import { useSelector, useDispatch } from 'react-redux'
-import { productApi, imgUrl } from '../api/productApi'
-import { fetchCategoriesThunk } from '../store/categorySlice'
-import type { RootState, AppDispatch } from '../store'
-import type { Product } from '../types'
+import {useEffect, useState} from 'react'
+import {Link, useParams} from 'react-router-dom'
+import {useDispatch, useSelector} from 'react-redux'
+import {imgUrl, productApi} from '../api/productApi'
+import {fetchCategoriesThunk} from '../store/categorySlice'
+import {addToCart} from '../store/cartSlice'
+import toast from 'react-hot-toast'
+import type {AppDispatch, RootState} from '../store'
+import type {Product} from '../types'
 import InfoBar from '../components/InfoBar'
 import Header from '../components/Header'
 import CategoryBar from '../components/CategoryBar'
@@ -95,6 +97,8 @@ export default function ProductDetailPage() {
   }
 
   const handleAddToCart = () => {
+    dispatch(addToCart({ productId: product.id, name: product.name, slug: product.slug, brandName: product.brandName, basePrice: Number(effectivePrice), unit: product.unit, moq: product.moq, primaryImageUrl: product.primaryImageUrl }))
+    toast.success('Sepete eklendi')
     setAddedToCart(true)
     setTimeout(() => setAddedToCart(false), 1800)
   }

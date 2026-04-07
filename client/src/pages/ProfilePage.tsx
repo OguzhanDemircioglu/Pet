@@ -10,6 +10,7 @@ import type { RootState, AppDispatch } from '../store'
 import { logout } from '../store/authSlice'
 import { fetchProductsThunk } from '../store/productSlice'
 import { productApi, brandApi, categoryApi, userApi, productImageApi, imgUrl, type ProductForm } from '../api/productApi'
+import { campaignApi, discountApi, type CampaignResponse, type DiscountResponse, type DiscountScope, type CampaignRequest } from '../api/campaignApi'
 import { fetchCategoriesThunk } from '../store/categorySlice'
 import type { Product, ProductImage as ProductImageType, Brand, Category, AdminUser } from '../types'
 
@@ -126,7 +127,7 @@ export default function ProfilePage() {
           {section === 'products' && isAdmin && <AdminProductsSection products={allProducts} onRefresh={() => dispatch(fetchProductsThunk(true))} categories={categories} categoriesLoading={categoriesLoading} brands={brands} />}
           {section === 'brands' && isAdmin && <AdminBrandsSection brands={brands} onRefresh={() => brandApi.adminList().then(setBrands).catch(() => {})} />}
           {section === 'categories' && isAdmin && <AdminCategoriesSection categories={categories} onRefresh={() => dispatch(fetchCategoriesThunk(true))} />}
-          {section === 'campaigns' && isAdmin && <AdminCampaignsSection />}
+          {section === 'campaigns' && isAdmin && <AdminCampaignsSection brands={brands} />}
           {section === 'users' && isAdmin && <AdminUsersSection />}
         </div>
       </div>
@@ -707,125 +708,399 @@ function AdminProductsSection({ products, onRefresh, categories, categoriesLoadi
 }
 
 // ─── Admin Campaigns Section ───────────────────────────────────────────────────
-const CAMPAIGN_COLORS = [
+const CAMP_COLORS = [
   'linear-gradient(130deg,#dc2626 0%,#991b1b 50%,#7f1d1d 100%)',
   'linear-gradient(130deg,#1e3a5f 0%,#0f2035 50%,#0a1628 100%)',
   'linear-gradient(130deg,#0f766e 0%,#0d5c56 50%,#0a4a44 100%)',
   'linear-gradient(130deg,#7c3aed 0%,#6d28d9 50%,#5b21b6 100%)',
+  'linear-gradient(130deg,#b45309 0%,#92400e 50%,#78350f 100%)',
+  'linear-gradient(130deg,#0369a1 0%,#075985 50%,#0c4a6e 100%)',
 ]
+const EMOJI_OPTS = ['🐱','🐶','🐦','🐟','🐹','🦎','🎁','🔥','🚚','💜','⭐','🏆','💯','🎉','🛍️','💰','🎀','🌟','❤️','🐾','🦴','🐠','🐇','🦜','🌿','🐕','🐈','📣','🎯','🎊']
 
-type Campaign = { badge: string; title: string; sub: string; bg: string; emoji: string; sticker: string }
-const DEFAULT_CAMPAIGNS: Campaign[] = [
-  { badge: '🔥 Mart Kampanyası', title: "Royal Canin'de\n%20 Toptan İndirim", sub: 'Tüm Royal Canin ürünlerinde geçerli özel toptan fiyatları.', bg: CAMPAIGN_COLORS[0], emoji: '🐱', sticker: '%20 İndirim' },
-  { badge: '🚚 Ücretsiz Kargo', title: '750 ₺ Üzeri\nÜcretsiz Kargo', sub: 'Tüm siparişlerinizde 750 ₺ ve üzeri alımlarda ücretsiz hızlı kargo.', bg: CAMPAIGN_COLORS[1], emoji: '🚚', sticker: '' },
-  { badge: '🐟 Akvaryum Sezonu', title: 'Yeni Akvaryum\nÜrünleri Geldi!', sub: 'JBL, Tetra ve Sera markalarında yeni sezon ürünler.', bg: CAMPAIGN_COLORS[2], emoji: '🐟', sticker: '' },
-  { badge: '💜 Özel Teklif', title: "Hill's Science Plan\nStok Fiyatına!", sub: "Hill's Science Plan kedi ve köpek mamalarında sınırlı stok fırsatı.", bg: CAMPAIGN_COLORS[3], emoji: '🐶', sticker: 'Son Stoklar' },
-]
+interface CampForm {
+  title: string; badge: string; description: string; emoji: string; sticker: string
+  bgColor: string; startDate: string; endDate: string; isActive: boolean
+}
+interface DiscForm {
+  name: string; emoji: string; scope: DiscountScope
+  discountType: 'PERCENT' | 'FIXED'; discountValue: string
+  categoryId: string; productId: string; brandId: string
+  couponCode: string; minOrderAmount: string; usageLimit: string
+  startDate: string; endDate: string; isActive: boolean
+}
 
-function AdminCampaignsSection() {
-  const [campaigns, setCampaigns] = useState<Campaign[]>(() => {
-    try { const s = localStorage.getItem('offcats_campaigns'); return s ? JSON.parse(s) : DEFAULT_CAMPAIGNS } catch { return DEFAULT_CAMPAIGNS }
-  })
-  const [modal, setModal] = useState<null | 'add' | 'edit'>(null)
-  const [editIdx, setEditIdx] = useState<number | null>(null)
-  const [deleteIdx, setDeleteIdx] = useState<number | null>(null)
-  const [form, setForm] = useState<Campaign>({ badge: '', title: '', sub: '', bg: CAMPAIGN_COLORS[0], emoji: '🎁', sticker: '' })
+const DISC_BADGE: Record<string, { label: string; color: string; bg: string }> = {
+  CATEGORY: { label: 'KATEGORİ', color: '#0369a1', bg: '#e0f2fe' },
+  PRODUCT:  { label: 'ÜRÜN',     color: '#16a34a', bg: '#dcfce7' },
+  BRAND:    { label: 'MARKA',    color: '#7c3aed', bg: '#ede9fe' },
+  GENERAL:  { label: 'KUPON',    color: '#b45309', bg: '#fef3c7' },
+}
 
-  const save = (list: Campaign[]) => { setCampaigns(list); localStorage.setItem('offcats_campaigns', JSON.stringify(list)); toast.success('Kampanyalar güncellendi') }
+function AdminCampaignsSection({ brands }: { brands: Brand[] }) {
+  const categories = useSelector((s: RootState) => s.categories.categories)
+  const allProducts = useSelector((s: RootState) => s.products.products)
 
-  const openAdd = () => { setForm({ badge: '', title: '', sub: '', bg: CAMPAIGN_COLORS[0], emoji: '🎁', sticker: '' }); setEditIdx(null); setModal('add') }
-  const openEdit = (i: number) => { setForm({ ...campaigns[i] }); setEditIdx(i); setModal('edit') }
-  const handleSave = () => {
-    if (!form.badge || !form.title) { toast.error('Badge ve başlık zorunlu'); return }
-    const updated = modal === 'add' ? [...campaigns, form] : campaigns.map((c, i) => i === editIdx ? form : c)
-    save(updated); setModal(null)
+  const [tab, setTab] = useState<'info' | 'discount'>('info')
+  const [campaigns, setCampaigns] = useState<CampaignResponse[]>([])
+  const [discounts, setDiscounts] = useState<DiscountResponse[]>([])
+  const [loading, setLoading] = useState(true)
+  const [activeEmojis, setActiveEmojis] = useState<Set<string>>(new Set())
+  const [modal, setModal] = useState<null | 'camp-add' | 'camp-edit' | 'disc-add'>(null)
+  const [editCamp, setEditCamp] = useState<CampaignResponse | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ kind: 'campaign' | 'discount'; id: number; dtype?: string } | null>(null)
+  const [campForm, setCampForm] = useState<CampForm>({ title: '', badge: '', description: '', emoji: '', sticker: '', bgColor: CAMP_COLORS[0], startDate: '', endDate: '', isActive: true })
+  const [discForm, setDiscForm] = useState<DiscForm>({ name: '', emoji: '', scope: 'category', discountType: 'PERCENT', discountValue: '', categoryId: '', productId: '', brandId: '', couponCode: '', minOrderAmount: '', usageLimit: '', startDate: '', endDate: '', isActive: true })
+  const [saving, setSaving] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [productSearch, setProductSearch] = useState('')
+
+  const loadData = async () => {
+    setLoading(true)
+    try {
+      const [c, d, ce, de] = await Promise.all([campaignApi.list(), discountApi.list(), campaignApi.getActiveEmojis(), discountApi.getActiveEmojis()])
+      setCampaigns(c); setDiscounts(d); setActiveEmojis(new Set([...ce, ...de]))
+    } catch { toast.error('Veriler yüklenemedi') }
+    finally { setLoading(false) }
   }
-  const handleDelete = (i: number) => { save(campaigns.filter((_, j) => j !== i)); setDeleteIdx(null) }
+
+  useEffect(() => { loadData() }, [])
+
+  const openCampAdd = () => { setCampForm({ title: '', badge: '', description: '', emoji: '', sticker: '', bgColor: CAMP_COLORS[0], startDate: '', endDate: '', isActive: true }); setSubmitted(false); setEditCamp(null); setModal('camp-add') }
+  const openCampEdit = (c: CampaignResponse) => {
+    setCampForm({ title: c.title, badge: c.badge, description: c.description || '', emoji: c.emoji || '', sticker: c.sticker || '', bgColor: c.bgColor, startDate: c.startDate ? c.startDate.slice(0, 16) : '', endDate: c.endDate ? c.endDate.slice(0, 16) : '', isActive: c.isActive })
+    setSubmitted(false); setEditCamp(c); setModal('camp-edit')
+  }
+  const openDiscAdd = () => { setDiscForm({ name: '', emoji: '', scope: 'category', discountType: 'PERCENT', discountValue: '', categoryId: '', productId: '', brandId: '', couponCode: '', minOrderAmount: '', usageLimit: '', startDate: '', endDate: '', isActive: true }); setSubmitted(false); setProductSearch(''); setModal('disc-add') }
+
+  const handleSaveCampaign = async () => {
+    setSubmitted(true)
+    if (!campForm.badge.trim() || !campForm.title.trim()) { toast.error('Badge ve başlık zorunlu'); return }
+    setSaving(true)
+    try {
+      const payload: CampaignRequest = { ...campForm, description: campForm.description || null, emoji: campForm.emoji || null, sticker: campForm.sticker || null, startDate: campForm.startDate || null, endDate: campForm.endDate || null }
+      if (modal === 'camp-add') { await campaignApi.create(payload); toast.success('Kampanya eklendi') }
+      else if (editCamp) { await campaignApi.update(editCamp.id, payload); toast.success('Kampanya güncellendi') }
+      setModal(null); loadData()
+    } catch (err: any) { toast.error(err?.response?.data?.message || 'Bir hata oluştu') }
+    finally { setSaving(false) }
+  }
+
+  const handleSaveDiscount = async () => {
+    setSubmitted(true)
+    if (!discForm.name.trim()) { toast.error('Kampanya adı zorunlu'); return }
+    if (!discForm.discountValue || isNaN(+discForm.discountValue)) { toast.error('İndirim değeri zorunlu'); return }
+    if (!discForm.startDate || !discForm.endDate) { toast.error('Tarih aralığı zorunlu'); return }
+    if (discForm.scope === 'category' && !discForm.categoryId) { toast.error('Kategori seçin'); return }
+    if (discForm.scope === 'product' && !discForm.productId) { toast.error('Ürün seçin'); return }
+    if (discForm.scope === 'brand' && !discForm.brandId) { toast.error('Marka seçin'); return }
+    if (discForm.scope === 'general' && !discForm.couponCode.trim()) { toast.error('Kupon kodu zorunlu'); return }
+    setSaving(true)
+    try {
+      const base = { name: discForm.name, emoji: discForm.emoji || null, discountType: discForm.discountType as 'PERCENT' | 'FIXED', discountValue: +discForm.discountValue, startDate: discForm.startDate, endDate: discForm.endDate, isActive: discForm.isActive }
+      if (discForm.scope === 'category') await discountApi.create('category', { ...base, categoryId: +discForm.categoryId })
+      else if (discForm.scope === 'product') await discountApi.create('product', { ...base, productId: +discForm.productId })
+      else if (discForm.scope === 'brand') await discountApi.create('brand', { ...base, brandId: +discForm.brandId })
+      else await discountApi.create('general', { ...base, couponCode: discForm.couponCode, minOrderAmount: discForm.minOrderAmount ? +discForm.minOrderAmount : null, usageLimit: discForm.usageLimit ? +discForm.usageLimit : null })
+      toast.success('İndirim kampanyası eklendi'); setModal(null); loadData()
+    } catch (err: any) { toast.error(err?.response?.data?.message || 'Bir hata oluştu') }
+    finally { setSaving(false) }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteConfirm) return
+    try {
+      if (deleteConfirm.kind === 'campaign') { await campaignApi.delete(deleteConfirm.id); toast.success('Kampanya silindi') }
+      else { await discountApi.delete(deleteConfirm.dtype!, deleteConfirm.id); toast.success('İndirim silindi') }
+      setDeleteConfirm(null); loadData()
+    } catch (err: any) { toast.error(err?.response?.data?.message || 'Silinemedi'); setDeleteConfirm(null) }
+  }
+
+  const filteredProducts = useMemo(() => productSearch.length < 2 ? [] : allProducts.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase())).slice(0, 8), [allProducts, productSearch])
+  const leafCategories = useMemo(() => categories.filter(c => c.parent_id !== null), [categories])
+
+  const EmojiPicker = ({ selected, onSelect }: { selected: string; onSelect: (e: string) => void }) => (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+      {EMOJI_OPTS.map(em => {
+        const disabled = activeEmojis.has(em) && em !== selected
+        return (
+          <button key={em} type="button" onClick={() => !disabled && onSelect(selected === em ? '' : em)} disabled={disabled}
+            style={{ width: 36, height: 36, borderRadius: 8, border: selected === em ? '2px solid var(--primary)' : '1px solid var(--border)', background: selected === em ? 'var(--primary-bg)' : 'var(--bg3)', fontSize: 18, cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.3 : 1, transition: '0.15s' }}>
+            {em}
+          </button>
+        )
+      })}
+    </div>
+  )
 
   return (
     <div>
-      <SectionHead title="Kampanya Yönetimi" sub="Ana sayfa karuselindeki kampanya slaytları" action={
-        <button onClick={openAdd} style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--r)', padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>+ Yeni Kampanya</button>
+      <SectionHead title="Kampanya Yönetimi" sub="Bilgilendirme ve indirim kampanyaları" action={
+        <button onClick={tab === 'info' ? openCampAdd : openDiscAdd} style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--r)', padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>+ Yeni Kampanya</button>
       } />
 
-      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: 'var(--bg3)', borderBottom: '1px solid var(--border)' }}>
-              {['Önizleme', 'Badge', 'Başlık', 'Açıklama', 'Sticker', ''].map(h => (
-                <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {campaigns.map((c, i) => (
-              <tr key={i} style={{ borderBottom: i < campaigns.length - 1 ? '1px solid var(--border)' : 'none' }} className="admin-row">
-                <td style={{ padding: '10px 14px' }}>
-                  <div style={{ width: 48, height: 48, borderRadius: 10, background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>{c.emoji}</div>
-                </td>
-                <td style={{ padding: '10px 14px', fontSize: 12.5, color: 'var(--text2)', maxWidth: 120 }}>{c.badge}</td>
-                <td style={{ padding: '10px 14px' }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', whiteSpace: 'pre-line', lineHeight: 1.3 }}>{c.title}</div>
-                </td>
-                <td style={{ padding: '10px 14px', fontSize: 12.5, color: 'var(--text2)', maxWidth: 200 }}>
-                  <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.sub || '—'}</div>
-                </td>
-                <td style={{ padding: '10px 14px' }}>
-                  {c.sticker ? (
-                    <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 4, background: 'var(--primary-bg)', color: 'var(--primary)', fontSize: 11.5, fontWeight: 700 }}>{c.sticker}</span>
-                  ) : <span style={{ color: 'var(--text3)', fontSize: 13 }}>—</span>}
-                </td>
-                <td style={{ padding: '10px 14px' }}>
-                  {deleteIdx === i ? (
-                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                      <span style={{ fontSize: 12, color: 'var(--text2)' }}>Emin misin?</span>
-                      <button onClick={() => handleDelete(i)} style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: 'var(--primary)', border: 'none', borderRadius: 5, padding: '3px 9px', cursor: 'pointer' }}>Evet</button>
-                      <button onClick={() => setDeleteIdx(null)} style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '3px 9px', cursor: 'pointer' }}>Hayır</button>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => openEdit(i)} style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 10px', cursor: 'pointer' }}>Düzenle</button>
-                      <button onClick={() => setDeleteIdx(i)} style={{ fontSize: 12, color: 'var(--primary)', background: 'var(--primary-bg)', border: '1px solid rgba(220,38,38,.2)', borderRadius: 5, padding: '4px 10px', cursor: 'pointer' }}>Sil</button>
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {campaigns.length === 0 && (
-              <tr><td colSpan={6} style={{ padding: 40, textAlign: 'center', color: 'var(--text3)', fontSize: 14 }}>Kampanya yok</td></tr>
-            )}
-          </tbody>
-        </table>
+      {/* Tabs */}
+      <div style={{ display: 'flex', marginBottom: 16, border: '1px solid var(--border)', borderRadius: 'var(--r)', overflow: 'hidden', width: 'fit-content' }}>
+        {(['info', 'discount'] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)} style={{ padding: '8px 20px', fontSize: 13, fontWeight: tab === t ? 700 : 500, background: tab === t ? 'var(--primary)' : 'var(--bg2)', color: tab === t ? '#fff' : 'var(--text2)', border: 'none', cursor: 'pointer', transition: '0.15s' }}>
+            {t === 'info' ? '📢 Bilgilendirme' : '🏷️ İndirimler'}
+          </button>
+        ))}
       </div>
 
-      {/* Campaign Modal */}
-      {modal && (
+      {loading ? (
+        <div style={{ padding: 40, textAlign: 'center', color: 'var(--text3)' }}>Yükleniyor...</div>
+      ) : tab === 'info' ? (
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: 'var(--bg3)', borderBottom: '1px solid var(--border)' }}>
+                {['Önizleme', 'Badge', 'Başlık', 'Açıklama', 'Durum', ''].map(h => (
+                  <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {campaigns.map((c, i) => (
+                <tr key={c.id} style={{ borderBottom: i < campaigns.length - 1 ? '1px solid var(--border)' : 'none' }} className="admin-row">
+                  <td style={{ padding: '10px 14px' }}>
+                    <div style={{ width: 48, height: 48, borderRadius: 10, background: c.bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>{c.emoji || '📢'}</div>
+                  </td>
+                  <td style={{ padding: '10px 14px', fontSize: 12.5, color: 'var(--text2)', maxWidth: 130 }}>{c.badge}</td>
+                  <td style={{ padding: '10px 14px' }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', whiteSpace: 'pre-line', lineHeight: 1.3 }}>{c.title}</div>
+                  </td>
+                  <td style={{ padding: '10px 14px', fontSize: 12.5, color: 'var(--text2)', maxWidth: 180 }}>
+                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.description || '—'}</div>
+                  </td>
+                  <td style={{ padding: '10px 14px' }}>
+                    <span style={{ display: 'inline-block', padding: '2px 9px', borderRadius: 20, fontSize: 11.5, fontWeight: 700, background: c.isActive ? '#f0fdf4' : 'var(--bg3)', color: c.isActive ? '#16a34a' : 'var(--text3)' }}>{c.isActive ? 'Aktif' : 'Pasif'}</span>
+                  </td>
+                  <td style={{ padding: '10px 14px' }}>
+                    {deleteConfirm?.kind === 'campaign' && deleteConfirm.id === c.id ? (
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <span style={{ fontSize: 12, color: 'var(--text2)' }}>Emin misin?</span>
+                        <button onClick={handleDelete} style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: 'var(--primary)', border: 'none', borderRadius: 5, padding: '3px 9px', cursor: 'pointer' }}>Evet</button>
+                        <button onClick={() => setDeleteConfirm(null)} style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '3px 9px', cursor: 'pointer' }}>Hayır</button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={() => openCampEdit(c)} style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 10px', cursor: 'pointer' }}>Düzenle</button>
+                        <button onClick={() => setDeleteConfirm({ kind: 'campaign', id: c.id })} style={{ fontSize: 12, color: 'var(--primary)', background: 'var(--primary-bg)', border: '1px solid rgba(220,38,38,.2)', borderRadius: 5, padding: '4px 10px', cursor: 'pointer' }}>Sil</button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {campaigns.length === 0 && <tr><td colSpan={6} style={{ padding: 40, textAlign: 'center', color: 'var(--text3)', fontSize: 14 }}>Bilgilendirme kampanyası yok</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: 'var(--bg3)', borderBottom: '1px solid var(--border)' }}>
+                {['Tip', 'Adı', 'Hedef', 'İndirim', 'Kupon', 'Durum', ''].map(h => (
+                  <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {discounts.map((d, i) => {
+                const badge = DISC_BADGE[d.type] || { label: d.type, color: 'var(--text2)', bg: 'var(--bg3)' }
+                return (
+                  <tr key={`${d.type}-${d.id}`} style={{ borderBottom: i < discounts.length - 1 ? '1px solid var(--border)' : 'none' }} className="admin-row">
+                    <td style={{ padding: '10px 14px' }}>
+                      <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 800, background: badge.bg, color: badge.color, letterSpacing: 0.3 }}>{badge.label}</span>
+                    </td>
+                    <td style={{ padding: '10px 14px', fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                      {d.emoji && <span style={{ marginRight: 5 }}>{d.emoji}</span>}{d.name}
+                    </td>
+                    <td style={{ padding: '10px 14px', fontSize: 12.5, color: 'var(--text2)' }}>{d.targetName || '—'}</td>
+                    <td style={{ padding: '10px 14px', fontSize: 13, fontWeight: 700, color: 'var(--primary)' }}>
+                      {d.discountValue != null ? `${d.discountType === 'PERCENT' ? '%' : '₺'}${d.discountValue}` : '—'}
+                    </td>
+                    <td style={{ padding: '10px 14px', fontSize: 12, color: 'var(--text2)', fontFamily: 'monospace' }}>{d.couponCode || '—'}</td>
+                    <td style={{ padding: '10px 14px' }}>
+                      <span style={{ display: 'inline-block', padding: '2px 9px', borderRadius: 20, fontSize: 11.5, fontWeight: 700, background: d.isActive ? '#f0fdf4' : 'var(--bg3)', color: d.isActive ? '#16a34a' : 'var(--text3)' }}>{d.isActive ? 'Aktif' : 'Pasif'}</span>
+                    </td>
+                    <td style={{ padding: '10px 14px' }}>
+                      {deleteConfirm?.kind === 'discount' && deleteConfirm.id === d.id ? (
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <span style={{ fontSize: 12, color: 'var(--text2)' }}>Emin misin?</span>
+                          <button onClick={handleDelete} style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: 'var(--primary)', border: 'none', borderRadius: 5, padding: '3px 9px', cursor: 'pointer' }}>Evet</button>
+                          <button onClick={() => setDeleteConfirm(null)} style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '3px 9px', cursor: 'pointer' }}>Hayır</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setDeleteConfirm({ kind: 'discount', id: d.id, dtype: d.type })} style={{ fontSize: 12, color: 'var(--primary)', background: 'var(--primary-bg)', border: '1px solid rgba(220,38,38,.2)', borderRadius: 5, padding: '4px 10px', cursor: 'pointer' }}>Sil</button>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+              {discounts.length === 0 && <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: 'var(--text3)', fontSize: 14 }}>İndirim kampanyası yok</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Bilgilendirme Kampanyası Modal */}
+      {(modal === 'camp-add' || modal === 'camp-edit') && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setModal(null)}>
-          <div style={{ background: 'var(--bg2)', borderRadius: 'var(--r2)', width: '100%', maxWidth: 520, boxShadow: '0 20px 60px rgba(0,0,0,.3)' }} onClick={e => e.stopPropagation()}>
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <h3 style={{ fontSize: 17, fontWeight: 800 }}>{modal === 'add' ? 'Yeni Kampanya' : 'Kampanyayı Düzenle'}</h3>
+          <div style={{ background: 'var(--bg2)', borderRadius: 'var(--r2)', width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,.3)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: 'var(--bg2)', zIndex: 1 }}>
+              <h3 style={{ fontSize: 17, fontWeight: 800 }}>{modal === 'camp-add' ? 'Bilgilendirme Kampanyası' : 'Kampanyayı Düzenle'}</h3>
               <button onClick={() => setModal(null)} style={{ background: 'none', border: 'none', fontSize: 22, color: 'var(--text3)', cursor: 'pointer', lineHeight: 1 }}>×</button>
             </div>
             <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <FormField label="Badge (üst etiket) *"><input value={form.badge} onChange={e => setForm(p => ({ ...p, badge: e.target.value }))} style={inputStyle} placeholder="🔥 Mart Kampanyası" /></FormField>
-              <FormField label="Başlık *"><input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} style={inputStyle} placeholder="Ana başlık (\n ile satır kır)" /></FormField>
-              <FormField label="Açıklama"><input value={form.sub} onChange={e => setForm(p => ({ ...p, sub: e.target.value }))} style={inputStyle} placeholder="Alt açıklama metni" /></FormField>
+              <FormField label="Badge (üst etiket) *">
+                <input value={campForm.badge} onChange={e => setCampForm(p => ({ ...p, badge: e.target.value }))} style={{ ...inputStyle, borderColor: submitted && !campForm.badge.trim() ? 'var(--primary)' : undefined }} placeholder="🔥 Mart Kampanyası" />
+              </FormField>
+              <FormField label="Başlık *">
+                <input value={campForm.title} onChange={e => setCampForm(p => ({ ...p, title: e.target.value }))} style={{ ...inputStyle, borderColor: submitted && !campForm.title.trim() ? 'var(--primary)' : undefined }} placeholder="Ana başlık (\\n ile satır kır)" />
+              </FormField>
+              <FormField label="Açıklama">
+                <textarea value={campForm.description} onChange={e => setCampForm(p => ({ ...p, description: e.target.value }))} style={{ ...inputStyle, height: 70, resize: 'vertical' } as React.CSSProperties} placeholder="Alt açıklama metni" />
+              </FormField>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                <FormField label="Emoji"><input value={form.emoji} onChange={e => setForm(p => ({ ...p, emoji: e.target.value }))} style={inputStyle} placeholder="🐱" /></FormField>
-                <FormField label="Sticker (opsiyonel)"><input value={form.sticker} onChange={e => setForm(p => ({ ...p, sticker: e.target.value }))} style={inputStyle} placeholder="%20 İndirim" /></FormField>
+                <FormField label="Sticker (opsiyonel)">
+                  <input value={campForm.sticker} onChange={e => setCampForm(p => ({ ...p, sticker: e.target.value }))} style={inputStyle} placeholder="%20 İndirim" />
+                </FormField>
+                <FormField label="Durum">
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 7, height: 40, cursor: 'pointer', fontSize: 13, color: 'var(--text2)' }}>
+                    <input type="checkbox" checked={campForm.isActive} onChange={e => setCampForm(p => ({ ...p, isActive: e.target.checked }))} style={{ width: 15, height: 15 }} /> Aktif
+                  </label>
+                </FormField>
               </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <FormField label="Başlangıç Tarihi">
+                  <input type="datetime-local" value={campForm.startDate} onChange={e => setCampForm(p => ({ ...p, startDate: e.target.value }))} style={inputStyle} />
+                </FormField>
+                <FormField label="Bitiş Tarihi">
+                  <input type="datetime-local" value={campForm.endDate} onChange={e => setCampForm(p => ({ ...p, endDate: e.target.value }))} style={inputStyle} />
+                </FormField>
+              </div>
+              <FormField label="Emoji (opsiyonel)">
+                <EmojiPicker selected={campForm.emoji} onSelect={em => setCampForm(p => ({ ...p, emoji: em }))} />
+                {campForm.emoji && <div style={{ fontSize: 11.5, color: 'var(--text2)', marginTop: 4 }}>Seçili: {campForm.emoji} <button type="button" onClick={() => setCampForm(p => ({ ...p, emoji: '' }))} style={{ fontSize: 11, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer' }}>Temizle</button></div>}
+              </FormField>
               <FormField label="Arka Plan Rengi">
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {CAMPAIGN_COLORS.map((col, i) => (
-                    <div key={i} onClick={() => setForm(p => ({ ...p, bg: col }))} style={{ width: 32, height: 32, borderRadius: 8, background: col, cursor: 'pointer', border: form.bg === col ? '3px solid #fff' : '3px solid transparent', boxShadow: form.bg === col ? '0 0 0 2px var(--primary)' : 'none' }} />
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {CAMP_COLORS.map((col, i) => (
+                    <div key={i} onClick={() => setCampForm(p => ({ ...p, bgColor: col }))} style={{ width: 36, height: 36, borderRadius: 8, background: col, cursor: 'pointer', border: campForm.bgColor === col ? '3px solid #fff' : '3px solid transparent', boxShadow: campForm.bgColor === col ? '0 0 0 2px var(--primary)' : 'none', transition: '0.15s' }} />
                   ))}
                 </div>
               </FormField>
             </div>
             <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button onClick={() => setModal(null)} style={{ padding: '9px 20px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>İptal</button>
-              <button onClick={handleSave} style={{ padding: '9px 22px', borderRadius: 'var(--r)', border: 'none', background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                {modal === 'add' ? 'Ekle' : 'Güncelle'}
+              <button onClick={handleSaveCampaign} disabled={saving} style={{ padding: '9px 22px', borderRadius: 'var(--r)', border: 'none', background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+                {saving ? 'Kaydediliyor...' : modal === 'camp-add' ? 'Ekle' : 'Güncelle'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* İndirim Kampanyası Modal */}
+      {modal === 'disc-add' && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setModal(null)}>
+          <div style={{ background: 'var(--bg2)', borderRadius: 'var(--r2)', width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,.3)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: 'var(--bg2)', zIndex: 1 }}>
+              <h3 style={{ fontSize: 17, fontWeight: 800 }}>İndirim Kampanyası</h3>
+              <button onClick={() => setModal(null)} style={{ background: 'none', border: 'none', fontSize: 22, color: 'var(--text3)', cursor: 'pointer', lineHeight: 1 }}>×</button>
+            </div>
+            <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <FormField label="Kampanya Adı *">
+                <input value={discForm.name} onChange={e => setDiscForm(p => ({ ...p, name: e.target.value }))} style={{ ...inputStyle, borderColor: submitted && !discForm.name.trim() ? 'var(--primary)' : undefined }} placeholder="Örn: Kedi Maması %20 İndirim" />
+              </FormField>
+              <FormField label="Emoji (opsiyonel)">
+                <EmojiPicker selected={discForm.emoji} onSelect={em => setDiscForm(p => ({ ...p, emoji: em }))} />
+                {discForm.emoji && <div style={{ fontSize: 11.5, color: 'var(--text2)', marginTop: 4 }}>Seçili: {discForm.emoji} <button type="button" onClick={() => setDiscForm(p => ({ ...p, emoji: '' }))} style={{ fontSize: 11, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer' }}>Temizle</button></div>}
+              </FormField>
+              <FormField label="Kapsam">
+                <select value={discForm.scope} onChange={e => setDiscForm(p => ({ ...p, scope: e.target.value as DiscountScope, categoryId: '', productId: '', brandId: '', couponCode: '' }))} style={inputStyle}>
+                  <option value="category">Kategoriye Göre</option>
+                  <option value="product">Ürüne Göre</option>
+                  <option value="brand">Markaya Göre</option>
+                  <option value="general">Genel Kupon</option>
+                </select>
+              </FormField>
+              {discForm.scope === 'category' && (
+                <FormField label="Kategori *">
+                  <select value={discForm.categoryId} onChange={e => setDiscForm(p => ({ ...p, categoryId: e.target.value }))} style={{ ...inputStyle, borderColor: submitted && !discForm.categoryId ? 'var(--primary)' : undefined }}>
+                    <option value="">Kategori seçin...</option>
+                    {leafCategories.map(c => <option key={c.category_id} value={c.category_id}>{c.category_name}</option>)}
+                  </select>
+                </FormField>
+              )}
+              {discForm.scope === 'product' && (
+                <FormField label="Ürün *">
+                  <input value={productSearch} onChange={e => { setProductSearch(e.target.value); setDiscForm(p => ({ ...p, productId: '' })) }} style={{ ...inputStyle, borderColor: submitted && !discForm.productId ? 'var(--primary)' : undefined }} placeholder="Ürün adı ile ara..." />
+                  {filteredProducts.length > 0 && !discForm.productId && (
+                    <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r)', marginTop: 4, overflow: 'hidden', background: 'var(--bg2)' }}>
+                      {filteredProducts.map(p => (
+                        <div key={p.id} onClick={() => { setDiscForm(fp => ({ ...fp, productId: String(p.id) })); setProductSearch(p.name) }} style={{ padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid var(--border)', color: 'var(--text)' }} className="admin-row">{p.name}</div>
+                      ))}
+                    </div>
+                  )}
+                  {discForm.productId && <div style={{ fontSize: 12, color: '#16a34a', marginTop: 4 }}>✓ Seçildi</div>}
+                </FormField>
+              )}
+              {discForm.scope === 'brand' && (
+                <FormField label="Marka *">
+                  <select value={discForm.brandId} onChange={e => setDiscForm(p => ({ ...p, brandId: e.target.value }))} style={{ ...inputStyle, borderColor: submitted && !discForm.brandId ? 'var(--primary)' : undefined }}>
+                    <option value="">Marka seçin...</option>
+                    {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  </select>
+                </FormField>
+              )}
+              {discForm.scope === 'general' && (
+                <>
+                  <FormField label="Kupon Kodu *">
+                    <input value={discForm.couponCode} onChange={e => setDiscForm(p => ({ ...p, couponCode: e.target.value.toUpperCase() }))} style={{ ...inputStyle, borderColor: submitted && !discForm.couponCode.trim() ? 'var(--primary)' : undefined, fontFamily: 'monospace', letterSpacing: 1 }} placeholder="YAZI50" />
+                  </FormField>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                    <FormField label="Min. Sipariş Tutarı (₺)">
+                      <input type="number" value={discForm.minOrderAmount} onChange={e => setDiscForm(p => ({ ...p, minOrderAmount: e.target.value }))} style={inputStyle} placeholder="0" min={0} />
+                    </FormField>
+                    <FormField label="Kullanım Limiti">
+                      <input type="number" value={discForm.usageLimit} onChange={e => setDiscForm(p => ({ ...p, usageLimit: e.target.value }))} style={inputStyle} placeholder="Sınırsız" min={1} />
+                    </FormField>
+                  </div>
+                </>
+              )}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <FormField label="İndirim Tipi">
+                  <div style={{ display: 'flex', gap: 14, alignItems: 'center', height: 40 }}>
+                    {(['PERCENT', 'FIXED'] as const).map(t => (
+                      <label key={t} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, cursor: 'pointer', color: 'var(--text2)' }}>
+                        <input type="radio" checked={discForm.discountType === t} onChange={() => setDiscForm(p => ({ ...p, discountType: t }))} /> {t === 'PERCENT' ? '% Yüzde' : '₺ Tutar'}
+                      </label>
+                    ))}
+                  </div>
+                </FormField>
+                <FormField label="İndirim Değeri *">
+                  <input type="number" value={discForm.discountValue} onChange={e => setDiscForm(p => ({ ...p, discountValue: e.target.value }))} style={{ ...inputStyle, borderColor: submitted && !discForm.discountValue ? 'var(--primary)' : undefined }} placeholder={discForm.discountType === 'PERCENT' ? '20' : '50.00'} min={0} step={0.01} />
+                </FormField>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <FormField label="Başlangıç Tarihi *">
+                  <input type="datetime-local" value={discForm.startDate} onChange={e => setDiscForm(p => ({ ...p, startDate: e.target.value }))} style={{ ...inputStyle, borderColor: submitted && !discForm.startDate ? 'var(--primary)' : undefined }} />
+                </FormField>
+                <FormField label="Bitiş Tarihi *">
+                  <input type="datetime-local" value={discForm.endDate} onChange={e => setDiscForm(p => ({ ...p, endDate: e.target.value }))} style={{ ...inputStyle, borderColor: submitted && !discForm.endDate ? 'var(--primary)' : undefined }} />
+                </FormField>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', fontSize: 13, color: 'var(--text2)' }}>
+                <input type="checkbox" checked={discForm.isActive} onChange={e => setDiscForm(p => ({ ...p, isActive: e.target.checked }))} style={{ width: 15, height: 15 }} /> Aktif
+              </label>
+            </div>
+            <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button onClick={() => setModal(null)} style={{ padding: '9px 20px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>İptal</button>
+              <button onClick={handleSaveDiscount} disabled={saving} style={{ padding: '9px 22px', borderRadius: 'var(--r)', border: 'none', background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+                {saving ? 'Kaydediliyor...' : 'Ekle'}
               </button>
             </div>
           </div>

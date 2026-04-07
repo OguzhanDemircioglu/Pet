@@ -23,6 +23,9 @@ public class ProductDiscount {
     @Column(nullable = false, length = 100)
     private String name;
 
+    @Column(length = 10)
+    private String emoji;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "discount_type", nullable = false, length = 10)
     private DiscountType discountType;

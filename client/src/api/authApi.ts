@@ -20,6 +20,9 @@ export const authApi = {
   logout: () =>
     api.post('/auth/logout'),
 
+  updatePhone: (phone: string) =>
+    api.patch<User>('/auth/me/phone', { phone }).then(r => r.data),
+
   adminInfo: () =>
     api.get<AdminInfo>('/public/admin-info').then(r => r.data),
 }

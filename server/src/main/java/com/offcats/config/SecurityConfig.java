@@ -45,6 +45,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/register", "/auth/google", "/auth/refresh", "/auth/verify-email").permitAll()
                 .requestMatchers(HttpMethod.GET, "/categories/**", "/products/**", "/brands/**", "/public/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/orders/guest").permitAll()
+                .requestMatchers(HttpMethod.POST, "/admin/discounts/validate-coupon").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
                 // Admin only
                 .requestMatchers("/admin/**").hasRole("ADMIN")

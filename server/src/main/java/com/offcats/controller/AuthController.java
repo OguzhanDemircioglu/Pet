@@ -7,6 +7,7 @@ import com.offcats.dto.response.AuthResponse;
 import com.offcats.dto.response.UserResponse;
 import com.offcats.service.AuthService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -60,4 +61,13 @@ public class AuthController {
     public ResponseEntity<UserResponse> me(@AuthenticationPrincipal Long userId) {
         return ResponseEntity.ok(authService.me(userId));
     }
+
+    @PatchMapping("/me/phone")
+    public ResponseEntity<UserResponse> updatePhone(
+            @AuthenticationPrincipal Long userId,
+            @RequestBody @Valid PhoneRequest req) {
+        return ResponseEntity.ok(authService.updatePhone(userId, req.phone()));
+    }
+
+    record PhoneRequest(@NotBlank String phone) {}
 }

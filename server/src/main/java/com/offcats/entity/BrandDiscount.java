@@ -8,17 +8,20 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "category_discounts", schema = "petshop")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-public class CategoryDiscount {
+@Table(name = "brand_discounts", schema = "petshop")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class BrandDiscount {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id", nullable = false)
-    private Category category;
+    @JoinColumn(name = "brand_id", nullable = false)
+    private Brand brand;
 
     @Column(nullable = false, length = 100)
     private String name;
@@ -40,17 +43,10 @@ public class CategoryDiscount {
     private LocalDateTime endDate;
 
     @Column(name = "is_active", nullable = false)
+    @Builder.Default
     private Boolean isActive = true;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-
-    public boolean isCurrentlyActive() {
-        if (!isActive) return false;
-        LocalDateTime now = LocalDateTime.now();
-        if (startDate != null && now.isBefore(startDate)) return false;
-        if (endDate != null && now.isAfter(endDate)) return false;
-        return true;
-    }
 }

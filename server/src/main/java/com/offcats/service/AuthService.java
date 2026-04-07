@@ -186,6 +186,15 @@ public class AuthService {
         return UserResponse.from(user);
     }
 
+    @Transactional
+    public UserResponse updatePhone(Long userId, String phone) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı", userId));
+        user.setPhone(phone);
+        userRepository.save(user);
+        return UserResponse.from(user);
+    }
+
     // ---- private helpers ----
 
     private AuthResponse generateAuthResponse(User user) {

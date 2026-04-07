@@ -1,2 +1,6 @@
 # Project exclude paths
 /server/target/
+.env
+.env.*
+**/.env
+**/.env.*
