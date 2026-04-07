@@ -3,6 +3,9 @@ import authReducer from './authSlice'
 import productReducer from './productSlice'
 import categoryReducer from './categorySlice'
 import cartReducer from './cartSlice'
+import campaignReducer from './campaignSlice'
+import brandReducer from './brandSlice'
+import adminCampaignReducer from './adminCampaignSlice'
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +13,9 @@ export const store = configureStore({
     products: productReducer,
     categories: categoryReducer,
     cart: cartReducer,
+    campaigns: campaignReducer,
+    brands: brandReducer,
+    adminCampaigns: adminCampaignReducer,
   },
 })
 

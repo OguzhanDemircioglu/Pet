@@ -9,35 +9,10 @@ import type { Product } from '../types'
 import type { RootState, AppDispatch } from '../store'
 import { fetchProductsThunk } from '../store/productSlice'
 import { fetchCategoriesThunk } from '../store/categorySlice'
+import { fetchCampaignsThunk } from '../store/campaignSlice'
 import { addToCart } from '../store/cartSlice'
 import { imgUrl } from '../api/productApi'
-import { campaignApi } from '../api/campaignApi'
 import toast from 'react-hot-toast'
-
-interface Slide {
-  bg: string; badge: string; title: string; sub: string; btnColor: string; emoji: string; sticker?: string
-}
-
-const extractFirstColor = (gradient: string): string => {
-  const m = gradient.match(/#[0-9a-fA-F]{6}/)
-  return m ? m[0] : '#dc2626'
-}
-
-const FALLBACK_SLIDES: Slide[] = [
-  { bg: 'linear-gradient(130deg,#dc2626 0%,#991b1b 50%,#7f1d1d 100%)', badge: '🔥 Mart Kampanyası', title: "Royal Canin'de\n%20 Toptan İndirim", sub: 'Tüm Royal Canin ürünlerinde geçerli özel toptan fiyatları.', btnColor: '#dc2626', emoji: '🐱', sticker: '%20 İndirim' },
-  { bg: 'linear-gradient(130deg,#1e3a5f 0%,#0f2035 50%,#0a1628 100%)', badge: '🚚 Ücretsiz Kargo', title: '750 ₺ Üzeri\nÜcretsiz Kargo', sub: 'Tüm siparişlerinizde 750 ₺ ve üzeri alımlarda ücretsiz hızlı kargo fırsatı.', btnColor: '#1e3a5f', emoji: '🚚' },
-  { bg: 'linear-gradient(130deg,#0f766e 0%,#0d5c56 50%,#0a4a44 100%)', badge: '🐟 Akvaryum Sezonu', title: 'Yeni Akvaryum\nÜrünleri Geldi!', sub: 'JBL, Tetra ve Sera markalarında yeni sezon ürünler.', btnColor: '#0f766e', emoji: '🐟' },
-  { bg: 'linear-gradient(130deg,#7c3aed 0%,#6d28d9 50%,#5b21b6 100%)', badge: '💜 Özel Teklif', title: "Hill's Science Plan\nStok Fiyatına!", sub: "Hill's Science Plan kedi ve köpek mamalarında sınırlı stok fırsatı.", btnColor: '#7c3aed', emoji: '🐶', sticker: 'Son Stoklar' },
-]
-
-const CAT_CARDS = [
-  { emoji: '🐱', name: 'Kedi', count: '320+ ürün', bg: 'linear-gradient(135deg,#fce7f3,#fdf2f8)', slug: 'kedi' },
-  { emoji: '🐶', name: 'Köpek', count: '280+ ürün', bg: 'linear-gradient(135deg,#dbeafe,#eff6ff)', slug: 'kopek' },
-  { emoji: '🐦', name: 'Kuş', count: '150+ ürün', bg: 'linear-gradient(135deg,#dcfce7,#f0fdf4)', slug: 'kus' },
-  { emoji: '🐟', name: 'Akvaryum', count: '200+ ürün', bg: 'linear-gradient(135deg,#e0f2fe,#f0f9ff)', slug: 'akvaryum' },
-  { emoji: '🐹', name: 'Kemirgen', count: '90+ ürün', bg: 'linear-gradient(135deg,#fef3c7,#fffbeb)', slug: 'kemirgen' },
-  { emoji: '🦎', name: 'Sürüngen', count: '60+ ürün', bg: 'linear-gradient(135deg,#ede9fe,#f5f3ff)', slug: 'surungenler' },
-]
 
 const WHY_CARDS = [
   { icon: '🏷️', title: 'Toptan Fiyat Garantisi', desc: 'Tüm ürünlerde en düşük toptan fiyat garantisi. Fiyat farkı varsa iade ederiz.' },
@@ -99,31 +74,20 @@ function ProductCard({ p }: { p: Product }) {
 
 export default function HomePage() {
   const [slideIdx, setSlideIdx] = useState(0)
-  const [slides, setSlides] = useState<Slide[]>(FALLBACK_SLIDES)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const dispatch = useDispatch<AppDispatch>()
   const products = useSelector((s: RootState) => s.products.products)
   const loading = useSelector((s: RootState) => s.products.loading)
+  const slides = useSelector((s: RootState) => s.campaigns.slides)
 
   useEffect(() => {
     dispatch(fetchProductsThunk())
     dispatch(fetchCategoriesThunk())
-    campaignApi.getActiveCampaigns().then(data => {
-      if (data.length > 0) {
-        setSlides(data.map(c => ({
-          bg: c.bgColor,
-          badge: c.badge,
-          title: c.title,
-          sub: c.description || '',
-          btnColor: extractFirstColor(c.bgColor),
-          emoji: c.emoji || '📢',
-          sticker: c.sticker || undefined,
-        })))
-      }
-    }).catch(() => {})
+    dispatch(fetchCampaignsThunk())
   }, [dispatch])
 
   useEffect(() => {
+    if (slides.length < 2) return
     timerRef.current = setInterval(() => setSlideIdx(i => (i + 1) % slides.length), 4500)
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [slides.length])
@@ -141,7 +105,7 @@ export default function HomePage() {
       <CategoryBar />
 
       {/* Campaign Carousel */}
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '16px 24px 0' }}>
+      {slides.length > 0 && <div style={{ maxWidth: 1280, margin: '0 auto', padding: '16px 24px 0' }}>
       <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 14 }}>
         <div style={{ display: 'flex', transition: 'transform 0.45s cubic-bezier(.4,0,.2,1)', transform: `translateX(-${slideIdx * 100}%)` }}>
           {slides.map((s, i) => (
@@ -175,7 +139,7 @@ export default function HomePage() {
           ))}
         </div>
       </div>
-      </div>
+      </div>}
 
       {/* Page Content */}
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 24px' }}>

@@ -6,14 +6,13 @@ import { useGoogleLogin } from '@react-oauth/google'
 import toast from 'react-hot-toast'
 import type { RootState, AppDispatch } from '../store'
 import { toggleCart, closeCart, removeFromCart, updateQuantity, clearCart } from '../store/cartSlice'
-import { discountApi } from '../api/campaignApi'
-import type { CouponValidationResponse } from '../api/campaignApi'
+import { orderApi } from '../api/orderApi'
 import { setUser, updateUserPhone } from '../store/authSlice'
 import { imgUrl } from '../api/productApi'
 import { authApi } from '../api/authApi'
 import { TURKEY_DISTRICTS } from '../data/turkeyDistricts'
 
-type CheckoutStep = 'cart' | 'login' | 'phone' | 'address' | 'payment'
+type CheckoutStep = 'cart' | 'login' | 'phone' | 'address' | 'confirm'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
 const PHONE_RE = /^05\d{2}\s?\d{3}\s?\d{2}\s?\d{2}$/
@@ -100,17 +99,12 @@ export default function Header({ showSearch = true }: HeaderProps) {
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>('cart')
   const [addressForm, setAddressForm] = useState<AddressForm>({ ...EMPTY_ADDRESS })
   const [addrSubmitted, setAddrSubmitted] = useState(false)
-  const [payMethod, setPayMethod] = useState<'iyzico' | 'paytr' | null>(null)
-  const [paySubmitted, setPaySubmitted] = useState(false)
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
   const [loginLoading, setLoginLoading] = useState(false)
   const [phoneVal, setPhoneVal] = useState('')
   const [phoneError, setPhoneError] = useState('')
   const [phoneSaving, setPhoneSaving] = useState(false)
-  const [couponInput, setCouponInput] = useState('')
-  const [couponLoading, setCouponLoading] = useState(false)
-  const [couponResult, setCouponResult] = useState<CouponValidationResponse | null>(null)
 
   const notifRef = useRef<HTMLDivElement>(null)
   const cartRef = useRef<HTMLDivElement>(null)
@@ -133,7 +127,7 @@ export default function Header({ showSearch = true }: HeaderProps) {
 
   // Sepet kapanınca adımı sıfırla
   useEffect(() => {
-    if (!cartOpen) { setCheckoutStep('cart'); setAddrSubmitted(false); setPaySubmitted(false); setLoginEmail(''); setLoginPassword(''); setPhoneVal(''); setPhoneError(''); setCouponInput(''); setCouponResult(null) }
+    if (!cartOpen) { setCheckoutStep('cart'); setAddrSubmitted(false); setLoginEmail(''); setLoginPassword(''); setPhoneVal(''); setPhoneError('') }
   }, [cartOpen])
 
   // Adres adımına geçince kullanıcı bilgilerini pre-fill et
@@ -152,21 +146,6 @@ export default function Header({ showSearch = true }: HeaderProps) {
     if (searchVal.trim()) navigate(`/urunler?q=${encodeURIComponent(searchVal.trim())}`)
   }
 
-  const handleApplyCoupon = async () => {
-    if (!couponInput.trim()) return
-    setCouponLoading(true)
-    try {
-      const result = await discountApi.validateCoupon(couponInput.trim().toUpperCase(), cartTotal)
-      setCouponResult(result)
-      if (result.valid) toast.success(`Kupon uygulandı! -₺${result.discountAmount.toFixed(2)}`)
-      else toast.error(result.message || 'Geçersiz kupon')
-    } catch {
-      toast.error('Kupon doğrulanamadı')
-    } finally {
-      setCouponLoading(false)
-    }
-  }
-
   const handleAddressNext = async () => {
     setAddrSubmitted(true)
     if (!addressForm.fullName.trim() || !addressForm.phone.trim() || !addressForm.city || !addressForm.district.trim() || !addressForm.address.trim()) {
@@ -181,7 +160,7 @@ export default function Header({ showSearch = true }: HeaderProps) {
         // non-blocking
       }
     }
-    setCheckoutStep('payment')
+    setCheckoutStep('confirm')
   }
 
   const handleLoginSubmit = async () => {
@@ -222,11 +201,33 @@ export default function Header({ showSearch = true }: HeaderProps) {
     }
   }
 
-  const handlePayment = () => {
-    setPaySubmitted(true)
-    if (!payMethod) { toast.error('Ödeme yöntemi seçin'); return }
-    toast.success(`${payMethod === 'iyzico' ? 'iyzico' : 'PayTR'} ödeme sayfasına yönlendiriliyorsunuz...`)
-    // TODO: backend'e sipariş oluştur + ödeme URL'i al
+  const [orderLoading, setOrderLoading] = useState(false)
+
+  const handleConfirmOrder = async () => {
+    setOrderLoading(true)
+    try {
+      await orderApi.create({
+        fullName: addressForm.fullName,
+        phone: addressForm.phone,
+        city: addressForm.city,
+        district: addressForm.district,
+        address: addressForm.address,
+        totalAmount: cartTotal,
+        items: cartItems.map(i => ({
+          productId: i.productId,
+          productName: i.name,
+          quantity: i.quantity,
+          unitPrice: i.basePrice,
+        })),
+      })
+      dispatch(clearCart())
+      dispatch(closeCart())
+      toast.success('Siparişiniz alındı! En kısa sürede sizinle iletişime geçeceğiz.')
+    } catch {
+      toast.error('Sipariş oluşturulamadı, lütfen tekrar deneyin.')
+    } finally {
+      setOrderLoading(false)
+    }
   }
 
   const addrField = (key: keyof AddressForm) => addrSubmitted && !addressForm[key].trim()
@@ -238,7 +239,7 @@ export default function Header({ showSearch = true }: HeaderProps) {
     login: '🔐 Giriş Yapın',
     phone: '📱 Telefon Numaranız',
     address: '📍 Teslimat Adresi',
-    payment: '💳 Ödeme Yöntemi',
+    confirm: '✅ Sipariş Onayı',
   }
 
   return (
@@ -338,8 +339,8 @@ export default function Header({ showSearch = true }: HeaderProps) {
                   {/* Step indicator (login ve phone adımlarında gizle) */}
                   {checkoutStep !== 'login' && checkoutStep !== 'phone' && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                      {(['cart', 'address', 'payment'] as CheckoutStep[]).map((s, i) => {
-                        const steps = ['cart', 'address', 'payment']
+                      {(['cart', 'address', 'confirm'] as CheckoutStep[]).map((s, i) => {
+                        const steps = ['cart', 'address', 'confirm']
                         const curIdx = steps.indexOf(checkoutStep)
                         const done = curIdx > i
                         const active = checkoutStep === s
@@ -349,7 +350,7 @@ export default function Header({ showSearch = true }: HeaderProps) {
                               {done ? '✓' : i + 1}
                             </div>
                             <span style={{ fontSize: 11, fontWeight: 600, color: active ? 'var(--text)' : 'var(--text3)', whiteSpace: 'nowrap' }}>
-                              {s === 'cart' ? 'Sepet' : s === 'address' ? 'Adres' : 'Ödeme'}
+                              {s === 'cart' ? 'Sepet' : s === 'address' ? 'Adres' : 'Onay'}
                             </span>
                             {i < 2 && <div style={{ width: 20, height: 1, background: 'var(--border)', flexShrink: 0 }} />}
                           </div>
@@ -368,7 +369,7 @@ export default function Header({ showSearch = true }: HeaderProps) {
                     <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>{drawerTitle[checkoutStep]}</h3>
                     {checkoutStep !== 'cart' && (
                       <button onClick={() => {
-                        if (checkoutStep === 'payment') setCheckoutStep('address')
+                        if (checkoutStep === 'confirm') setCheckoutStep('address')
                         else if (checkoutStep === 'phone') setCheckoutStep('login')
                         else setCheckoutStep('cart')
                       }} style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '4px 10px', cursor: 'pointer' }}>← Geri</button>
@@ -410,30 +411,8 @@ export default function Header({ showSearch = true }: HeaderProps) {
                     </div>
                     {cartItems.length > 0 && (
                       <div style={{ borderTop: '1px solid var(--border)', padding: '16px 20px', flexShrink: 0 }}>
-                        {/* Coupon input */}
-                        <div style={{ display: 'flex', gap: 7, marginBottom: 12 }}>
-                          <input
-                            value={couponInput}
-                            onChange={e => { setCouponInput(e.target.value.toUpperCase()); if (couponResult) setCouponResult(null) }}
-                            onKeyDown={e => e.key === 'Enter' && handleApplyCoupon()}
-                            placeholder="Kupon kodu"
-                            style={{ flex: 1, height: 36, border: `1.5px solid ${couponResult?.valid ? '#16a34a' : 'var(--border)'}`, borderRadius: 'var(--r)', background: 'var(--bg3)', color: 'var(--text)', fontSize: 13, padding: '0 10px', outline: 'none', fontFamily: 'monospace', letterSpacing: 0.5 }}
-                          />
-                          <button onClick={handleApplyCoupon} disabled={couponLoading || !couponInput.trim()} style={{ height: 36, padding: '0 12px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--r)', fontSize: 12, fontWeight: 700, cursor: couponLoading || !couponInput.trim() ? 'not-allowed' : 'pointer', opacity: couponLoading || !couponInput.trim() ? 0.6 : 1, whiteSpace: 'nowrap' }}>
-                            {couponLoading ? '...' : 'Uygula'}
-                          </button>
-                        </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 13, color: 'var(--text2)' }}><span>{cartCount} ürün</span><span>₺{cartTotal.toFixed(2)}</span></div>
-                        {couponResult?.valid && couponResult.discountAmount > 0 && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 13, color: '#16a34a', fontWeight: 600 }}>
-                            <span>🏷️ {couponResult.couponCode}</span>
-                            <span>-₺{couponResult.discountAmount.toFixed(2)}</span>
-                          </div>
-                        )}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14, fontSize: 16, fontWeight: 800 }}>
-                          <span>Toplam</span>
-                          <span style={{ color: 'var(--primary)' }}>₺{Math.max(0, cartTotal - (couponResult?.valid ? couponResult.discountAmount : 0)).toFixed(2)}</span>
-                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14, fontSize: 16, fontWeight: 800 }}><span>Toplam</span><span style={{ color: 'var(--primary)' }}>₺{cartTotal.toFixed(2)}</span></div>
                         <button onClick={() => setCheckoutStep(user ? 'address' : 'login')}
                           style={{ width: '100%', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--r)', padding: '13px 0', fontSize: 15, fontWeight: 800, cursor: 'pointer' }}>
                           Siparişi Tamamla →
@@ -598,71 +577,55 @@ export default function Header({ showSearch = true }: HeaderProps) {
                     <div style={{ borderTop: '1px solid var(--border)', padding: '16px 20px', flexShrink: 0 }}>
                       <button onClick={handleAddressNext}
                         style={{ width: '100%', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--r)', padding: '13px 0', fontSize: 15, fontWeight: 800, cursor: 'pointer' }}>
-                        Ödemeye Geç →
+                        Devam Et →
                       </button>
                     </div>
                   </>
                 )}
 
-                {/* ── Step: Payment ── */}
-                {checkoutStep === 'payment' && (
+                {/* ── Step: Confirm ── */}
+                {checkoutStep === 'confirm' && (
                   <>
                     <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
-                      <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 16 }}>Ödeme yönteminizi seçin:</div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {/* iyzico */}
-                        <button onClick={() => setPayMethod('iyzico')}
-                          style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', borderRadius: 'var(--r2)', border: `2px solid ${payMethod === 'iyzico' ? 'var(--primary)' : 'var(--border)'}`, background: payMethod === 'iyzico' ? 'var(--primary-bg)' : 'var(--bg3)', cursor: 'pointer', textAlign: 'left', transition: '0.18s' }}>
-                          <div style={{ width: 44, height: 44, borderRadius: 10, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid var(--border)', fontSize: 22 }}>💳</div>
-                          <div>
-                            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 3 }}>iyzico</div>
-                            <div style={{ fontSize: 12, color: 'var(--text2)' }}>Kredi / banka kartı · Güvenli 3D ödeme · Taksit imkânı</div>
-                          </div>
-                          <div style={{ marginLeft: 'auto', width: 20, height: 20, borderRadius: '50%', border: `2px solid ${payMethod === 'iyzico' ? 'var(--primary)' : 'var(--border)'}`, background: payMethod === 'iyzico' ? 'var(--primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            {payMethod === 'iyzico' && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff' }} />}
-                          </div>
-                        </button>
-
-                        {/* PayTR */}
-                        <button onClick={() => setPayMethod('paytr')}
-                          style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', borderRadius: 'var(--r2)', border: `2px solid ${payMethod === 'paytr' ? 'var(--primary)' : 'var(--border)'}`, background: payMethod === 'paytr' ? 'var(--primary-bg)' : 'var(--bg3)', cursor: 'pointer', textAlign: 'left', transition: '0.18s' }}>
-                          <div style={{ width: 44, height: 44, borderRadius: 10, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid var(--border)', fontSize: 22 }}>🏦</div>
-                          <div>
-                            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 3 }}>PayTR</div>
-                            <div style={{ fontSize: 12, color: 'var(--text2)' }}>Kredi / banka kartı · Hızlı ödeme · Türk Lirası</div>
-                          </div>
-                          <div style={{ marginLeft: 'auto', width: 20, height: 20, borderRadius: '50%', border: `2px solid ${payMethod === 'paytr' ? 'var(--primary)' : 'var(--border)'}`, background: payMethod === 'paytr' ? 'var(--primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            {payMethod === 'paytr' && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff' }} />}
-                          </div>
-                        </button>
+                      {/* Ödeme bilgisi */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: 'var(--r2)', marginBottom: 18 }}>
+                        <span style={{ fontSize: 22, flexShrink: 0 }}>💵</span>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: '#92400e', marginBottom: 3 }}>Ödeme Teslimatta Yapılacaktır</div>
+                          <div style={{ fontSize: 12, color: '#78350f', lineHeight: 1.5 }}>Siparişiniz kapıda nakit veya kart ile teslim alındığında ödenecektir.</div>
+                        </div>
                       </div>
 
-                      {/* Validation error */}
-                      {paySubmitted && !payMethod && (
-                        <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--primary-bg)', borderRadius: 'var(--r)', border: '1px solid rgba(220,38,38,.2)', fontSize: 13, color: 'var(--primary)', fontWeight: 600 }}>
-                          Lütfen bir ödeme yöntemi seçin
-                        </div>
-                      )}
+                      {/* Teslimat adresi özeti */}
+                      <div style={{ background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '12px 14px', marginBottom: 14 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Teslimat Adresi</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>📍 {addressForm.fullName}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 2 }}>{addressForm.city} / {addressForm.district}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.4 }}>{addressForm.address}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>📞 {addressForm.phone}</div>
+                      </div>
 
-                      {/* Summary */}
-                      <div style={{ background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '12px 14px', marginTop: 20 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)', marginBottom: 6 }}>📍 {addressForm.fullName} · {addressForm.city} / {addressForm.district}</div>
-                        <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 10, lineHeight: 1.4 }}>{addressForm.address}</div>
-                        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 800 }}>
+                      {/* Sipariş özeti */}
+                      <div style={{ background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '12px 14px' }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Sipariş Özeti</div>
+                        {cartItems.map(item => (
+                          <div key={item.productId} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text2)', marginBottom: 5 }}>
+                            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: 8 }}>{item.name} ×{item.quantity}</span>
+                            <span style={{ fontWeight: 700, flexShrink: 0 }}>₺{(item.basePrice * item.quantity).toFixed(2)}</span>
+                          </div>
+                        ))}
+                        <div style={{ borderTop: '1px solid var(--border)', marginTop: 8, paddingTop: 8, display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 800 }}>
                           <span>Ödenecek Tutar</span>
                           <span style={{ color: 'var(--primary)' }}>₺{cartTotal.toFixed(2)}</span>
                         </div>
                       </div>
-
-                      <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, color: 'var(--text3)' }}>
-                        <span>🔒</span><span>256-bit SSL ile şifreli bağlantı</span>
-                      </div>
                     </div>
                     <div style={{ borderTop: '1px solid var(--border)', padding: '16px 20px', flexShrink: 0 }}>
-                      <button onClick={handlePayment}
-                        style={{ width: '100%', background: payMethod ? 'var(--primary)' : 'var(--bg3)', color: payMethod ? '#fff' : 'var(--text3)', border: 'none', borderRadius: 'var(--r)', padding: '13px 0', fontSize: 15, fontWeight: 800, cursor: payMethod ? 'pointer' : 'default', transition: '0.2s' }}>
-                        {payMethod ? `${payMethod === 'iyzico' ? 'iyzico' : 'PayTR'} ile Ödeme Yap →` : 'Ödeme Yöntemi Seçin'}
+                      <button onClick={handleConfirmOrder} disabled={orderLoading}
+                        style={{ width: '100%', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--r)', padding: '13px 0', fontSize: 15, fontWeight: 800, cursor: orderLoading ? 'not-allowed' : 'pointer', opacity: orderLoading ? 0.7 : 1 }}>
+                        {orderLoading ? 'Sipariş oluşturuluyor...' : 'Siparişi Onayla ✓'}
                       </button>
+                      <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text3)', marginTop: 8 }}>Siparişiniz alındığında sizi arayacağız</div>
                     </div>
                   </>
                 )}

@@ -1,54 +1,52 @@
 package com.offcats.service;
 
+import com.offcats.dto.response.NotificationResponse;
+import com.offcats.entity.Notification;
+import com.offcats.entity.User;
+import com.offcats.repository.NotificationRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 @Slf4j
 public class NotificationService {
 
-    private static final String TELEGRAM_API = "https://api.telegram.org/bot{token}/sendMessage";
+    private final NotificationRepository notificationRepository;
 
-    @Value("${app.telegram.chat-id:}")
-    private String chatId;
+    /**
+     * Kullanıcının tüm bildirimlerini en yeniden eskiye sıralar.
+     */
+    public List<NotificationResponse> getUserNotifications(Long userId) {
+        return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId)
+                .stream()
+                .map(NotificationResponse::from)
+                .collect(Collectors.toList());
+    }
 
-    @Value("${app.telegram.api-key:}")
-    private String apiKey;
+    /**
+     * Kullanıcının tüm bildirimlerini okundu olarak işaretler.
+     */
+    @Transactional
+    public void markAllRead(Long userId) {
+        notificationRepository.markAllRead(userId);
+    }
 
-    private final RestTemplate restTemplate = new RestTemplate();
-
-    @Async
-    public void sendOrderNotification(String orderNumber, String productSummary,
-                                      String shippingAddress, String total) {
-        if (apiKey.isBlank() || chatId.isBlank()) {
-            log.warn("Telegram bildirimi atlandı: api-key veya chat-id tanımlı değil");
-            return;
-        }
-
-        String message = """
-                🛒 Yeni Sipariş!
-                📦 Sipariş No: %s
-                🧾 Ürünler: %s
-                📍 Adres: %s
-                💰 Toplam: %s ₺
-                """.formatted(orderNumber, productSummary, shippingAddress, total);
-
-        String url = UriComponentsBuilder
-                .fromUriString(TELEGRAM_API)
-                .queryParam("chat_id", chatId)
-                .queryParam("text", message)
-                .buildAndExpand(apiKey)
-                .toUriString();
-
-        try {
-            restTemplate.getForObject(url, String.class);
-            log.info("Telegram bildirimi gönderildi — sipariş: {}", orderNumber);
-        } catch (Exception e) {
-            log.error("Telegram bildirimi gönderilemedi: {}", e.getMessage());
-        }
+    /**
+     * Yeni bir bildirim kaydeder (OrderService tarafından çağrılır).
+     */
+    public Notification createNotification(User user, String message, String type) {
+        Notification notification = Notification.builder()
+                .user(user)
+                .message(message)
+                .type(type)
+                .isRead(false)
+                .build();
+        return notificationRepository.save(notification);
     }
 }
