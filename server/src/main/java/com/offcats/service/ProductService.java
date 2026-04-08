@@ -2,21 +2,19 @@ package com.offcats.service;
 
 import com.offcats.dto.request.CreateProductRequest;
 import com.offcats.dto.response.ProductResponse;
-import com.offcats.entity.Brand;
-import com.offcats.entity.Category;
-import com.offcats.entity.Product;
+import com.offcats.entity.*;
 import com.offcats.exception.ResourceNotFoundException;
-import com.offcats.repository.BrandRepository;
-import com.offcats.repository.CategoryRepository;
-import com.offcats.repository.ProductRepository;
+import com.offcats.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -26,37 +24,45 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final BrandRepository brandRepository;
     private final CategoryRepository categoryRepository;
+    private final ProductDiscountRepository productDiscountRepo;
+    private final CategoryDiscountRepository categoryDiscountRepo;
+    private final BrandDiscountRepository brandDiscountRepo;
+
+    // ─── Public listing ───────────────────────────────────────────────────────
 
     public Page<ProductResponse> listByCategory(Long categoryId, Pageable pageable) {
-        return productRepository.findByIsActiveTrueAndCategoryId(categoryId, pageable)
-                .map(ProductResponse::from);
+        return enrichPage(productRepository.findByIsActiveTrueAndCategoryId(categoryId, pageable), pageable);
     }
 
     public Page<ProductResponse> search(String query, Pageable pageable) {
-        return productRepository.search(query, pageable)
-                .map(ProductResponse::from);
+        return enrichPage(productRepository.search(query, pageable), pageable);
     }
 
     public ProductResponse getBySlug(String slug) {
         Product p = productRepository.findBySlug(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Ürün bulunamadı: " + slug));
-        return ProductResponse.from(p);
+        Map<Long, ProductResponse.ActiveDiscountDto> dm = buildDiscountMap();
+        return ProductResponse.fromWithDiscount(p, dm.get(p.getId()));
     }
 
     public ProductResponse getById(Long id) {
         Product p = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Ürün", id));
-        return ProductResponse.from(p);
+        Map<Long, ProductResponse.ActiveDiscountDto> dm = buildDiscountMap();
+        return ProductResponse.fromWithDiscount(p, dm.get(p.getId()));
     }
 
     public List<ProductResponse> getFeatured() {
-        return productRepository.findByIsFeaturedTrueAndIsActiveTrueOrderByCreatedAtDesc()
-                .stream().map(ProductResponse::from).toList();
+        List<Product> products = productRepository.findByIsFeaturedTrueAndIsActiveTrueOrderByCreatedAtDesc();
+        Map<Long, ProductResponse.ActiveDiscountDto> dm = buildDiscountMap();
+        return products.stream().map(p -> ProductResponse.fromWithDiscount(p, dm.get(p.getId()))).toList();
     }
 
     public Page<ProductResponse> listAll(Pageable pageable) {
-        return productRepository.findAll(pageable).map(ProductResponse::from);
+        return enrichPage(productRepository.findAll(pageable), pageable);
     }
+
+    // ─── Admin CRUD ───────────────────────────────────────────────────────────
 
     @Transactional
     public ProductResponse create(CreateProductRequest req) {
@@ -88,8 +94,7 @@ public class ProductService {
                 .isFeatured(req.isFeatured() != null ? req.isFeatured() : false)
                 .build();
 
-        Product saved = productRepository.save(product);
-        return ProductResponse.from(saved);
+        return ProductResponse.from(productRepository.save(product));
     }
 
     @Transactional
@@ -122,8 +127,7 @@ public class ProductService {
         }
         product.setBrand(brand);
 
-        Product saved = productRepository.save(product);
-        return ProductResponse.from(saved);
+        return ProductResponse.from(productRepository.save(product));
     }
 
     @Transactional
@@ -132,6 +136,70 @@ public class ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Ürün", id));
         productRepository.deleteById(id);
     }
+
+    // ─── Discount helpers ─────────────────────────────────────────────────────
+
+    private Page<ProductResponse> enrichPage(Page<Product> page, Pageable pageable) {
+        if (page.isEmpty()) return Page.empty(pageable);
+        Map<Long, ProductResponse.ActiveDiscountDto> dm = buildDiscountMap();
+        List<ProductResponse> enriched = page.getContent().stream()
+                .map(p -> ProductResponse.fromWithDiscount(p, dm.get(p.getId())))
+                .toList();
+        return new PageImpl<>(enriched, pageable, page.getTotalElements());
+    }
+
+    /**
+     * Tüm aktif indirimleri yükler ve her ürün id'si → en iyi indirim map'i döndürür.
+     * Öncelik: ürün indirim > kategori indirim > marka indirim
+     */
+    private Map<Long, ProductResponse.ActiveDiscountDto> buildDiscountMap() {
+        LocalDateTime now = LocalDateTime.now();
+        Map<Long, ProductResponse.ActiveDiscountDto> map = new HashMap<>();
+
+        // Marka indirimleri (en düşük öncelik)
+        brandDiscountRepo.findAll().stream()
+                .filter(d -> isActive(d.getIsActive(), d.getStartDate(), d.getEndDate(), now))
+                .forEach(d -> productRepository.findByIsActiveTrueAndBrandId(d.getBrand().getId())
+                        .forEach(p -> map.merge(p.getId(),
+                                toDto(d.getName(), d.getDiscountType().name(), d.getDiscountValue()),
+                                this::better)));
+
+        // Kategori indirimleri
+        categoryDiscountRepo.findAll().stream()
+                .filter(d -> isActive(d.getIsActive(), d.getStartDate(), d.getEndDate(), now))
+                .forEach(d -> productRepository.findByIsActiveTrueAndCategoryId(d.getCategory().getId(), Pageable.unpaged())
+                        .getContent().forEach(p -> map.merge(p.getId(),
+                                toDto(d.getName(), d.getDiscountType().name(), d.getDiscountValue()),
+                                this::better)));
+
+        // Ürün indirimleri (en yüksek öncelik — her zaman üzerine yazar)
+        productDiscountRepo.findAll().stream()
+                .filter(d -> isActive(d.getIsActive(), d.getStartDate(), d.getEndDate(), now))
+                .forEach(d -> map.put(d.getProduct().getId(),
+                        toDto(d.getName(), d.getDiscountType().name(), d.getDiscountValue())));
+
+        return map;
+    }
+
+    private ProductResponse.ActiveDiscountDto toDto(String name, String discountType, BigDecimal value) {
+        String label = "PERCENT".equals(discountType)
+                ? "%" + value.stripTrailingZeros().toPlainString()
+                : value.stripTrailingZeros().toPlainString() + " ₺";
+        return new ProductResponse.ActiveDiscountDto(label, discountType, value, name);
+    }
+
+    private ProductResponse.ActiveDiscountDto better(ProductResponse.ActiveDiscountDto a, ProductResponse.ActiveDiscountDto b) {
+        return a.discountValue().compareTo(b.discountValue()) >= 0 ? a : b;
+    }
+
+    private boolean isActive(Boolean active, LocalDateTime start, LocalDateTime end, LocalDateTime now) {
+        if (!Boolean.TRUE.equals(active)) return false;
+        if (start != null && now.isBefore(start)) return false;
+        if (end != null && now.isAfter(end)) return false;
+        return true;
+    }
+
+    // ─── Slug ─────────────────────────────────────────────────────────────────
 
     private String toSlug(String input) {
         if (input == null) return "";

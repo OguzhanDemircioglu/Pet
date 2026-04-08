@@ -435,7 +435,7 @@ export default function LoginPage() {
 
       <footer style={{ background: 'var(--bg2)', borderTop: '1px solid var(--border)', padding: '18px 24px', textAlign: 'center' }}>
         <div style={{ fontSize: 12, color: 'var(--text3)' }}>
-          © 2025 OffCats &nbsp;·&nbsp;
+          © 2025 Patilya &nbsp;·&nbsp;
           <a href="#" style={{ color: 'var(--primary)' }}>Gizlilik Politikası</a> &nbsp;·&nbsp;
           <a href="#" style={{ color: 'var(--primary)' }}>Kullanım Koşulları</a>
         </div>

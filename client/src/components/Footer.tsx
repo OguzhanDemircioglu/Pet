@@ -14,7 +14,7 @@ export default function Footer() {
           marginBottom: 24, flexWrap: 'wrap', gap: 16,
         }}>
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            <img src="/logo.svg" alt="OffCats" style={{ width: 32, height: 32, objectFit: 'contain' }} />
+            <img src="/logo.svg" alt="Patilya" style={{ width: 32, height: 32, objectFit: 'contain' }} />
             <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.5 }}>
               <span style={{ color: 'var(--primary)' }}>OFF</span>
               <span style={{ color: 'var(--accent)' }}>Cats</span>
@@ -32,7 +32,7 @@ export default function Footer() {
           flexWrap: 'wrap', gap: 8,
         }}>
           <div style={{ fontSize: 12, color: 'var(--text3)' }}>
-            © 2024 OffCats. Tüm hakları saklıdır. Türkiye'nin toptan pet ürünleri platformu.
+            © 2024 Patilya. Tüm hakları saklıdır. Türkiye'nin toptan pet ürünleri platformu.
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             {['iyzico', 'PayTR', 'SSL Güvenli'].map(b => (

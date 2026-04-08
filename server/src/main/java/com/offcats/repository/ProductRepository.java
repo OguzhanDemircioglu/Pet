@@ -34,6 +34,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     List<Product> findByIsFeaturedTrueAndIsActiveTrueOrderByCreatedAtDesc();
 
+    List<Product> findByIsActiveTrueAndBrandId(Long brandId);
+
     @Query("SELECT p FROM Product p WHERE p.isActive = true AND p.stockQuantity - p.reservedQuantity > 0")
     Page<Product> findInStock(Pageable pageable);
 }

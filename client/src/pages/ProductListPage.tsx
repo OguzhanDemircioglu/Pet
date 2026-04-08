@@ -36,8 +36,8 @@ export default function ProductListPage() {
   const categories = useSelector((s: RootState) => s.categories.categories)
 
   useEffect(() => {
-    dispatch(fetchProductsThunk())
-    dispatch(fetchCategoriesThunk())
+    dispatch(fetchProductsThunk(false))
+    dispatch(fetchCategoriesThunk(false))
   }, [dispatch])
 
   // Seçili kategori ve hiyerarşi

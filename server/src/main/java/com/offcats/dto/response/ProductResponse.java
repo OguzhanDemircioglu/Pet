@@ -27,12 +27,18 @@ public record ProductResponse(
         String primaryImageUrl,
         List<PriceTierDto> priceTiers,
         Double averageRating,
-        List<ImageDto> images
+        List<ImageDto> images,
+        ActiveDiscountDto activeDiscount
 ) {
     public record PriceTierDto(Integer minQuantity, Integer maxQuantity, BigDecimal unitPrice) {}
     public record ImageDto(Long id, String imageUrl, Boolean isPrimary, Integer displayOrder) {}
+    public record ActiveDiscountDto(String label, String discountType, BigDecimal discountValue, String name) {}
 
     public static ProductResponse from(Product p) {
+        return fromWithDiscount(p, null);
+    }
+
+    public static ProductResponse fromWithDiscount(Product p, ActiveDiscountDto discount) {
         String primaryImage = p.getImages().stream()
                 .filter(ProductImage::getIsPrimary)
                 .map(ProductImage::getImageUrl)
@@ -58,7 +64,7 @@ public record ProductResponse(
                 p.getBasePrice(), p.getVatRate(), p.getMoq(),
                 p.getAvailableStock(), p.getUnit(),
                 p.getIsActive(), p.getIsFeatured(),
-                primaryImage, tiers, null, images
+                primaryImage, tiers, null, images, discount
         );
     }
 }

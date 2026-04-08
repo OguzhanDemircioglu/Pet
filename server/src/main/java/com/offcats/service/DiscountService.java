@@ -1,6 +1,7 @@
 package com.offcats.service;
 
 import com.offcats.dto.request.*;
+import com.offcats.dto.response.CampaignResponse;
 import com.offcats.dto.response.CouponValidationResponse;
 import com.offcats.dto.response.DiscountResponse;
 import com.offcats.entity.*;
@@ -17,6 +18,7 @@ import java.util.*;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class DiscountService {
 
     private final CategoryDiscountRepository categoryDiscountRepo;
@@ -124,6 +126,70 @@ public class DiscountService {
             }
             default -> throw new BusinessException("Geçersiz indirim tipi: " + type);
         }
+    }
+
+    /** Şu an aktif olan tüm indirimleri döndürür (public endpoint için). */
+    public List<DiscountResponse> getActiveDiscounts() {
+        LocalDateTime now = LocalDateTime.now();
+        List<DiscountResponse> result = new ArrayList<>();
+        categoryDiscountRepo.findAll().stream()
+                .filter(d -> isCurrentlyActive(d.getIsActive(), d.getStartDate(), d.getEndDate(), now))
+                .forEach(d -> result.add(toResponse(d)));
+        productDiscountRepo.findAll().stream()
+                .filter(d -> isCurrentlyActive(d.getIsActive(), d.getStartDate(), d.getEndDate(), now))
+                .forEach(d -> result.add(toResponse(d)));
+        brandDiscountRepo.findAll().stream()
+                .filter(d -> isCurrentlyActive(d.getIsActive(), d.getStartDate(), d.getEndDate(), now))
+                .forEach(d -> result.add(toResponse(d)));
+        return result;
+    }
+
+    /** Aktif indirimleri carousel slide formatına dönüştürür. */
+    public List<CampaignResponse> getActiveDiscountsAsSlides() {
+        LocalDateTime now = LocalDateTime.now();
+        List<CampaignResponse> slides = new ArrayList<>();
+
+        categoryDiscountRepo.findAll().stream()
+                .filter(d -> isCurrentlyActive(d.getIsActive(), d.getStartDate(), d.getEndDate(), now))
+                .forEach(d -> slides.add(discountToSlide(
+                        d.getId(), d.getName(), d.getEmoji(),
+                        d.getDiscountType().name(), d.getDiscountValue(),
+                        d.getCategory().getName(), "linear-gradient(135deg,#0f766e,#064e3b)")));
+
+        productDiscountRepo.findAll().stream()
+                .filter(d -> isCurrentlyActive(d.getIsActive(), d.getStartDate(), d.getEndDate(), now))
+                .forEach(d -> slides.add(discountToSlide(
+                        d.getId(), d.getName(), d.getEmoji(),
+                        d.getDiscountType().name(), d.getDiscountValue(),
+                        d.getProduct().getName(), "linear-gradient(135deg,#7c3aed,#4c1d95)")));
+
+        brandDiscountRepo.findAll().stream()
+                .filter(d -> isCurrentlyActive(d.getIsActive(), d.getStartDate(), d.getEndDate(), now))
+                .forEach(d -> slides.add(discountToSlide(
+                        d.getId(), d.getName(), d.getEmoji(),
+                        d.getDiscountType().name(), d.getDiscountValue(),
+                        d.getBrand().getName(), "linear-gradient(135deg,#0369a1,#0c4a6e)")));
+
+        return slides;
+    }
+
+    private CampaignResponse discountToSlide(Long id, String name, String emoji,
+            String discountType, BigDecimal discountValue, String targetName, String bgColor) {
+        String valueLabel = "PERCENT".equals(discountType)
+                ? "%" + discountValue.stripTrailingZeros().toPlainString()
+                : discountValue.stripTrailingZeros().toPlainString() + " ₺";
+        String usedEmoji = (emoji != null && !emoji.isBlank()) ? emoji : "🏷️";
+        String title = targetName + "'de\n" + valueLabel + " İndirim";
+        String badge = usedEmoji + " " + name;
+        return new CampaignResponse(id, title, badge, name, usedEmoji, valueLabel, bgColor,
+                null, null, true, null);
+    }
+
+    private boolean isCurrentlyActive(Boolean active, LocalDateTime start, LocalDateTime end, LocalDateTime now) {
+        if (!Boolean.TRUE.equals(active)) return false;
+        if (start != null && now.isBefore(start)) return false;
+        if (end != null && now.isAfter(end)) return false;
+        return true;
     }
 
     public Set<String> getActiveEmojis() {

@@ -16,7 +16,7 @@ export interface CampaignResponse {
 
 export interface DiscountResponse {
   id: number
-  type: 'CATEGORY' | 'PRODUCT' | 'BRAND' | 'GENERAL'
+  type: 'category' | 'product' | 'brand' | 'general'
   name: string
   emoji: string | null
   discountType: 'PERCENT' | 'FIXED' | null
@@ -109,6 +109,7 @@ export const campaignApi = {
   delete: (id: number) => api.delete(`/admin/campaigns/${id}`),
   getActiveEmojis: () => api.get<string[]>('/admin/campaigns/active-emojis').then(r => r.data),
   getActiveCampaigns: () => api.get<CampaignResponse[]>('/public/campaigns').then(r => r.data),
+  getActiveDiscounts: () => api.get<DiscountResponse[]>('/public/active-discounts').then(r => r.data),
 }
 
 export const discountApi = {

@@ -62,7 +62,7 @@ export default function ProductDetailPage() {
   const [addedToCart, setAddedToCart] = useState(false)
 
   useEffect(() => {
-    dispatch(fetchCategoriesThunk())
+    dispatch(fetchCategoriesThunk(false))
   }, [dispatch])
 
   useEffect(() => {
@@ -190,9 +190,23 @@ export default function ProductDetailPage() {
 
           {/* RIGHT: Product Info */}
           <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--primary-bg)', color: 'var(--primary)', fontSize: 12, fontWeight: 800, letterSpacing: 0.8, padding: '4px 11px', borderRadius: 5, border: '1px solid rgba(220,38,38,.25)', marginBottom: 12, textTransform: 'uppercase' }}>
-              🏅 {product.brandName}
-            </div>
+            {product.brandName && <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              background: 'var(--primary-bg)',
+              color: 'var(--primary)',
+              fontSize: 12,
+              fontWeight: 800,
+              letterSpacing: 0.8,
+              padding: '4px 11px',
+              borderRadius: 5,
+              border: '1px solid rgba(220,38,38,.25)',
+              marginBottom: 12,
+              textTransform: 'uppercase'
+            }}>
+              {product.brandName}
+            </div>}
             <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', lineHeight: 1.3, marginBottom: 12 }}>{product.name}</h1>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
@@ -316,7 +330,7 @@ export default function ProductDetailPage() {
             <div>
               {product.shortDescription && <p style={{ fontSize: 15, color: 'var(--text2)', lineHeight: 1.75, marginBottom: 14 }}>{product.shortDescription}</p>}
               <div style={{ background: 'var(--primary-bg)', borderLeft: '4px solid var(--primary)', padding: '14px 18px', borderRadius: '0 var(--r) var(--r) 0', margin: '18px 0', fontSize: 14, color: 'var(--text2)', lineHeight: 1.6 }}>
-                🏆 OffCats, en kaliteli pet ürünlerini toptan fiyatlarla sunan güvenilir platfromunuzdur.
+                🏆 Patilya, en kaliteli pet ürünlerini toptan fiyatlarla sunan güvenilir platfromunuzdur.
               </div>
               <p style={{ fontSize: 15, color: 'var(--text2)', lineHeight: 1.75, marginBottom: 14 }}>
                 <strong style={{ color: 'var(--text)' }}>Toptan alım avantajı:</strong> Bu ürün minimum {product.moq} adet ile özel toptan fiyatlarıyla sunulmaktadır. Pet shop, veteriner klinikleri ve işletmeler için ideal toptan çözüm.

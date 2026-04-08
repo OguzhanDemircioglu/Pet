@@ -249,7 +249,7 @@ export default function Header({ showSearch = true }: HeaderProps) {
         {/* Logo + Theme */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginRight: 20 }}>
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            <img src="/logo.svg" alt="OffCats" style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0 }} />
+            <img src="/logo.svg" alt="Patilya" style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0 }} />
             <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.5, whiteSpace: 'nowrap' }}>
               <span style={{ color: 'var(--primary)' }}>OFF</span>
               <span style={{ color: 'var(--accent)' }}>Cats</span>

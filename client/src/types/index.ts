@@ -27,6 +27,13 @@ export interface ProductImage {
   displayOrder: number
 }
 
+export interface ActiveDiscount {
+  label: string       // "%20" veya "50 ₺"
+  discountType: 'PERCENT' | 'FIXED'
+  discountValue: number
+  name: string
+}
+
 export interface Product {
   id: number
   name: string
@@ -49,6 +56,7 @@ export interface Product {
   priceTiers: PriceTier[]
   averageRating: number | null
   images: ProductImage[]
+  activeDiscount: ActiveDiscount | null
 }
 
 export interface User {

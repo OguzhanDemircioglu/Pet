@@ -1,6 +1,6 @@
 spring:
   application:
-    name: offcats-server
+    name: patilya-server
 
   datasource:
     url: jdbc:postgresql://${DB_HOST:pg-3da83de9-keya.h.aivencloud.com}:${DB_PORT:15474}/${DB_NAME:defaultdb}?currentSchema=petshop&sslmode=require
@@ -34,7 +34,7 @@ spring:
   mail:
     host: ${MAIL_HOST:smtp-relay.brevo.com}
     port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME:info@offcats.com.tr}
+    username: ${MAIL_USERNAME:info@patilya.com.tr}
     password: ${MAIL_PASSWORD:}
     properties:
       mail:
@@ -51,22 +51,22 @@ server:
 
 # JWT
 jwt:
-  secret: ${JWT_SECRET:offcats-super-secret-key-minimum-256-bits-for-HS256-algorithm-change-in-production}
+  secret: ${JWT_SECRET:patilya-super-secret-key-minimum-256-bits-for-HS256-algorithm-change-in-production}
   access-token-expiration-ms: 900000        # 15 dakika
   refresh-token-expiration-ms: 604800000    # 7 gün
 
 # Uygulama ayarları
 app:
-  upload-dir: ${UPLOAD_DIR:./uploads/products}
+  upload-dir: ${UPLOAD_DIR:../uploads/products}
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
-  admin-email: ${ADMIN_EMAIL:admin@offcats.com.tr}
-  mail-from: ${MAIL_FROM:info@offcats.com.tr}
+  admin-email: ${ADMIN_EMAIL:admin@patilya.com.tr}
+  mail-from: ${MAIL_FROM:info@patilya.com.tr}
   telegram:
     chat-id: ${TELEGRAM_CHAT_ID:}
     api-key: ${TELEGRAM_API_KEY:}
 
 logging:
   level:
-    com.offcats: INFO
+    com.patilya: INFO
     org.springframework.security: WARN
     org.hibernate.SQL: WARN

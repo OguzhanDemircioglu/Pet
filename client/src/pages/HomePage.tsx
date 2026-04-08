@@ -9,7 +9,7 @@ import type { Product } from '../types'
 import type { RootState, AppDispatch } from '../store'
 import { fetchProductsThunk } from '../store/productSlice'
 import { fetchCategoriesThunk } from '../store/categorySlice'
-import { fetchCampaignsThunk } from '../store/campaignSlice'
+import { fetchCampaignsThunk, fetchActiveDiscountsThunk } from '../store/campaignSlice'
 import { addToCart } from '../store/cartSlice'
 import { imgUrl } from '../api/productApi'
 import toast from 'react-hot-toast'
@@ -48,15 +48,37 @@ function ProductCard({ p }: { p: Product }) {
           ? <img src={imgUrl(p.primaryImageUrl)} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 8 }} />
           : <span>{emoji}</span>
         }
+        {p.activeDiscount && (
+          <div style={{
+            position: 'absolute', top: 8, left: 8,
+            background: 'var(--primary)', color: '#fff',
+            fontSize: 12, fontWeight: 900, padding: '3px 9px',
+            borderRadius: 20, boxShadow: '0 2px 8px rgba(220,38,38,.4)',
+            letterSpacing: 0.3,
+          }}>
+            {p.activeDiscount.label} İndirim
+          </div>
+        )}
       </div>
       <div style={{ padding: 14, flex: 1, display: 'flex', flexDirection: 'column' }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>{p.brandName}</div>
         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.4, marginBottom: 8, flex: 1 }}>{p.name}</div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 10 }}>
-          <div>
-            <div style={{ fontSize: 11, color: 'var(--text3)' }}>Min. {p.moq} {p.unit}</div>
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 2 }}>Min. {p.moq} {p.unit}</div>
+          {p.activeDiscount ? (() => {
+            const disc = p.activeDiscount!
+            const newPrice = disc.discountType === 'PERCENT'
+              ? p.basePrice * (1 - disc.discountValue / 100)
+              : p.basePrice - disc.discountValue
+            return (
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                <div style={{ fontSize: 14, color: 'var(--text3)', textDecoration: 'line-through' }}>₺{p.basePrice.toFixed(2)}</div>
+                <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--primary)' }}>₺{newPrice.toFixed(2)}</div>
+              </div>
+            )
+          })() : (
             <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--primary)' }}>₺{p.basePrice.toFixed(2)}</div>
-          </div>
+          )}
         </div>
         <button onClick={e => {
           e.stopPropagation(); e.preventDefault()
@@ -81,9 +103,10 @@ export default function HomePage() {
   const slides = useSelector((s: RootState) => s.campaigns.slides)
 
   useEffect(() => {
-    dispatch(fetchProductsThunk())
-    dispatch(fetchCategoriesThunk())
+    dispatch(fetchProductsThunk(false))
+    dispatch(fetchCategoriesThunk(false))
     dispatch(fetchCampaignsThunk())
+    dispatch(fetchActiveDiscountsThunk())
   }, [dispatch])
 
   useEffect(() => {
@@ -172,7 +195,7 @@ export default function HomePage() {
 
         {/* Why Section */}
         <div style={{ padding: '48px 0 52px' }}>
-          <SectionHead title="Neden OffCats?" />
+          <SectionHead title="Neden Patilya?" />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 18 }}>
             {WHY_CARDS.map(w => (
               <div key={w.title} className="why-card" style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', padding: '26px 20px', textAlign: 'center', transition: '0.2s' }}>

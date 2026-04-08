@@ -45,7 +45,7 @@ export default function PhoneRequiredModal() {
       }}>
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 28 }}>
-          <img src="/logo.svg" alt="OffCats" style={{ width: 36, height: 36 }} />
+          <img src="/logo.svg" alt="Patilya" style={{ width: 36, height: 36 }} />
           <span style={{ fontSize: 20, fontWeight: 900 }}>
             <span style={{ color: 'var(--primary)' }}>OFF</span>
             <span style={{ color: 'var(--accent)' }}>Cats</span>
