@@ -3,6 +3,7 @@ package com.petshop.service;
 import com.petshop.dto.response.NotificationResponse;
 import com.petshop.entity.Notification;
 import com.petshop.entity.User;
+import com.petshop.exception.ResourceNotFoundException;
 import com.petshop.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,9 +20,6 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
 
-    /**
-     * Kullanıcının tüm bildirimlerini en yeniden eskiye sıralar.
-     */
     public List<NotificationResponse> getUserNotifications(Long userId) {
         return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
@@ -29,17 +27,19 @@ public class NotificationService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Kullanıcının tüm bildirimlerini okundu olarak işaretler.
-     */
     @Transactional
     public void markAllRead(Long userId) {
         notificationRepository.markAllRead(userId);
     }
 
-    /**
-     * Yeni bir bildirim kaydeder (OrderService tarafından çağrılır).
-     */
+    @Transactional
+    public void markRead(Long notificationId, Long userId) {
+        int updated = notificationRepository.markReadByIdAndUserId(notificationId, userId);
+        if (updated == 0) {
+            throw new ResourceNotFoundException("Bildirim bulunamadı");
+        }
+    }
+
     public Notification createNotification(User user, String message, String type) {
         Notification notification = Notification.builder()
                 .user(user)

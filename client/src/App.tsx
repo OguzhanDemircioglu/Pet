@@ -6,6 +6,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google'
 import { useSelector } from 'react-redux'
 import { store } from './store'
 import { loadMeThunk } from './store/authSlice'
+import { fetchNotificationsThunk } from './store/notificationSlice'
 import { useAppDispatch } from './hooks/useAppDispatch'
 import { ThemeProvider } from './context/ThemeContext'
 import type { RootState } from './store'
@@ -26,6 +27,10 @@ function AppInner() {
   useEffect(() => {
     dispatch(loadMeThunk())
   }, [dispatch])
+
+  useEffect(() => {
+    if (user) dispatch(fetchNotificationsThunk())
+  }, [user, dispatch])
 
   if (!authLoading && user && !user.phone) {
     return <PhoneRequiredModal />

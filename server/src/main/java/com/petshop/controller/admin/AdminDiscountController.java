@@ -46,6 +46,12 @@ public class AdminDiscountController {
         return ResponseEntity.ok(discountService.createGeneralDiscount(req));
     }
 
+    @PutMapping("/{type}/{id}")
+    public ResponseEntity<DiscountResponse> update(@PathVariable String type, @PathVariable Long id,
+            @Valid @RequestBody DiscountUpdateRequest req) {
+        return ResponseEntity.ok(discountService.updateDiscount(type, id, req));
+    }
+
     @DeleteMapping("/{type}/{id}")
     public ResponseEntity<Void> delete(@PathVariable String type, @PathVariable Long id) {
         discountService.deleteDiscount(type, id);

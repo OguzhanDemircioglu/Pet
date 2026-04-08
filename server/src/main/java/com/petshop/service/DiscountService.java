@@ -173,6 +173,40 @@ public class DiscountService {
         return slides;
     }
 
+    @Transactional
+    public DiscountResponse updateDiscount(String type, Long id, DiscountUpdateRequest req) {
+        switch (type) {
+            case "category" -> {
+                CategoryDiscount d = categoryDiscountRepo.findById(id)
+                        .orElseThrow(() -> new ResourceNotFoundException("İndirim", id));
+                d.setName(req.name()); d.setEmoji(req.emoji());
+                d.setDiscountType(req.discountType()); d.setDiscountValue(req.discountValue());
+                d.setStartDate(req.startDate()); d.setEndDate(req.endDate());
+                if (req.isActive() != null) d.setIsActive(req.isActive());
+                return toResponse(categoryDiscountRepo.save(d));
+            }
+            case "product" -> {
+                ProductDiscount d = productDiscountRepo.findById(id)
+                        .orElseThrow(() -> new ResourceNotFoundException("İndirim", id));
+                d.setName(req.name()); d.setEmoji(req.emoji());
+                d.setDiscountType(req.discountType()); d.setDiscountValue(req.discountValue());
+                d.setStartDate(req.startDate()); d.setEndDate(req.endDate());
+                if (req.isActive() != null) d.setIsActive(req.isActive());
+                return toResponse(productDiscountRepo.save(d));
+            }
+            case "brand" -> {
+                BrandDiscount d = brandDiscountRepo.findById(id)
+                        .orElseThrow(() -> new ResourceNotFoundException("İndirim", id));
+                d.setName(req.name()); d.setEmoji(req.emoji());
+                d.setDiscountType(req.discountType()); d.setDiscountValue(req.discountValue());
+                d.setStartDate(req.startDate()); d.setEndDate(req.endDate());
+                if (req.isActive() != null) d.setIsActive(req.isActive());
+                return toResponse(brandDiscountRepo.save(d));
+            }
+            default -> throw new BusinessException("Geçersiz indirim tipi: " + type);
+        }
+    }
+
     private CampaignResponse discountToSlide(Long id, String name, String emoji,
             String discountType, BigDecimal discountValue, String targetName, String bgColor) {
         String valueLabel = "PERCENT".equals(discountType)
@@ -180,9 +214,8 @@ public class DiscountService {
                 : discountValue.stripTrailingZeros().toPlainString() + " ₺";
         String usedEmoji = (emoji != null && !emoji.isBlank()) ? emoji : "🏷️";
         String title = targetName + "'de\n" + valueLabel + " İndirim";
-        String badge = usedEmoji + " " + name;
-        return new CampaignResponse(id, title, badge, name, usedEmoji, valueLabel, bgColor,
-                null, null, true, null);
+        String badge = usedEmoji + " " + valueLabel;
+        return CampaignResponse.discount(title, badge, name, usedEmoji, bgColor);
     }
 
     private boolean isCurrentlyActive(Boolean active, LocalDateTime start, LocalDateTime end, LocalDateTime now) {

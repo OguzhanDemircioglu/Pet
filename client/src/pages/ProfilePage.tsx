@@ -13,8 +13,9 @@ import { fetchBrandsThunk, resetBrands } from '../store/brandSlice'
 import { fetchAdminCampaignsThunk, resetAdminCampaigns } from '../store/adminCampaignSlice'
 import { resetCampaigns, fetchCampaignsThunk } from '../store/campaignSlice'
 import { productApi, brandApi, categoryApi, userApi, productImageApi, imgUrl, type ProductForm } from '../api/productApi'
-import { campaignApi, discountApi, type CampaignResponse, type CampaignRequest } from '../api/campaignApi'
-import { orderApi, notificationApi, type OrderResponse, type NotificationResponse } from '../api/orderApi'
+import { campaignApi, discountApi, type CampaignResponse, type CampaignRequest, type DiscountResponse } from '../api/campaignApi'
+import { orderApi, type OrderResponse } from '../api/orderApi'
+import { fetchNotificationsThunk, markAllReadThunk, markReadThunk } from '../store/notificationSlice'
 import { fetchCategoriesThunk } from '../store/categorySlice'
 import type { Product, ProductImage as ProductImageType, Brand, Category, AdminUser } from '../types'
 
@@ -290,26 +291,30 @@ function InfoSection({ user }: { user: { firstName: string; lastName: string; em
 
 // ─── Notifications Section ─────────────────────────────────────────────────────
 function NotificationsSection() {
-  const [notifications, setNotifications] = useState<NotificationResponse[]>([])
-  const [loading, setLoading] = useState(true)
+  const dispatch = useDispatch<AppDispatch>()
+  const notifications = useSelector((s: RootState) => s.notifications.items)
+  const loading = useSelector((s: RootState) => s.notifications.loading)
   const [onlyUnread, setOnlyUnread] = useState(false)
   const [marking, setMarking] = useState(false)
 
   useEffect(() => {
-    notificationApi.listMy().then(setNotifications).catch(() => {}).finally(() => setLoading(false))
-  }, [])
+    dispatch(fetchNotificationsThunk())
+  }, [dispatch])
 
   const handleMarkAllRead = async () => {
     setMarking(true)
     try {
-      await notificationApi.markAllRead()
-      setNotifications(prev => prev.map(x => ({ ...x, isRead: true })))
+      await dispatch(markAllReadThunk()).unwrap()
       toast.success('Tüm bildirimler okundu işaretlendi')
     } catch {
       toast.error('İşlem başarısız, tekrar deneyin')
     } finally {
       setMarking(false)
     }
+  }
+
+  const handleMarkRead = (id: number) => {
+    dispatch(markReadThunk(id))
   }
 
   const unreadCount = notifications.filter(n => !n.isRead).length
@@ -324,8 +329,8 @@ function NotificationsSection() {
 
       {/* Kontrol barı */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text2)', userSelect: 'none' }}>
-          <div onClick={() => setOnlyUnread(v => !v)} style={{ width: 36, height: 20, borderRadius: 10, background: onlyUnread ? 'var(--primary)' : 'var(--border2)', position: 'relative', cursor: 'pointer', transition: '0.25s', flexShrink: 0 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text2)', userSelect: 'none' }} onClick={() => setOnlyUnread(v => !v)}>
+          <div style={{ width: 36, height: 20, borderRadius: 10, background: onlyUnread ? 'var(--primary)' : 'var(--border2)', position: 'relative', transition: '0.25s', flexShrink: 0 }}>
             <div style={{ position: 'absolute', width: 14, height: 14, borderRadius: '50%', background: '#fff', top: 3, left: onlyUnread ? 19 : 3, transition: '0.25s' }} />
           </div>
           Sadece okunmayanları göster
@@ -345,7 +350,8 @@ function NotificationsSection() {
             <div style={{ fontSize: 14, fontWeight: 600 }}>{onlyUnread ? 'Okunmamış bildirim yok' : 'Bildirim yok'}</div>
           </div>
         ) : displayed.map((n, i) => (
-          <div key={n.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '14px 20px', borderBottom: i < displayed.length - 1 ? '1px solid var(--border)' : 'none', background: n.isRead ? 'transparent' : 'var(--primary-bg)', transition: '0.2s' }}>
+          <div key={n.id} onClick={() => { if (!n.isRead) handleMarkRead(n.id) }}
+            style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '14px 20px', borderBottom: i < displayed.length - 1 ? '1px solid var(--border)' : 'none', background: n.isRead ? 'transparent' : 'var(--primary-bg)', transition: '0.2s', cursor: n.isRead ? 'default' : 'pointer' }}>
             <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--bg3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
               {typeIcon[n.type] || '🔔'}
             </div>
@@ -809,6 +815,8 @@ function AdminCampaignsSection() {
 
   useEffect(() => {
     dispatch(fetchBrandsThunk())
+    dispatch(fetchProductsThunk(false))
+    dispatch(fetchCategoriesThunk(false))
     dispatch(fetchAdminCampaignsThunk())
   }, [dispatch])
 
@@ -820,21 +828,25 @@ function AdminCampaignsSection() {
   }
 
   const [tab, setTab] = useState<'info' | 'discount'>('info')
-  const [modal, setModal] = useState<null | 'camp-add' | 'camp-edit' | 'disc-add'>(null)
+  const [modal, setModal] = useState<null | 'camp-add' | 'camp-edit' | 'disc-add' | 'disc-edit'>(null)
   const [editCamp, setEditCamp] = useState<CampaignResponse | null>(null)
+  const [editDisc, setEditDisc] = useState<DiscountResponse | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<{ kind: 'campaign' | 'discount'; id: number; dtype?: string } | null>(null)
   const [campForm, setCampForm] = useState<CampForm>({ title: '', badge: '', description: '', emoji: '', sticker: '', bgColor: CAMP_COLORS[0], startDate: '', endDate: '', isActive: true })
   const [discForm, setDiscForm] = useState<DiscForm>({ name: '', emoji: '', scope: 'category', discountType: 'PERCENT', discountValue: '', categoryId: '', productId: '', brandId: '', startDate: '', endDate: '', isActive: true })
   const [saving, setSaving] = useState(false)
   const [submitted, setSubmitted] = useState(false)
-  const [productSearch, setProductSearch] = useState('')
 
   const openCampAdd = () => { setCampForm({ title: '', badge: '', description: '', emoji: '', sticker: '', bgColor: CAMP_COLORS[0], startDate: '', endDate: '', isActive: true }); setSubmitted(false); setEditCamp(null); setModal('camp-add') }
   const openCampEdit = (c: CampaignResponse) => {
     setCampForm({ title: c.title, badge: c.badge, description: c.description || '', emoji: c.emoji || '', sticker: c.sticker || '', bgColor: c.bgColor, startDate: c.startDate ? c.startDate.slice(0, 16) : '', endDate: c.endDate ? c.endDate.slice(0, 16) : '', isActive: c.isActive })
     setSubmitted(false); setEditCamp(c); setModal('camp-edit')
   }
-  const openDiscAdd = () => { setDiscForm({ name: '', emoji: '', scope: 'category', discountType: 'PERCENT', discountValue: '', categoryId: '', productId: '', brandId: '', startDate: '', endDate: '', isActive: true }); setSubmitted(false); setProductSearch(''); setModal('disc-add') }
+  const openDiscAdd = () => { setDiscForm({ name: '', emoji: '', scope: 'category', discountType: 'PERCENT', discountValue: '', categoryId: '', productId: '', brandId: '', startDate: '', endDate: '', isActive: true }); setSubmitted(false); setEditDisc(null); setModal('disc-add') }
+  const openDiscEdit = (d: DiscountResponse) => {
+    setDiscForm({ name: d.name, emoji: d.emoji || '', scope: d.type as any, discountType: d.discountType || 'PERCENT', discountValue: String(d.discountValue ?? ''), categoryId: '', productId: '', brandId: '', startDate: d.startDate ? d.startDate.slice(0, 16) : '', endDate: d.endDate ? d.endDate.slice(0, 16) : '', isActive: d.isActive })
+    setSubmitted(false); setEditDisc(d); setModal('disc-edit')
+  }
 
   const handleSaveCampaign = async () => {
     setSubmitted(true)
@@ -843,7 +855,7 @@ function AdminCampaignsSection() {
     try {
       const payload: CampaignRequest = { ...campForm, description: campForm.description || null, emoji: campForm.emoji || null, sticker: campForm.sticker || null, startDate: campForm.startDate || null, endDate: campForm.endDate || null }
       if (modal === 'camp-add') { await campaignApi.create(payload); toast.success('Kampanya eklendi') }
-      else if (editCamp) { await campaignApi.update(editCamp.id, payload); toast.success('Kampanya güncellendi') }
+      else if (editCamp) { await campaignApi.update(editCamp.id!, payload); toast.success('Kampanya güncellendi') }
       setModal(null); refreshAll()
     } catch (err: any) { toast.error(err?.response?.data?.message || 'Bir hata oluştu') }
     finally { setSaving(false) }
@@ -853,17 +865,25 @@ function AdminCampaignsSection() {
     setSubmitted(true)
     if (!discForm.name.trim()) { toast.error('Kampanya adı zorunlu'); return }
     if (!discForm.discountValue || isNaN(+discForm.discountValue)) { toast.error('İndirim değeri zorunlu'); return }
-    if (!discForm.startDate || !discForm.endDate) { toast.error('Tarih aralığı zorunlu'); return }
-    if (discForm.scope === 'category' && !discForm.categoryId) { toast.error('Kategori seçin'); return }
-    if (discForm.scope === 'product' && !discForm.productId) { toast.error('Ürün seçin'); return }
-    if (discForm.scope === 'brand' && !discForm.brandId) { toast.error('Marka seçin'); return }
+    if (modal !== 'disc-edit') {
+      if (discForm.scope === 'category' && !discForm.categoryId) { toast.error('Kategori seçin'); return }
+      if (discForm.scope === 'product' && !discForm.productId) { toast.error('Ürün seçin'); return }
+      if (discForm.scope === 'brand' && !discForm.brandId) { toast.error('Marka seçin'); return }
+    }
     setSaving(true)
     try {
-      const base = { name: discForm.name, emoji: discForm.emoji || null, discountType: discForm.discountType as 'PERCENT' | 'FIXED', discountValue: +discForm.discountValue, startDate: discForm.startDate, endDate: discForm.endDate, isActive: discForm.isActive }
-      if (discForm.scope === 'category') await discountApi.create('category', { ...base, categoryId: +discForm.categoryId })
-      else if (discForm.scope === 'product') await discountApi.create('product', { ...base, productId: +discForm.productId })
-      else await discountApi.create('brand', { ...base, brandId: +discForm.brandId })
-      toast.success('İndirim kampanyası eklendi'); setModal(null); refreshAll()
+      const base = { name: discForm.name, emoji: discForm.emoji || null, discountType: discForm.discountType as 'PERCENT' | 'FIXED', discountValue: +discForm.discountValue, startDate: discForm.startDate || null, endDate: discForm.endDate || null, isActive: discForm.isActive }
+      if (modal === 'disc-edit' && editDisc) {
+        await discountApi.update(editDisc.type, editDisc.id, base)
+        toast.success('İndirim kampanyası güncellendi')
+      } else {
+        const createBase = { ...base, startDate: discForm.startDate || '', endDate: discForm.endDate || '' }
+        if (discForm.scope === 'category') await discountApi.create('category', { ...createBase, categoryId: +discForm.categoryId })
+        else if (discForm.scope === 'product') await discountApi.create('product', { ...createBase, productId: +discForm.productId })
+        else await discountApi.create('brand', { ...createBase, brandId: +discForm.brandId })
+        toast.success('İndirim kampanyası eklendi')
+      }
+      setModal(null); refreshAll()
     } catch (err: any) { toast.error(err?.response?.data?.message || 'Bir hata oluştu') }
     finally { setSaving(false) }
   }
@@ -877,8 +897,15 @@ function AdminCampaignsSection() {
     } catch (err: any) { toast.error(err?.response?.data?.message || 'Silinemedi'); setDeleteConfirm(null) }
   }
 
-  const filteredProducts = useMemo(() => productSearch.length < 2 ? [] : allProducts.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase())).slice(0, 8), [allProducts, productSearch])
-  const leafCategories = useMemo(() => categories.filter(c => c.parent_id !== null), [categories])
+  const categoryMap = useMemo(() => new Map(categories.map(c => [c.category_id, c.category_name])), [categories])
+  const leafCategories = useMemo(() =>
+    categories
+      .filter(c => c.parent_id !== null)
+      .map(c => ({ ...c, displayName: `${categoryMap.get(c.parent_id!) ?? ''} → ${c.category_name}` }))
+      .sort((a, b) => a.displayName.localeCompare(b.displayName, 'tr')),
+    [categories, categoryMap])
+  const sortedBrands = useMemo(() => [...brands].sort((a, b) => a.name.localeCompare(b.name, 'tr')), [brands])
+  const sortedProducts = useMemo(() => [...allProducts].sort((a, b) => a.name.localeCompare(b.name, 'tr')), [allProducts])
 
   const EmojiPicker = ({ selected, onSelect }: { selected: string; onSelect: (e: string) => void }) => (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
@@ -947,7 +974,7 @@ function AdminCampaignsSection() {
                     ) : (
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button onClick={() => openCampEdit(c)} style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 10px', cursor: 'pointer' }}>Düzenle</button>
-                        <button onClick={() => setDeleteConfirm({ kind: 'campaign', id: c.id })} style={{ fontSize: 12, color: 'var(--primary)', background: 'var(--primary-bg)', border: '1px solid rgba(220,38,38,.2)', borderRadius: 5, padding: '4px 10px', cursor: 'pointer' }}>Sil</button>
+                        <button onClick={() => setDeleteConfirm({ kind: 'campaign', id: c.id! })} style={{ fontSize: 12, color: 'var(--primary)', background: 'var(--primary-bg)', border: '1px solid rgba(220,38,38,.2)', borderRadius: 5, padding: '4px 10px', cursor: 'pointer' }}>Sil</button>
                       </div>
                     )}
                   </td>
@@ -993,7 +1020,10 @@ function AdminCampaignsSection() {
                           <button onClick={() => setDeleteConfirm(null)} style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '3px 9px', cursor: 'pointer' }}>Hayır</button>
                         </div>
                       ) : (
-                        <button onClick={() => setDeleteConfirm({ kind: 'discount', id: d.id, dtype: d.type })} style={{ fontSize: 12, color: 'var(--primary)', background: 'var(--primary-bg)', border: '1px solid rgba(220,38,38,.2)', borderRadius: 5, padding: '4px 10px', cursor: 'pointer' }}>Sil</button>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button onClick={() => openDiscEdit(d)} style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 10px', cursor: 'pointer' }}>Düzenle</button>
+                          <button onClick={() => setDeleteConfirm({ kind: 'discount', id: d.id, dtype: d.type })} style={{ fontSize: 12, color: 'var(--primary)', background: 'var(--primary-bg)', border: '1px solid rgba(220,38,38,.2)', borderRadius: 5, padding: '4px 10px', cursor: 'pointer' }}>Sil</button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -1064,11 +1094,11 @@ function AdminCampaignsSection() {
       )}
 
       {/* İndirim Kampanyası Modal */}
-      {modal === 'disc-add' && (
+      {(modal === 'disc-add' || modal === 'disc-edit') && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setModal(null)}>
           <div style={{ background: 'var(--bg2)', borderRadius: 'var(--r2)', width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,.3)' }} onClick={e => e.stopPropagation()}>
             <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: 'var(--bg2)', zIndex: 1 }}>
-              <h3 style={{ fontSize: 17, fontWeight: 800 }}>İndirim Kampanyası</h3>
+              <h3 style={{ fontSize: 17, fontWeight: 800 }}>{modal === 'disc-edit' ? 'İndirimi Düzenle' : 'İndirim Kampanyası'}</h3>
               <button onClick={() => setModal(null)} style={{ background: 'none', border: 'none', fontSize: 22, color: 'var(--text3)', cursor: 'pointer', lineHeight: 1 }}>×</button>
             </div>
             <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -1079,6 +1109,7 @@ function AdminCampaignsSection() {
                 <EmojiPicker selected={discForm.emoji} onSelect={em => setDiscForm(p => ({ ...p, emoji: em }))} />
                 {discForm.emoji && <div style={{ fontSize: 11.5, color: 'var(--text2)', marginTop: 4 }}>Seçili: {discForm.emoji} <button type="button" onClick={() => setDiscForm(p => ({ ...p, emoji: '' }))} style={{ fontSize: 11, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer' }}>Temizle</button></div>}
               </FormField>
+              {modal !== 'disc-edit' && (<>
               <FormField label="Kapsam">
                 <select value={discForm.scope} onChange={e => setDiscForm(p => ({ ...p, scope: e.target.value as DiscountScope, categoryId: '', productId: '', brandId: '' }))} style={inputStyle}>
                   <option value="category">Kategoriye Göre</option>
@@ -1090,31 +1121,27 @@ function AdminCampaignsSection() {
                 <FormField label="Kategori *">
                   <select value={discForm.categoryId} onChange={e => setDiscForm(p => ({ ...p, categoryId: e.target.value }))} style={{ ...inputStyle, borderColor: submitted && !discForm.categoryId ? 'var(--primary)' : undefined }}>
                     <option value="">Kategori seçin...</option>
-                    {leafCategories.map(c => <option key={c.category_id} value={c.category_id}>{c.category_name}</option>)}
+                    {leafCategories.map(c => <option key={c.category_id} value={c.category_id}>{c.displayName}</option>)}
                   </select>
                 </FormField>
               )}
               {discForm.scope === 'product' && (
                 <FormField label="Ürün *">
-                  <input value={productSearch} onChange={e => { setProductSearch(e.target.value); setDiscForm(p => ({ ...p, productId: '' })) }} style={{ ...inputStyle, borderColor: submitted && !discForm.productId ? 'var(--primary)' : undefined }} placeholder="Ürün adı ile ara..." />
-                  {filteredProducts.length > 0 && !discForm.productId && (
-                    <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r)', marginTop: 4, overflow: 'hidden', background: 'var(--bg2)' }}>
-                      {filteredProducts.map(p => (
-                        <div key={p.id} onClick={() => { setDiscForm(fp => ({ ...fp, productId: String(p.id) })); setProductSearch(p.name) }} style={{ padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid var(--border)', color: 'var(--text)' }} className="admin-row">{p.name}</div>
-                      ))}
-                    </div>
-                  )}
-                  {discForm.productId && <div style={{ fontSize: 12, color: '#16a34a', marginTop: 4 }}>✓ Seçildi</div>}
+                  <select value={discForm.productId} onChange={e => setDiscForm(p => ({ ...p, productId: e.target.value }))} style={{ ...inputStyle, borderColor: submitted && !discForm.productId ? 'var(--primary)' : undefined }}>
+                    <option value="">Ürün seçin...</option>
+                    {sortedProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
                 </FormField>
               )}
               {discForm.scope === 'brand' && (
                 <FormField label="Marka *">
                   <select value={discForm.brandId} onChange={e => setDiscForm(p => ({ ...p, brandId: e.target.value }))} style={{ ...inputStyle, borderColor: submitted && !discForm.brandId ? 'var(--primary)' : undefined }}>
                     <option value="">Marka seçin...</option>
-                    {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                    {sortedBrands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                   </select>
                 </FormField>
               )}
+              </>)}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <FormField label="İndirim Tipi">
                   <div style={{ display: 'flex', gap: 14, alignItems: 'center', height: 40 }}>
@@ -1144,7 +1171,7 @@ function AdminCampaignsSection() {
             <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button onClick={() => setModal(null)} style={{ padding: '9px 20px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>İptal</button>
               <button onClick={handleSaveDiscount} disabled={saving} style={{ padding: '9px 22px', borderRadius: 'var(--r)', border: 'none', background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
-                {saving ? 'Kaydediliyor...' : 'Ekle'}
+                {saving ? 'Kaydediliyor...' : modal === 'disc-edit' ? 'Güncelle' : 'Ekle'}
               </button>
             </div>
           </div>

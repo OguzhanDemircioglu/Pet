@@ -57,6 +57,9 @@ export const notificationApi = {
   listMy: () =>
     api.get<NotificationResponse[]>('/notifications/my').then(r => r.data),
 
+  markRead: (id: number) =>
+    api.patch(`/notifications/${id}/read`),
+
   markAllRead: () =>
     api.patch('/notifications/read-all'),
 }

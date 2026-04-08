@@ -1,7 +1,7 @@
 import api from './axios'
 
 export interface CampaignResponse {
-  id: number
+  id: number | null
   title: string
   badge: string
   description: string | null
@@ -11,7 +11,18 @@ export interface CampaignResponse {
   startDate: string | null
   endDate: string | null
   isActive: boolean
-  createdAt: string
+  createdAt: string | null
+  sourceType: 'info' | 'discount' | null
+}
+
+export interface DiscountUpdateRequest {
+  name: string
+  emoji?: string | null
+  discountType: DiscountValueType
+  discountValue: number
+  startDate: string | null
+  endDate: string | null
+  isActive?: boolean
 }
 
 export interface DiscountResponse {
@@ -118,6 +129,8 @@ export const discountApi = {
     scope: DiscountScope,
     data: CategoryDiscountRequest | ProductDiscountRequest | BrandDiscountRequest | GeneralDiscountRequest
   ) => api.post<DiscountResponse>(`/admin/discounts/${scope}`, data).then(r => r.data),
+  update: (type: string, id: number, data: DiscountUpdateRequest) =>
+    api.put<DiscountResponse>(`/admin/discounts/${type.toLowerCase()}/${id}`, data).then(r => r.data),
   delete: (type: string, id: number) => api.delete(`/admin/discounts/${type.toLowerCase()}/${id}`),
   getActiveEmojis: () => api.get<string[]>('/admin/discounts/active-emojis').then(r => r.data),
   validateCoupon: (couponCode: string, orderAmount: number) =>

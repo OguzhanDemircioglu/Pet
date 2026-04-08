@@ -1,5 +1,6 @@
 package com.petshop.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.petshop.entity.Campaign;
 
 import java.time.LocalDateTime;
@@ -14,13 +15,22 @@ public record CampaignResponse(
         String bgColor,
         LocalDateTime startDate,
         LocalDateTime endDate,
-        Boolean isActive,
-        LocalDateTime createdAt
+        @JsonProperty("isActive") Boolean isActive,
+        LocalDateTime createdAt,
+        String sourceType
 ) {
     public static CampaignResponse from(Campaign c) {
         return new CampaignResponse(
                 c.getId(), c.getTitle(), c.getBadge(), c.getDescription(),
                 c.getEmoji(), c.getSticker(), c.getBgColor(),
-                c.getStartDate(), c.getEndDate(), c.getIsActive(), c.getCreatedAt());
+                c.getStartDate(), c.getEndDate(), c.getIsActive(), c.getCreatedAt(),
+                "info");
+    }
+
+    public static CampaignResponse discount(String title, String badge, String description,
+                                             String emoji, String bgColor) {
+        return new CampaignResponse(
+                null, title, badge, description, emoji, null, bgColor,
+                null, null, true, null, "discount");
     }
 }

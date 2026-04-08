@@ -140,10 +140,11 @@ export default function HomePage() {
             }}>
               <div style={{ position: 'absolute', inset: 0, opacity: 0.07, backgroundImage: 'radial-gradient(circle at 20% 50%,white 1px,transparent 1px),radial-gradient(circle at 80% 20%,white 1px,transparent 1px)', backgroundSize: '40px 40px' }} />
               <div style={{ position: 'relative', zIndex: 1, maxWidth: 520 }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,.18)', border: '1px solid rgba(255,255,255,.3)', borderRadius: 20, padding: '4px 14px', fontSize: 12.5, fontWeight: 600, color: 'rgba(255,255,255,.95)', marginBottom: 16 }}>{s.badge}</div>
+                {s.sourceType !== 'discount' && <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,.18)', border: '1px solid rgba(255,255,255,.3)', borderRadius: 20, padding: '4px 14px', fontSize: 12.5, fontWeight: 600, color: 'rgba(255,255,255,.95)', marginBottom: 16 }}>{s.badge}</div>}
                 <h2 style={{ fontSize: 'clamp(22px,3vw,38px)', fontWeight: 900, color: '#fff', lineHeight: 1.2, marginBottom: 10, letterSpacing: -0.3, whiteSpace: 'pre-line' }}>{s.title}</h2>
-                <p style={{ fontSize: 15, color: 'rgba(255,255,255,.85)', lineHeight: 1.55, marginBottom: 22 }}>{s.sub}</p>
-                <a href="#" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#fff', color: s.btnColor, fontSize: 14, fontWeight: 700, padding: '11px 26px', borderRadius: 'var(--r)', boxShadow: '0 4px 14px rgba(0,0,0,.15)' }}>Hemen İncele →</a>
+                {s.sourceType === 'info' && s.sub && (
+                  <p style={{ fontSize: 15, color: 'rgba(255,255,255,.85)', lineHeight: 1.55, marginBottom: 22 }}>{s.sub}</p>
+                )}
               </div>
               <div style={{ position: 'relative', zIndex: 1, fontSize: 110, lineHeight: 1, filter: 'drop-shadow(0 8px 24px rgba(0,0,0,.2))', flexShrink: 0, userSelect: 'none' }}>{s.emoji}</div>
               {s.sticker && (

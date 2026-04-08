@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import type { RootState, AppDispatch } from '../store'
 import { toggleCart, closeCart, removeFromCart, updateQuantity, clearCart } from '../store/cartSlice'
 import { orderApi } from '../api/orderApi'
+import { markReadThunk, markAllReadThunk } from '../store/notificationSlice'
 import { setUser, updateUserPhone } from '../store/authSlice'
 import { imgUrl } from '../api/productApi'
 import { authApi } from '../api/authApi'
@@ -93,6 +94,8 @@ export default function Header({ showSearch = true }: HeaderProps) {
   const user = useSelector((s: RootState) => s.auth.user)
   const cartItems = useSelector((s: RootState) => s.cart.items)
   const cartOpen = useSelector((s: RootState) => s.cart.isOpen)
+  const notifications = useSelector((s: RootState) => s.notifications.items)
+  const unreadCount = notifications.filter(n => !n.isRead).length
 
   const [searchVal, setSearchVal] = useState('')
   const [notifOpen, setNotifOpen] = useState(false)
@@ -282,31 +285,42 @@ export default function Header({ showSearch = true }: HeaderProps) {
               <button onClick={e => { e.stopPropagation(); setNotifOpen(o => !o) }}
                 style={{ position: 'relative', background: 'none', height: 42, borderRadius: 'var(--r)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text2)', fontSize: 20, padding: '0 10px', border: 'none', cursor: 'pointer' }}>
                 🔔
-                <span style={{ position: 'absolute', top: 4, right: 4, fontSize: 10, fontWeight: 700, minWidth: 17, height: 17, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px', background: 'var(--primary)', color: '#fff' }}>3</span>
+                {unreadCount > 0 && (
+                  <span style={{ position: 'absolute', top: 4, right: 4, fontSize: 10, fontWeight: 700, minWidth: 17, height: 17, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px', background: 'var(--primary)', color: '#fff' }}>{unreadCount > 9 ? '9+' : unreadCount}</span>
+                )}
               </button>
               {notifOpen && (
                 <div style={{ position: 'absolute', top: 'calc(100% + 10px)', right: 0, width: 320, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', boxShadow: 'var(--shadow-lg)', zIndex: 600, overflow: 'hidden', animation: 'dropIn 0.18s ease' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 15px 9px', borderBottom: '1px solid var(--border)' }}>
-                    <span style={{ fontWeight: 700, fontSize: 14 }}>Bildirimler</span>
-                    <span style={{ fontSize: 12, color: 'var(--primary)', cursor: 'pointer' }}>Tümünü okundu işaretle</span>
+                    <span style={{ fontWeight: 700, fontSize: 14 }}>Bildirimler {unreadCount > 0 && <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--primary)' }}>({unreadCount})</span>}</span>
+                    {unreadCount > 0 && (
+                      <span onClick={() => dispatch(markAllReadThunk())} style={{ fontSize: 12, color: 'var(--primary)', cursor: 'pointer' }}>Tümünü okundu işaretle</span>
+                    )}
                   </div>
                   <div style={{ maxHeight: 280, overflowY: 'auto' }}>
-                    {[
-                      { emoji: '📦', text: 'Siparişiniz hazırlanıyor — #PET20240042', time: '2 saat önce', unread: true },
-                      { emoji: '🏷️', text: 'Yeni indirim! — Royal Canin ürünlerinde %15 indirim', time: '5 saat önce', unread: true },
-                      { emoji: '✅', text: 'Siparişiniz teslim edildi — #PET20240038', time: '2 gün önce', unread: false },
-                    ].map((n, i) => (
-                      <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '11px 15px', borderBottom: '1px solid var(--border)', background: n.unread ? 'rgba(220,38,38,.04)' : 'transparent' }}>
-                        <span style={{ fontSize: 20, width: 34, height: 34, background: 'var(--bg3)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{n.emoji}</span>
+                    {notifications.length === 0 ? (
+                      <div style={{ padding: '32px 20px', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Bildirim yok</div>
+                    ) : notifications.slice(0, 10).map(n => (
+                      <div key={n.id} onClick={() => { if (!n.isRead) dispatch(markReadThunk(n.id)) }}
+                        style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '11px 15px', borderBottom: '1px solid var(--border)', background: n.isRead ? 'transparent' : 'rgba(220,38,38,.04)', cursor: n.isRead ? 'default' : 'pointer' }}>
+                        <span style={{ fontSize: 18, width: 34, height: 34, background: 'var(--bg3)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          {n.type === 'ORDER' ? '📦' : '🔔'}
+                        </span>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.4, marginBottom: 2 }}>{n.text}</p>
-                          <small style={{ fontSize: 11, color: 'var(--text3)' }}>{n.time}</small>
+                          <p style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.4, marginBottom: 2, fontWeight: n.isRead ? 400 : 600 }}>{n.message}</p>
+                          <small style={{ fontSize: 11, color: 'var(--text3)' }}>
+                            {new Date(n.createdAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                          </small>
                         </div>
-                        {n.unread && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--primary)', flexShrink: 0, marginTop: 5 }} />}
+                        {!n.isRead && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--primary)', flexShrink: 0, marginTop: 5 }} />}
                       </div>
                     ))}
                   </div>
-                  <div style={{ padding: '9px 15px', textAlign: 'center', fontSize: 12, color: 'var(--text2)', background: 'var(--bg3)', borderTop: '1px solid var(--border)' }}>Son 30 günün bildirimleri gösteriliyor</div>
+                  {notifications.length > 10 && (
+                    <div style={{ padding: '9px 15px', textAlign: 'center', fontSize: 12, color: 'var(--text2)', background: 'var(--bg3)', borderTop: '1px solid var(--border)' }}>
+                      <Link to="/profil" onClick={() => setNotifOpen(false)} style={{ color: 'var(--primary)', fontWeight: 600 }}>Tümünü profilde gör</Link>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

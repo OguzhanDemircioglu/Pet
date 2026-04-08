@@ -10,6 +10,7 @@ interface Slide {
   btnColor: string
   emoji: string
   sticker?: string
+  sourceType: 'info' | 'discount'
 }
 
 interface CampaignState {
@@ -47,6 +48,7 @@ export const fetchCampaignsThunk = createAsyncThunk(
       btnColor: extractFirstColor(c.bgColor),
       emoji: c.emoji || '📢',
       sticker: c.sticker || undefined,
+      sourceType: c.sourceType === 'discount' ? 'discount' : 'info',
     }))
     return { raw: data, slides }
   },

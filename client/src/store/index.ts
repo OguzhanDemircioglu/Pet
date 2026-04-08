@@ -6,6 +6,7 @@ import cartReducer from './cartSlice'
 import campaignReducer from './campaignSlice'
 import brandReducer from './brandSlice'
 import adminCampaignReducer from './adminCampaignSlice'
+import notificationReducer from './notificationSlice'
 
 export const store = configureStore({
   reducer: {
@@ -16,6 +17,7 @@ export const store = configureStore({
     campaigns: campaignReducer,
     brands: brandReducer,
     adminCampaigns: adminCampaignReducer,
+    notifications: notificationReducer,
   },
 })
 
