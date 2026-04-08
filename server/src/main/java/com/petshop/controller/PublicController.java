@@ -1,0 +1,53 @@
+package com.petshop.controller;
+
+import com.petshop.dto.response.AdminInfoResponse;
+import com.petshop.dto.response.CampaignResponse;
+import com.petshop.dto.response.DiscountResponse;
+import com.petshop.entity.User;
+import com.petshop.repository.UserRepository;
+import com.petshop.service.CampaignService;
+import com.petshop.service.DiscountService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@RestController
+@RequestMapping("/public")
+@RequiredArgsConstructor
+public class PublicController {
+
+    private final UserRepository userRepository;
+    private final CampaignService campaignService;
+    private final DiscountService discountService;
+
+    @GetMapping("/health")
+    public ResponseEntity<String> health() {
+        return ResponseEntity.ok("OK");
+    }
+
+    @GetMapping("/admin-info")
+    public ResponseEntity<AdminInfoResponse> adminInfo() {
+        return userRepository.findFirstByRole(User.Role.ADMIN)
+                .map(admin -> ResponseEntity.ok(new AdminInfoResponse(admin.getEmail(), admin.getPhone())))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /** Carousel: bilgilendirme kampanyaları + indirim kampanyaları */
+    @GetMapping("/campaigns")
+    public ResponseEntity<List<CampaignResponse>> campaigns() {
+        List<CampaignResponse> slides = new ArrayList<>(campaignService.getActiveCampaigns());
+        slides.addAll(discountService.getActiveDiscountsAsSlides());
+        return ResponseEntity.ok(slides);
+    }
+
+    /** Ürün kartlarında indirim badge'i için aktif indirimler */
+    @GetMapping("/active-discounts")
+    public ResponseEntity<List<DiscountResponse>> activeDiscounts() {
+        return ResponseEntity.ok(discountService.getActiveDiscounts());
+    }
+}

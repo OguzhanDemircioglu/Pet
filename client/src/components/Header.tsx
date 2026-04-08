@@ -251,8 +251,8 @@ export default function Header({ showSearch = true }: HeaderProps) {
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
             <img src="/logo.svg" alt="Patilya" style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0 }} />
             <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.5, whiteSpace: 'nowrap' }}>
-              <span style={{ color: 'var(--primary)' }}>OFF</span>
-              <span style={{ color: 'var(--accent)' }}>Cats</span>
+              <span style={{ color: 'var(--primary)' }}>{import.meta.env.VITE_BRAND_PART1}</span>
+              <span style={{ color: 'var(--accent)' }}>{import.meta.env.VITE_BRAND_PART2}</span>
             </div>
           </Link>
           <button onClick={toggleTheme} title="Tema değiştir" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 5px', borderRadius: 6, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, marginLeft: 4, lineHeight: 1 }}>

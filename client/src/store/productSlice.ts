@@ -7,12 +7,16 @@ interface ProductState {
   products: Product[]
   loading: boolean
   loaded: boolean
+  featured: Product[]
+  featuredLoaded: boolean
 }
 
 const initialState: ProductState = {
   products: [],
   loading: false,
   loaded: false,
+  featured: [],
+  featuredLoaded: false,
 }
 
 export const fetchProductsThunk = createAsyncThunk(
@@ -26,6 +30,17 @@ export const fetchProductsThunk = createAsyncThunk(
       if (force) return true
       const state = getState() as RootState
       return !state.products.loaded
+    },
+  }
+)
+
+export const fetchFeaturedProductsThunk = createAsyncThunk(
+  'products/fetchFeatured',
+  async () => productApi.featured(),
+  {
+    condition: (_, { getState }) => {
+      const state = getState() as RootState
+      return !state.products.featuredLoaded
     },
   }
 )
@@ -45,6 +60,15 @@ const productSlice = createSlice({
         state.loading = false
       })
       .addCase(fetchProductsThunk.rejected, (state) => { state.loading = false })
+      .addCase(fetchFeaturedProductsThunk.pending, (state) => { state.loading = true })
+      .addCase(fetchFeaturedProductsThunk.fulfilled, (state, action) => {
+        if (action.payload) {
+          state.featured = action.payload
+          state.featuredLoaded = true
+        }
+        state.loading = false
+      })
+      .addCase(fetchFeaturedProductsThunk.rejected, (state) => { state.loading = false })
   },
 })
 

@@ -16,8 +16,8 @@ export default function Footer() {
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
             <img src="/logo.svg" alt="Patilya" style={{ width: 32, height: 32, objectFit: 'contain' }} />
             <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.5 }}>
-              <span style={{ color: 'var(--primary)' }}>OFF</span>
-              <span style={{ color: 'var(--accent)' }}>Cats</span>
+              <span style={{ color: 'var(--primary)' }}>{import.meta.env.VITE_BRAND_PART1}</span>
+              <span style={{ color: 'var(--accent)' }}>{import.meta.env.VITE_BRAND_PART2}</span>
             </div>
           </Link>
           <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap' }}>
@@ -32,7 +32,7 @@ export default function Footer() {
           flexWrap: 'wrap', gap: 8,
         }}>
           <div style={{ fontSize: 12, color: 'var(--text3)' }}>
-            © 2024 Patilya. Tüm hakları saklıdır. Türkiye'nin toptan pet ürünleri platformu.
+            © 2024 {import.meta.env.VITE_BRAND_PART1}{import.meta.env.VITE_BRAND_PART2}. Tüm hakları saklıdır. Türkiye'nin toptan pet ürünleri platformu.
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             {['iyzico', 'PayTR', 'SSL Güvenli'].map(b => (

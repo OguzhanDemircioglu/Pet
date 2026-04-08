@@ -7,7 +7,7 @@ import CategoryBar from '../components/CategoryBar'
 import Footer from '../components/Footer'
 import type { Product } from '../types'
 import type { RootState, AppDispatch } from '../store'
-import { fetchProductsThunk } from '../store/productSlice'
+import { fetchFeaturedProductsThunk } from '../store/productSlice'
 import { fetchCategoriesThunk } from '../store/categorySlice'
 import { fetchCampaignsThunk, fetchActiveDiscountsThunk } from '../store/campaignSlice'
 import { addToCart } from '../store/cartSlice'
@@ -98,12 +98,12 @@ export default function HomePage() {
   const [slideIdx, setSlideIdx] = useState(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const dispatch = useDispatch<AppDispatch>()
-  const products = useSelector((s: RootState) => s.products.products)
+  const products = useSelector((s: RootState) => s.products.featured)
   const loading = useSelector((s: RootState) => s.products.loading)
   const slides = useSelector((s: RootState) => s.campaigns.slides)
 
   useEffect(() => {
-    dispatch(fetchProductsThunk(false))
+    dispatch(fetchFeaturedProductsThunk())
     dispatch(fetchCategoriesThunk(false))
     dispatch(fetchCampaignsThunk())
     dispatch(fetchActiveDiscountsThunk())
@@ -188,14 +188,14 @@ export default function HomePage() {
             <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text3)' }}>Yükleniyor...</div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }}>
-              {products.slice(0, 8).map(p => <ProductCard key={p.id} p={p} />)}
+              {products.map(p => <ProductCard key={p.id} p={p} />)}
             </div>
           )}
         </div>
 
         {/* Why Section */}
         <div style={{ padding: '48px 0 52px' }}>
-          <SectionHead title="Neden Patilya?" />
+          <SectionHead title={`Neden ${import.meta.env.VITE_BRAND_PART1}${import.meta.env.VITE_BRAND_PART2}?`} />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 18 }}>
             {WHY_CARDS.map(w => (
               <div key={w.title} className="why-card" style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', padding: '26px 20px', textAlign: 'center', transition: '0.2s' }}>
