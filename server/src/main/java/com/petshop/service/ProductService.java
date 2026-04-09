@@ -27,16 +27,15 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final BrandRepository brandRepository;
     private final CategoryRepository categoryRepository;
-    private final ProductDiscountRepository productDiscountRepo;
 
     // ─── Public listing ───────────────────────────────────────────────────────
 
     public Page<ProductResponse> listByCategory(Long categoryId, Pageable pageable) {
-        return enrichPage(productRepository.findByCategoryWithDetails(categoryId, pageable), pageable);
+        return enrichPageWithImages(productRepository.findByCategoryPaged(categoryId, pageable), pageable);
     }
 
     public Page<ProductResponse> search(String query, Pageable pageable) {
-        return enrichPage(productRepository.searchWithDetails(query, pageable), pageable);
+        return enrichPageWithImages(productRepository.searchPaged(query, pageable), pageable);
     }
 
     public ProductResponse getBySlug(String slug) {
@@ -116,7 +115,7 @@ public class ProductService {
     }
 
     public Page<ProductResponse> listAll(Pageable pageable) {
-        return enrichPage(productRepository.findAll(pageable), pageable);
+        return enrichPageWithImages(productRepository.findAll(pageable), pageable);
     }
 
     // ─── Admin CRUD ───────────────────────────────────────────────────────────
@@ -196,10 +195,14 @@ public class ProductService {
 
     // ─── Discount helpers ─────────────────────────────────────────────────────
 
-    private Page<ProductResponse> enrichPage(Page<Product> page, Pageable pageable) {
+    private Page<ProductResponse> enrichPageWithImages(Page<Product> page, Pageable pageable) {
         if (page.isEmpty()) return Page.empty(pageable);
+        List<Long> ids = page.getContent().stream().map(Product::getId).toList();
+        Map<Long, Product> withImages = productRepository.findByIdsWithImages(ids)
+                .stream().collect(java.util.stream.Collectors.toMap(Product::getId, p -> p));
         Map<Long, ProductResponse.ActiveDiscountDto> dm = buildDiscountMap();
-        List<ProductResponse> enriched = page.getContent().stream()
+        List<ProductResponse> enriched = ids.stream()
+                .map(id -> withImages.getOrDefault(id, page.getContent().stream().filter(p -> p.getId().equals(id)).findFirst().orElseThrow()))
                 .map(p -> ProductResponse.fromWithDiscount(p, dm.get(p.getId())))
                 .toList();
         return new PageImpl<>(enriched, pageable, page.getTotalElements());

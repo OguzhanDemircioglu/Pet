@@ -34,19 +34,14 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.images WHERE p.isActive = true ORDER BY p.name ASC")
     List<Product> findAllActiveWithImages();
 
-    // ─── Category / search (paginated, with JOIN FETCH) ───────────────────────
+    // ─── Category / search (paginated — no collection fetch to avoid HHH90003004) ──
+
+    @Query(value = "SELECT p FROM Product p WHERE p.isActive = true AND p.category.id = :categoryId",
+           countQuery = "SELECT COUNT(p) FROM Product p WHERE p.isActive = true AND p.category.id = :categoryId")
+    Page<Product> findByCategoryPaged(@Param("categoryId") Long categoryId, Pageable pageable);
 
     @Query(value = """
-        SELECT DISTINCT p FROM Product p
-        LEFT JOIN FETCH p.images
-        WHERE p.isActive = true AND p.category.id = :categoryId
-        """,
-        countQuery = "SELECT COUNT(p) FROM Product p WHERE p.isActive = true AND p.category.id = :categoryId")
-    Page<Product> findByCategoryWithDetails(@Param("categoryId") Long categoryId, Pageable pageable);
-
-    @Query(value = """
-        SELECT DISTINCT p FROM Product p
-        LEFT JOIN FETCH p.images
+        SELECT p FROM Product p
         WHERE p.isActive = true
           AND (LOWER(p.name) LIKE LOWER(CONCAT('%',:q,'%'))
                OR LOWER(p.sku) LIKE LOWER(CONCAT('%',:q,'%')))
@@ -56,7 +51,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         AND (LOWER(p.name) LIKE LOWER(CONCAT('%',:q,'%'))
              OR LOWER(p.sku) LIKE LOWER(CONCAT('%',:q,'%')))
         """)
-    Page<Product> searchWithDetails(@Param("q") String query, Pageable pageable);
+    Page<Product> searchPaged(@Param("q") String query, Pageable pageable);
+
+    // Batch images fetch by IDs (second step of two-query pagination)
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.images WHERE p.id IN :ids")
+    List<Product> findByIdsWithImages(@Param("ids") List<Long> ids);
 
     // ─── Discount map helpers (eliminates N+1 in buildDiscountMap) ────────────
 
