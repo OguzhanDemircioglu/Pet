@@ -258,9 +258,8 @@ export default function Header({ showSearch = true }: HeaderProps) {
               <span style={{ color: 'var(--accent)' }}>{import.meta.env.VITE_BRAND_PART2}</span>
             </div>
           </Link>
-          <button onClick={toggleTheme} title="Tema değiştir" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 5px', borderRadius: 6, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, marginLeft: 4, lineHeight: 1 }}>
-            <span style={{ fontSize: 12, lineHeight: 1.15 }}>{isDark ? '🌙' : '☀️'}</span>
-            <span style={{ fontSize: 16, lineHeight: 1.1 }}>{isDark ? '😴' : '🐱'}</span>
+          <button onClick={toggleTheme} title="Tema değiştir" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: 6, display: 'flex', alignItems: 'center', marginLeft: 4, fontSize: 24, lineHeight: 1 }}>
+            {isDark ? '🌙' : '☀️'}
           </button>
         </div>
 

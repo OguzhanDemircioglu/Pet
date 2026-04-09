@@ -47,8 +47,8 @@ export default function PhoneRequiredModal() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 28 }}>
           <img src="/logo.svg" alt="Patilya" style={{ width: 36, height: 36 }} />
           <span style={{ fontSize: 20, fontWeight: 900 }}>
-            <span style={{ color: 'var(--primary)' }}>OFF</span>
-            <span style={{ color: 'var(--accent)' }}>Cats</span>
+            <span style={{ color: 'var(--primary)' }}>{import.meta.env.VITE_BRAND_PART1}</span>
+            <span style={{ color: 'var(--accent)' }}>{import.meta.env.VITE_BRAND_PART2}</span>
           </span>
         </div>
 

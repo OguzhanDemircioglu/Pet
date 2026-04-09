@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Provider } from 'react-redux'
 import { Toaster } from 'react-hot-toast'
 import { GoogleOAuthProvider } from '@react-oauth/google'
@@ -20,6 +20,13 @@ import ProfilePage from './pages/ProfilePage'
 import PhoneRequiredModal from './components/PhoneRequiredModal'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
+
+function PrivateRoute({ children, authLoading, user }: { children: React.ReactNode; authLoading: boolean; user: unknown }) {
+  if (authLoading) return null
+  const isGuest = localStorage.getItem('pt-guest') === 'true'
+  if (!user && !isGuest) return <Navigate to="/login" replace />
+  return <>{children}</>
+}
 
 function AppInner() {
   const dispatch = useAppDispatch()
@@ -45,11 +52,11 @@ function AppInner() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/urunler" element={<ProductListPage />} />
-        <Route path="/urun/:slug" element={<ProductDetailPage />} />
-        <Route path="/profil" element={<ProfilePage />} />
+        <Route path="/"           element={<PrivateRoute authLoading={authLoading} user={user}><HomePage /></PrivateRoute>} />
+        <Route path="/login"      element={<LoginPage />} />
+        <Route path="/urunler"    element={<PrivateRoute authLoading={authLoading} user={user}><ProductListPage /></PrivateRoute>} />
+        <Route path="/urun/:slug" element={<PrivateRoute authLoading={authLoading} user={user}><ProductDetailPage /></PrivateRoute>} />
+        <Route path="/profil"     element={<PrivateRoute authLoading={authLoading} user={user}><ProfilePage /></PrivateRoute>} />
       </Routes>
       <Toaster position="top-right" />
     </BrowserRouter>

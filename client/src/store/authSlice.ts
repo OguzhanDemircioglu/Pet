@@ -20,6 +20,7 @@ export const loginThunk = createAsyncThunk(
     const data = await authApi.login(email, password)
     localStorage.setItem('accessToken', data.accessToken)
     localStorage.setItem('refreshToken', data.refreshToken)
+    localStorage.removeItem('pt-guest')
     return data.user
   }
 )
@@ -37,6 +38,7 @@ export const verifyEmailThunk = createAsyncThunk(
     const data = await authApi.verifyEmail(email, code)
     localStorage.setItem('accessToken', data.accessToken)
     localStorage.setItem('refreshToken', data.refreshToken)
+    localStorage.removeItem('pt-guest')
     return data.user
   }
 )
@@ -55,6 +57,7 @@ const authSlice = createSlice({
       state.user = null
       localStorage.removeItem('accessToken')
       localStorage.removeItem('refreshToken')
+      localStorage.removeItem('pt-guest')
     },
     setUser(state, action: PayloadAction<User>) {
       state.user = action.payload

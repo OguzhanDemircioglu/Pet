@@ -1,4 +1,4 @@
-# OffCats — Geliştirici Notları
+# Petshop — Geliştirici Notları
 
 ## Telegram Bot Entegrasyonu
 

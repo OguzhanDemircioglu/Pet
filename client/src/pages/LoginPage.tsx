@@ -268,16 +268,15 @@ export default function LoginPage() {
 
       <header style={{ background: isDark ? '#1a2333' : 'var(--bg2)', borderBottom: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,.07)' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 24px', height: 68, display: 'flex', alignItems: 'center' }}>
-          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          <Link to="/" onClick={() => localStorage.setItem('pt-guest', 'true')} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
             <div style={{ width: 44, height: 44, background: 'linear-gradient(135deg,var(--primary),#ef4444)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 2px 8px rgba(220,38,38,.35)' }}>🐾</div>
             <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.5 }}>
-              <span style={{ color: 'var(--primary)' }}>Off</span>
-              <span style={{ color: 'var(--accent)' }}>Cats</span>
+              <span style={{ color: 'var(--primary)' }}>{import.meta.env.VITE_BRAND_PART1}</span>
+              <span style={{ color: 'var(--accent)' }}>{import.meta.env.VITE_BRAND_PART2}</span>
             </div>
           </Link>
-          <button onClick={toggleTheme} title="Tema" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 5px', borderRadius: 6, display: 'flex', flexDirection: 'column', alignItems: 'center', marginLeft: 8, lineHeight: 1 }}>
-            <span style={{ fontSize: 12, lineHeight: 1.15 }}>{isDark ? '🌙' : '☀️'}</span>
-            <span style={{ fontSize: 16, lineHeight: 1.1 }}>{isDark ? '😴' : '🐱'}</span>
+          <button onClick={toggleTheme} title="Tema" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: 6, display: 'flex', alignItems: 'center', marginLeft: 8, fontSize: 24, lineHeight: 1 }}>
+            {isDark ? '🌙' : '☀️'}
           </button>
         </div>
       </header>
@@ -426,9 +425,8 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: 'var(--text3)' }}>
-            Üye olmadan da alışveriş yapabilirsiniz —{' '}
-            <Link to="/" style={{ color: 'var(--primary)', fontWeight: 600 }}>Misafir olarak devam et →</Link>
+          <div style={{ textAlign: 'center', marginTop: 20, fontSize: 20, color: 'var(--text3)' }}>
+            <Link to="/" onClick={() => localStorage.setItem('pt-guest', 'true')} style={{ color: 'var(--primary)', fontWeight: 600 }}>Misafir olarak devam et →</Link>
           </div>
         </div>
       </main>
