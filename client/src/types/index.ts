@@ -4,6 +4,7 @@ export interface Category {
   emoji: string | null
   category_slug: string
   parent_id: number | null
+  parent_slug: string | null
   display_order: number
   has_product: boolean
 }
@@ -14,11 +15,6 @@ export interface Brand {
   isActive: boolean
 }
 
-export interface PriceTier {
-  minQuantity: number
-  maxQuantity: number | null
-  unitPrice: number
-}
 
 export interface ProductImage {
   id: number
@@ -31,7 +27,6 @@ export interface ActiveDiscount {
   label: string       // "%20" veya "50 ₺"
   discountType: 'PERCENT' | 'FIXED'
   discountValue: number
-  name: string
 }
 
 export interface Product {
@@ -53,7 +48,6 @@ export interface Product {
   isActive: boolean
   isFeatured: boolean
   primaryImageUrl: string | null
-  priceTiers: PriceTier[]
   averageRating: number | null
   images: ProductImage[]
   activeDiscount: ActiveDiscount | null
@@ -85,6 +79,41 @@ export interface Page<T> {
   totalPages: number
   number: number
   size: number
+}
+
+export interface CatalogProduct {
+  id: number
+  name: string
+  slug: string
+  sku: string
+  shortDescription: string | null
+  categoryId: number | null
+  categoryName: string | null
+  categorySlug: string | null
+  brandId: number | null
+  brandName: string | null
+  basePrice: number
+  vatRate: number
+  moq: number
+  availableStock: number
+  unit: string
+  isActive: boolean
+  isFeatured: boolean
+  primaryImageUrl: string | null
+  images: ProductImage[]
+  activeDiscount: ActiveDiscount | null
+}
+
+export interface FeaturedProduct {
+  id: number
+  name: string
+  slug: string
+  brandName: string | null
+  basePrice: number
+  moq: number
+  unit: string
+  primaryImageUrl: string | null
+  activeDiscount: ActiveDiscount | null
 }
 
 export interface AdminUser {

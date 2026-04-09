@@ -38,12 +38,13 @@ const cartSlice = createSlice({
   name: 'cart',
   initialState,
   reducers: {
-    addToCart(state, action: PayloadAction<Omit<CartItem, 'quantity'>>) {
+    addToCart(state, action: PayloadAction<Omit<CartItem, 'quantity'> & { quantity?: number }>) {
       const existing = state.items.find(i => i.productId === action.payload.productId)
+      const addQty = action.payload.quantity ?? action.payload.moq
       if (existing) {
-        existing.quantity += action.payload.moq
+        existing.quantity += addQty
       } else {
-        state.items.push({ ...action.payload, quantity: action.payload.moq })
+        state.items.push({ ...action.payload, quantity: addQty })
       }
       saveToStorage(state.items)
     },

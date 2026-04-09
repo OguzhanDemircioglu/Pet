@@ -9,7 +9,8 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "brands", schema = "petshop",
-       uniqueConstraints = @UniqueConstraint(columnNames = "slug"))
+       uniqueConstraints = @UniqueConstraint(columnNames = "slug"),
+       indexes = @Index(name = "idx_brand_active", columnList = "is_active"))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Brand {
 

@@ -7,23 +7,97 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-    Optional<Product> findBySlug(String slug);
-    Optional<Product> findBySku(String sku);
+    // ─── Detail queries (with JOIN FETCH) ────────────────────────────────────
 
-    Page<Product> findByIsActiveTrueAndCategoryId(Long categoryId, Pageable pageable);
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.images WHERE p.slug = :slug")
+    Optional<Product> findBySlugWithDetails(@Param("slug") String slug);
+
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.images WHERE p.id = :id")
+    Optional<Product> findByIdWithDetails(@Param("id") Long id);
+
+    // ─── Catalog / featured ───────────────────────────────────────────────────
 
     @Query("""
-        SELECT p FROM Product p
+        SELECT DISTINCT p FROM Product p
+        LEFT JOIN FETCH p.images
+        WHERE p.isFeatured = true AND p.isActive = true
+        ORDER BY p.createdAt DESC
+        """)
+    List<Product> findFeaturedWithImages(Pageable pageable);
+
+    @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.images WHERE p.isActive = true ORDER BY p.name ASC")
+    List<Product> findAllActiveWithImages();
+
+    // ─── Category / search (paginated, with JOIN FETCH) ───────────────────────
+
+    @Query(value = """
+        SELECT DISTINCT p FROM Product p
+        LEFT JOIN FETCH p.images
+        WHERE p.isActive = true AND p.category.id = :categoryId
+        """,
+        countQuery = "SELECT COUNT(p) FROM Product p WHERE p.isActive = true AND p.category.id = :categoryId")
+    Page<Product> findByCategoryWithDetails(@Param("categoryId") Long categoryId, Pageable pageable);
+
+    @Query(value = """
+        SELECT DISTINCT p FROM Product p
+        LEFT JOIN FETCH p.images
         WHERE p.isActive = true
+          AND (LOWER(p.name) LIKE LOWER(CONCAT('%',:q,'%'))
+               OR LOWER(p.sku) LIKE LOWER(CONCAT('%',:q,'%')))
+        """,
+        countQuery = """
+        SELECT COUNT(p) FROM Product p WHERE p.isActive = true
         AND (LOWER(p.name) LIKE LOWER(CONCAT('%',:q,'%'))
              OR LOWER(p.sku) LIKE LOWER(CONCAT('%',:q,'%')))
         """)
-    Page<Product> search(@Param("q") String query, Pageable pageable);
+    Page<Product> searchWithDetails(@Param("q") String query, Pageable pageable);
+
+    // ─── Discount map helpers (eliminates N+1 in buildDiscountMap) ────────────
+
+    @Query("""
+        SELECT p.id, bd.name, bd.discountType, bd.discountValue
+        FROM Product p
+        JOIN BrandDiscount bd ON p.brand.id = bd.brand.id
+        WHERE p.isActive = true
+          AND bd.isActive = true
+          AND (bd.startDate IS NULL OR bd.startDate <= :now)
+          AND (bd.endDate IS NULL OR bd.endDate >= :now)
+        """)
+    List<Object[]> findProductIdsWithBrandDiscounts(@Param("now") LocalDateTime now);
+
+    @Query("""
+        SELECT p.id, cd.name, cd.discountType, cd.discountValue
+        FROM Product p
+        JOIN CategoryDiscount cd ON p.category.id = cd.category.id
+        WHERE p.isActive = true
+          AND cd.isActive = true
+          AND (cd.startDate IS NULL OR cd.startDate <= :now)
+          AND (cd.endDate IS NULL OR cd.endDate >= :now)
+        """)
+    List<Object[]> findProductIdsWithCategoryDiscounts(@Param("now") LocalDateTime now);
+
+    @Query("""
+        SELECT pd.product.id, pd.name, pd.discountType, pd.discountValue
+        FROM ProductDiscount pd
+        WHERE pd.isActive = true
+          AND (pd.startDate IS NULL OR pd.startDate <= :now)
+          AND (pd.endDate IS NULL OR pd.endDate >= :now)
+        """)
+    List<Object[]> findActiveProductDiscounts(@Param("now") LocalDateTime now);
+
+    // ─── Misc ─────────────────────────────────────────────────────────────────
+
+    Optional<Product> findBySlug(String slug);
+    Optional<Product> findBySku(String sku);
+
+    // Used by admin category controller for product count
+    Page<Product> findByIsActiveTrueAndCategoryId(Long categoryId, Pageable pageable);
 
     @Query("""
         SELECT p FROM Product p
@@ -31,8 +105,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         AND p.category.id IN :categoryIds
         """)
     Page<Product> findByCategoryIds(@Param("categoryIds") List<Long> categoryIds, Pageable pageable);
-
-    List<Product> findByIsFeaturedTrueAndIsActiveTrueOrderByCreatedAtDesc();
 
     List<Product> findByIsActiveTrueAndBrandId(Long brandId);
 

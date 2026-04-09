@@ -2,11 +2,26 @@ import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import type { RootState } from '../store'
 
+// Ana kategoriler — DB'den bağımsız, sayfa açılır açılmaz görünür
+const ROOT_CATEGORIES = [
+  { category_name: 'Kedi',        emoji: '🐱', category_slug: 'kedi' },
+  { category_name: 'Köpek',       emoji: '🐶', category_slug: 'kopek' },
+  { category_name: 'Kuş',         emoji: '🐦', category_slug: 'kus' },
+  { category_name: 'Akvaryum',    emoji: '🐟', category_slug: 'akvaryum' },
+  { category_name: 'Kemirgen',    emoji: '🐹', category_slug: 'kemirgen' },
+  { category_name: 'Sürüngenler', emoji: '🦎', category_slug: 'surungenler' },
+]
+
 export default function CategoryBar() {
   const navigate = useNavigate()
-  const categories = useSelector((s: RootState) => s.categories.categories)
+  const allCategories = useSelector((s: RootState) => s.categories.categories)
+  const catalogLoaded = useSelector((s: RootState) => s.products.catalogLoaded)
 
-  const rootCats = categories.filter(c => c.parent_id === null)
+  // Alt kategoriler catalog yüklendikten sonra parent_slug ile eşleştiriliyor
+  const getSubs = (rootSlug: string) =>
+    catalogLoaded
+      ? allCategories.filter(c => c.parent_slug === rootSlug)
+      : []
 
   return (
     <div style={{
@@ -27,19 +42,18 @@ export default function CategoryBar() {
         overflow: 'visible',
       }}>
         <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 46, flex: 1, overflow: 'visible' }}>
-          {rootCats.map((cat) => {
-            const subs = categories.filter(c => c.parent_id === cat.category_id)
+          {ROOT_CATEGORIES.map((cat) => {
+            const subs = getSubs(cat.category_slug)
             return (
-              <div key={cat.category_id} style={{ position: 'relative', height: '100%', display: 'flex', alignItems: 'center' }}
+              <div key={cat.category_slug} style={{ position: 'relative', height: '100%', display: 'flex', alignItems: 'center' }}
                 className="cat-nav-item">
                 <button
-                  onClick={() => navigate(`/urunler?slug=${cat.category_slug}`)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 5,
                     padding: '0 16px', height: '100%',
                     fontSize: 14, fontWeight: 600,
                     color: 'rgba(255,255,255,.88)',
-                    background: 'none', border: 'none', cursor: 'pointer',
+                    background: 'none', border: 'none', cursor: 'default',
                     transition: '0.15s', whiteSpace: 'nowrap',
                   }}
                   className="cat-nav-btn">

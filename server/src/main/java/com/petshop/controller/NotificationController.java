@@ -16,7 +16,7 @@ public class NotificationController {
 
     private final NotificationService notificationService;
 
-    @GetMapping("/my")
+    @GetMapping("/myNotifications")
     public ResponseEntity<List<NotificationResponse>> getMyNotifications(
             @AuthenticationPrincipal Long userId) {
         return ResponseEntity.ok(notificationService.getUserNotifications(userId));

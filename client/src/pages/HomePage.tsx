@@ -5,11 +5,9 @@ import InfoBar from '../components/InfoBar'
 import Header from '../components/Header'
 import CategoryBar from '../components/CategoryBar'
 import Footer from '../components/Footer'
-import type { Product } from '../types'
+import type { FeaturedProduct } from '../types'
 import type { RootState, AppDispatch } from '../store'
-import { fetchFeaturedProductsThunk } from '../store/productSlice'
-import { fetchCategoriesThunk } from '../store/categorySlice'
-import { fetchCampaignsThunk, fetchActiveDiscountsThunk } from '../store/campaignSlice'
+import { fetchHomepageThunk } from '../store/campaignSlice'
 import { addToCart } from '../store/cartSlice'
 import { imgUrl } from '../api/productApi'
 import toast from 'react-hot-toast'
@@ -21,7 +19,7 @@ const WHY_CARDS = [
   { icon: '📞', title: '7/24 Destek', desc: 'WhatsApp ve e-posta ile 7/24 müşteri desteği. Hızlı yanıt garantisi.' },
 ]
 
-function ProductCard({ p }: { p: Product }) {
+function ProductCard({ p }: { p: FeaturedProduct }) {
   const navigate = useNavigate()
   const dispatch = useDispatch<AppDispatch>()
   const BG_COLORS = [
@@ -32,10 +30,7 @@ function ProductCard({ p }: { p: Product }) {
     'linear-gradient(135deg,#f3e8ff,#faf5ff)',
     'linear-gradient(135deg,#e0f2fe,#f0f9ff)',
   ]
-  const idx = p.name.charCodeAt(0) % BG_COLORS.length
-  const bg = BG_COLORS[idx]
-  const EMOJIS: Record<string, string> = { kedi: '🐱', kopek: '🐶', kus: '🐦', akvaryum: '🐟', kemirgen: '🐹', surungenler: '🦎' }
-  const emoji = (p.categoryName && EMOJIS[p.categoryName.toLowerCase()]) || '🐾'
+  const bg = BG_COLORS[p.name.charCodeAt(0) % BG_COLORS.length]
 
   return (
     <div onClick={() => navigate(`/urun/${p.slug}`)} className="prod-card" style={{
@@ -46,7 +41,7 @@ function ProductCard({ p }: { p: Product }) {
       <div style={{ height: 165, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64, position: 'relative', flexShrink: 0, background: bg }}>
         {p.primaryImageUrl
           ? <img src={imgUrl(p.primaryImageUrl)} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 8 }} />
-          : <span>{emoji}</span>
+          : <span>🐾</span>
         }
         {p.activeDiscount && (
           <div style={{
@@ -99,14 +94,11 @@ export default function HomePage() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const dispatch = useDispatch<AppDispatch>()
   const products = useSelector((s: RootState) => s.products.featured)
-  const loading = useSelector((s: RootState) => s.products.loading)
+  const loading = useSelector((s: RootState) => !s.campaigns.loaded || s.campaigns.loading)
   const slides = useSelector((s: RootState) => s.campaigns.slides)
 
   useEffect(() => {
-    dispatch(fetchFeaturedProductsThunk())
-    dispatch(fetchCategoriesThunk(false))
-    dispatch(fetchCampaignsThunk())
-    dispatch(fetchActiveDiscountsThunk())
+    dispatch(fetchHomepageThunk())
   }, [dispatch])
 
   useEffect(() => {
@@ -167,20 +159,6 @@ export default function HomePage() {
 
       {/* Page Content */}
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 24px' }}>
-
-        {/* Category Cards */}
-    {/*    <div style={{ padding: '44px 0 0' }}>
-          <SectionHead title="Kategoriler" link="/urunler" />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 12 }}>
-            {CAT_CARDS.map(c => (
-              <div key={c.slug} onClick={() => navigate(`/urunler?kategori=${c.slug}`)} className="cat-card" style={{ borderRadius: 'var(--r2)', padding: '24px 12px 18px', textAlign: 'center', cursor: 'pointer', transition: '0.22s', border: '2px solid transparent', background: c.bg }}>
-                <span style={{ fontSize: 40, display: 'block', marginBottom: 10, lineHeight: 1 }}>{c.emoji}</span>
-                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', marginBottom: 3 }}>{c.name}</div>
-                <div style={{ fontSize: 11, color: 'var(--text2)', fontWeight: 500 }}>{c.count}</div>
-              </div>
-            ))}
-          </div>
-        </div>*/}
 
         {/* Featured Products */}
         <div style={{ padding: '44px 0 0' }}>

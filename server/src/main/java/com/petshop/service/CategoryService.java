@@ -35,6 +35,7 @@ public class CategoryService {
                         c.getEmoji(),
                         c.getSlug(),
                         c.getParent() != null ? c.getParent().getId() : null,
+                        c.getParent() != null ? c.getParent().getSlug() : null,
                         c.getDisplayOrder(),
                         withProducts.contains(c.getId())
                 ))

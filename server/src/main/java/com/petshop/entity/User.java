@@ -11,7 +11,8 @@ import java.util.List;
 
 @Entity
 @Table(name = "users", schema = "petshop",
-       uniqueConstraints = @UniqueConstraint(columnNames = "email"))
+       uniqueConstraints = @UniqueConstraint(columnNames = "email"),
+       indexes = @Index(name = "idx_user_google", columnList = "google_id"))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class User {
 
@@ -64,10 +65,6 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<RefreshToken> refreshTokens = new ArrayList<>();
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<CartItem> cartItems = new ArrayList<>();
 
     public enum Role {
         ADMIN, CUSTOMER

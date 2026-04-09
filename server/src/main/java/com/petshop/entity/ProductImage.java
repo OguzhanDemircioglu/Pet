@@ -7,7 +7,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "product_images", schema = "petshop")
+@Table(name = "product_images", schema = "petshop",
+       indexes = @Index(name = "idx_product_image_product", columnList = "product_id"))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class ProductImage {
 
@@ -27,9 +28,6 @@ public class ProductImage {
 
     @Column(name = "display_order", nullable = false)
     private Integer displayOrder = 0;
-
-    @Column(name = "alt_text", length = 255)
-    private String altText;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

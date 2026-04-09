@@ -1,5 +1,7 @@
 package com.petshop.controller.admin;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import com.petshop.dto.response.ProductResponse;
 import com.petshop.entity.Product;
 import com.petshop.entity.ProductImage;
@@ -9,18 +11,14 @@ import com.petshop.repository.ProductImageRepository;
 import com.petshop.repository.ProductRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
-import java.util.UUID;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/admin/products/{productId}/images")
@@ -30,9 +28,7 @@ public class AdminProductImageController {
 
     private final ProductRepository productRepository;
     private final ProductImageRepository productImageRepository;
-
-    @Value("${app.upload-dir}")
-    private String uploadDir;
+    private final Cloudinary cloudinary;
 
     @GetMapping
     public ResponseEntity<List<ProductResponse.ImageDto>> listImages(@PathVariable Long productId) {
@@ -54,20 +50,17 @@ public class AdminProductImageController {
             throw new BusinessException("Sadece resim dosyası yüklenebilir.");
         }
 
-        String originalFilename = file.getOriginalFilename();
-        String ext = (originalFilename != null && originalFilename.contains("."))
-                ? originalFilename.substring(originalFilename.lastIndexOf('.'))
-                : ".jpg";
-
-        String filename = UUID.randomUUID() + ext;
-        Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
-        Files.createDirectories(uploadPath);
-        Files.copy(file.getInputStream(), uploadPath.resolve(filename));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> result = cloudinary.uploader().upload(
+                file.getBytes(),
+                ObjectUtils.asMap("folder", "products")
+        );
+        String imageUrl = (String) result.get("secure_url");
 
         int count = productImageRepository.countByProductId(productId);
         ProductImage image = ProductImage.builder()
                 .product(product)
-                .imageUrl("/uploads/products/" + filename)
+                .imageUrl(imageUrl)
                 .isPrimary(count == 0)
                 .displayOrder(count)
                 .build();
@@ -127,8 +120,10 @@ public class AdminProductImageController {
         ProductImage image = productImageRepository.findByIdAndProductId(imageId, productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Resim", imageId));
 
-        String filename = image.getImageUrl().replaceFirst("^/uploads/products/", "");
-        Files.deleteIfExists(Paths.get(uploadDir).toAbsolutePath().normalize().resolve(filename));
+        String publicId = extractPublicId(image.getImageUrl());
+        if (publicId != null) {
+            cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+        }
 
         boolean wasPrimary = Boolean.TRUE.equals(image.getIsPrimary());
         productImageRepository.delete(image);
@@ -142,6 +137,16 @@ public class AdminProductImageController {
             }
         }
         return ResponseEntity.noContent().build();
+    }
+
+    /** Cloudinary URL'den public_id çıkarır.
+     *  https://res.cloudinary.com/{cloud}/image/upload/v123/products/abc.jpg → products/abc */
+    private String extractPublicId(String url) {
+        if (url == null || !url.contains("/upload/")) return null;
+        String withoutExt = url.replaceAll("\\.[^./]+$", "");
+        int idx = withoutExt.indexOf("/upload/");
+        String afterUpload = withoutExt.substring(idx + 8);
+        return afterUpload.replaceFirst("^v\\d+/", "");
     }
 
     private List<ProductResponse.ImageDto> toDto(List<ProductImage> images) {

@@ -11,7 +11,11 @@ import java.util.List;
 
 @Entity
 @Table(name = "categories", schema = "petshop",
-       uniqueConstraints = @UniqueConstraint(columnNames = "slug"))
+       uniqueConstraints = @UniqueConstraint(columnNames = "slug"),
+       indexes = {
+           @Index(name = "idx_category_parent", columnList = "parent_id"),
+           @Index(name = "idx_category_active", columnList = "is_active")
+       })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Category {
 

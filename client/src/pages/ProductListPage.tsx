@@ -1,12 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { useSearchParams, useNavigate, Link } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
-import type { Product } from '../types'
+import type { Product, CatalogProduct } from '../types'
 import type { RootState, AppDispatch } from '../store'
-import { fetchProductsThunk } from '../store/productSlice'
 import { fetchCategoriesThunk } from '../store/categorySlice'
 import { addToCart } from '../store/cartSlice'
-import { imgUrl } from '../api/productApi'
+import { productApi, imgUrl } from '../api/productApi'
 import toast from 'react-hot-toast'
 import InfoBar from '../components/InfoBar'
 import Header from '../components/Header'
@@ -25,18 +24,22 @@ const EMOJIS: Record<string, string> = { kedi: '🐱', kopek: '🐶', kus: '🐦
 
 export default function ProductListPage() {
   const [searchParams] = useSearchParams()
-  // slug= (yeni) veya kategori= (eski bağlantı uyumu)
   const slugParam = searchParams.get('slug') || searchParams.get('kategori') || ''
   const query = searchParams.get('q') || ''
   const [sort, setSort] = useState('default')
 
   const dispatch = useDispatch<AppDispatch>()
-  const allProducts = useSelector((s: RootState) => s.products.products)
-  const loading = useSelector((s: RootState) => s.products.loading)
   const categories = useSelector((s: RootState) => s.categories.categories)
+  const catalogProducts = useSelector((s: RootState) => s.products.products)
+  const catalogLoaded = useSelector((s: RootState) => s.products.catalogLoaded)
+
+  // Kategori bazlı ürün cache (component ömrü boyunca, fallback için)
+  const cacheRef = useRef<Map<number, Product[]>>(new Map())
+  const [catProducts, setCatProducts] = useState<(Product | CatalogProduct)[]>([])
+  const [loading, setLoading] = useState(false)
+  const [noStock, setNoStock] = useState(false)
 
   useEffect(() => {
-    dispatch(fetchProductsThunk(false))
     dispatch(fetchCategoriesThunk(false))
   }, [dispatch])
 
@@ -45,37 +48,64 @@ export default function ProductListPage() {
     () => categories.find(c => c.category_slug === slugParam) ?? null,
     [categories, slugParam]
   )
-  const isRoot = currentCat ? currentCat.parent_id === null : false
   const parentCat = useMemo(
-    () => (currentCat && currentCat.parent_id != null ? categories.find(c => c.category_id === currentCat.parent_id) ?? null : null),
+    () => (currentCat?.parent_id != null ? categories.find(c => c.category_id === currentCat!.parent_id) ?? null : null),
     [categories, currentCat]
   )
 
-  // Üst kategoriye ait alt kategori ID'leri
-  const childCatIds = useMemo(() => {
-    if (!currentCat || !isRoot) return null
-    return new Set(categories.filter(c => c.parent_id === currentCat.category_id).map(c => c.category_id))
-  }, [categories, currentCat, isRoot])
+  // Kategori değişince fetch
+  useEffect(() => {
+    if (!currentCat) {
+      if (catalogLoaded) {
+        setCatProducts(catalogProducts)
+        setNoStock(false)
+      } else {
+        setCatProducts([])
+        setNoStock(false)
+      }
+      return
+    }
+
+    // Üst kategori — tıklanamaz, buraya gelinen yol olmamalı ama yine de guard
+    if (currentCat.parent_id === null) { setCatProducts([]); setNoStock(false); return }
+
+    // has_product false → stok yok, API çağırma
+    if (!currentCat.has_product) { setCatProducts([]); setNoStock(true); return }
+
+    setNoStock(false)
+
+    // Catalog Redux'ta yüklüyse — API çağrısı yok
+    if (catalogLoaded) {
+      setCatProducts(catalogProducts.filter(p => p.categoryId === currentCat.category_id))
+      return
+    }
+
+    // Cache'den al
+    if (cacheRef.current.has(currentCat.category_id)) {
+      setCatProducts(cacheRef.current.get(currentCat.category_id)!)
+      return
+    }
+
+    // Fallback: per-category API
+    setLoading(true)
+    productApi.list({ categoryId: currentCat.category_id, size: 500 })
+      .then(page => {
+        cacheRef.current.set(currentCat.category_id, page.content)
+        setCatProducts(page.content)
+      })
+      .catch(() => setCatProducts([]))
+      .finally(() => setLoading(false))
+  }, [currentCat, catalogLoaded, catalogProducts])
 
   const products = useMemo(() => {
-    let list = allProducts
-
-    if (slugParam) {
-      if (isRoot && childCatIds) {
-        // Üst kategoriye tıklandı → tüm alt kategorilerin ürünleri
-        list = list.filter(p => childCatIds.has(p.categoryId))
-      } else if (currentCat) {
-        // Alt kategoriye tıklandı → sadece o kategorinin ürünleri
-        list = list.filter(p => p.categoryId === currentCat.category_id)
-      }
-    }
+    let list = catProducts
 
     if (query) {
       const q = query.toLowerCase()
       list = list.filter(p =>
         p.name.toLowerCase().includes(q) ||
         (p.brandName?.toLowerCase().includes(q) ?? false) ||
-        (p.shortDescription?.toLowerCase().includes(q) ?? false)
+        (('shortDescription' in p && p.shortDescription?.toLowerCase().includes(q)) ?? false)
       )
     }
 
@@ -83,7 +113,7 @@ export default function ProductListPage() {
     else if (sort === 'price_desc') list = [...list].sort((a, b) => b.basePrice - a.basePrice)
     else if (sort === 'name_asc') list = [...list].sort((a, b) => a.name.localeCompare(b.name, 'tr'))
     return list
-  }, [allProducts, slugParam, currentCat, isRoot, childCatIds, query, sort])
+  }, [catProducts, query, sort])
 
   const pageTitle = query
     ? `"${query}" için sonuçlar`
@@ -148,6 +178,12 @@ export default function ProductListPage() {
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text3)', fontSize: 16 }}>Yükleniyor...</div>
+        ) : noStock ? (
+          <div style={{ textAlign: 'center', padding: '80px 0' }}>
+            <div style={{ fontSize: 60, marginBottom: 16 }}>📦</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>Bu kategoride stok bulunmuyor</div>
+            <div style={{ fontSize: 14, color: 'var(--text2)' }}>Yakında yeni ürünler eklenecek.</div>
+          </div>
         ) : products.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 0' }}>
             <div style={{ fontSize: 60, marginBottom: 16 }}>🔍</div>
@@ -157,7 +193,7 @@ export default function ProductListPage() {
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 16, paddingBottom: 40 }}>
             {products.map(p => (
-              <ProductCard key={p.id} p={p} />
+              <ProductCard key={p.id} p={p as CatalogProduct} />
             ))}
           </div>
         )}
@@ -172,7 +208,7 @@ export default function ProductListPage() {
   )
 }
 
-function ProductCard({ p }: { p: Product }) {
+function ProductCard({ p }: { p: CatalogProduct }) {
   const navigate = useNavigate()
   const dispatch = useDispatch<AppDispatch>()
   const bg = BG_COLORS[p.name.charCodeAt(0) % BG_COLORS.length]

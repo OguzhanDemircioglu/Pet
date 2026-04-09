@@ -14,9 +14,11 @@ import java.util.List;
 @Table(name = "products", schema = "petshop",
        uniqueConstraints = @UniqueConstraint(columnNames = "sku"),
        indexes = {
-           @Index(name = "idx_product_category", columnList = "category_id"),
-           @Index(name = "idx_product_brand", columnList = "brand_id"),
-           @Index(name = "idx_product_active", columnList = "is_active")
+           @Index(name = "idx_product_category",       columnList = "category_id"),
+           @Index(name = "idx_product_brand",          columnList = "brand_id"),
+           @Index(name = "idx_product_active",         columnList = "is_active"),
+           @Index(name = "idx_product_slug",           columnList = "slug"),
+           @Index(name = "idx_product_featured_active",columnList = "is_featured,is_active")
        })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Product {
@@ -76,11 +78,6 @@ public class Product {
 
     @Column(name = "is_featured", nullable = false)
     private Boolean isFeatured = false;
-
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    @OrderBy("minQuantity ASC")
-    private List<ProductPriceTier> priceTiers = new ArrayList<>();
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

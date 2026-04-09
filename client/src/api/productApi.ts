@@ -1,5 +1,13 @@
 import api from './axios'
-import type { Product, ProductImage, Brand, Category, Page, AdminUser } from '../types'
+import type { Product, CatalogProduct, ProductImage, Brand, Category, Page, AdminUser } from '../types'
+import type { DiscountResponse, CampaignResponse } from './campaignApi'
+
+export interface CatalogResponse {
+  products: CatalogProduct[]
+  categories: Category[]
+  activeDiscounts: DiscountResponse[]
+  slides: CampaignResponse[]
+}
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 export const imgUrl = (path: string | null | undefined): string | undefined =>
@@ -27,11 +35,11 @@ export const productApi = {
   featured: () =>
     api.get<Product[]>('/products/featured').then(r => r.data),
 
+  catalog: () =>
+    api.get<CatalogResponse>('/public/catalog').then(r => r.data),
+
   getBySlug: (slug: string) =>
     api.get<Product>(`/products/${slug}`).then(r => r.data),
-
-  adminList: (params?: { page?: number; size?: number }) =>
-    api.get<Page<Product>>('/admin/products', { params }).then(r => r.data),
 
   adminCreate: (data: ProductForm) =>
     api.post<Product>('/admin/products', data).then(r => r.data),

@@ -9,8 +9,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "product_reviews", schema = "petshop",
        indexes = {
-           @Index(name = "idx_review_product", columnList = "product_id"),
-           @Index(name = "idx_review_order_product", columnList = "order_id,product_id", unique = true)
+           @Index(name = "idx_review_product_approved", columnList = "product_id,is_approved"),
+           @Index(name = "idx_review_order_product",    columnList = "order_id,product_id", unique = true)
        })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class ProductReview {

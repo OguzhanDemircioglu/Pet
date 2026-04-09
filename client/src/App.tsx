@@ -7,6 +7,8 @@ import { useSelector } from 'react-redux'
 import { store } from './store'
 import { loadMeThunk } from './store/authSlice'
 import { fetchNotificationsThunk } from './store/notificationSlice'
+import { fetchHomepageThunk } from './store/campaignSlice'
+import { fetchCatalogThunk } from './store/productSlice'
 import { useAppDispatch } from './hooks/useAppDispatch'
 import { ThemeProvider } from './context/ThemeContext'
 import type { RootState } from './store'
@@ -26,6 +28,10 @@ function AppInner() {
 
   useEffect(() => {
     dispatch(loadMeThunk())
+    dispatch(fetchHomepageThunk())  // phase 1: kritik path
+    // phase 2: catalog arka planda, homepage isteği bittikten sonra başlasın
+    const t = setTimeout(() => dispatch(fetchCatalogThunk()), 2000)
+    return () => clearTimeout(t)
   }, [dispatch])
 
   useEffect(() => {

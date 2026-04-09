@@ -29,7 +29,13 @@ export const fetchCategoriesThunk = createAsyncThunk(
 const categorySlice = createSlice({
   name: 'categories',
   initialState,
-  reducers: {},
+  reducers: {
+    setCategories: (state, action) => {
+      state.categories = action.payload
+      state.loaded = true
+      state.loading = false
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchCategoriesThunk.pending, (state) => { state.loading = true })
@@ -46,4 +52,5 @@ const categorySlice = createSlice({
   },
 })
 
+export const { setCategories } = categorySlice.actions
 export default categorySlice.reducer

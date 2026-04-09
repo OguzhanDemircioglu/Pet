@@ -1,46 +1,40 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import { productApi } from '../api/productApi'
-import type { Product } from '../types'
+import type { DiscountResponse } from '../api/campaignApi'
+import { setCategories } from './categorySlice'
+import type { CatalogProduct, FeaturedProduct } from '../types'
 import type { RootState } from './index'
 
 interface ProductState {
-  products: Product[]
+  products: CatalogProduct[]
   loading: boolean
-  loaded: boolean
-  featured: Product[]
+  catalogLoaded: boolean
+  activeDiscounts: DiscountResponse[]
+  featured: FeaturedProduct[]
   featuredLoaded: boolean
 }
 
 const initialState: ProductState = {
   products: [],
   loading: false,
-  loaded: false,
+  catalogLoaded: false,
+  activeDiscounts: [],
   featured: [],
   featuredLoaded: false,
 }
 
-export const fetchProductsThunk = createAsyncThunk(
-  'products/fetch',
-  async (_force: boolean = false) => {
-    const page = await productApi.list({ size: 500 })
-    return page.content
+export const fetchCatalogThunk = createAsyncThunk(
+  'products/fetchCatalog',
+  async (_, { dispatch }) => {
+    const data = await productApi.catalog()
+    dispatch(setCategories(data.categories))
+    dispatch(setActiveDiscounts(data.activeDiscounts))
+    return data
   },
   {
-    condition: (force, { getState }) => {
-      if (force) return true
-      const state = getState() as RootState
-      return !state.products.loaded
-    },
-  }
-)
-
-export const fetchFeaturedProductsThunk = createAsyncThunk(
-  'products/fetchFeatured',
-  async () => productApi.featured(),
-  {
     condition: (_, { getState }) => {
-      const state = getState() as RootState
-      return !state.products.featuredLoaded
+      const s = getState() as RootState
+      return !s.products.catalogLoaded && !s.products.loading
     },
   }
 )
@@ -48,28 +42,32 @@ export const fetchFeaturedProductsThunk = createAsyncThunk(
 const productSlice = createSlice({
   name: 'products',
   initialState,
-  reducers: {},
+  reducers: {
+    setFeatured: (state, action) => {
+      state.featured = action.payload
+      state.featuredLoaded = true
+    },
+    setActiveDiscounts: (state, action) => {
+      state.activeDiscounts = action.payload
+    },
+    resetCatalog: (state) => {
+      state.catalogLoaded = false
+      state.products = []
+    },
+  },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchProductsThunk.pending, (state) => { state.loading = true })
-      .addCase(fetchProductsThunk.fulfilled, (state, action) => {
+      .addCase(fetchCatalogThunk.pending, (state) => { state.loading = true })
+      .addCase(fetchCatalogThunk.fulfilled, (state, action) => {
         if (action.payload) {
-          state.products = action.payload
-          state.loaded = true
+          state.products = action.payload.products
+          state.catalogLoaded = true
         }
         state.loading = false
       })
-      .addCase(fetchProductsThunk.rejected, (state) => { state.loading = false })
-      .addCase(fetchFeaturedProductsThunk.pending, (state) => { state.loading = true })
-      .addCase(fetchFeaturedProductsThunk.fulfilled, (state, action) => {
-        if (action.payload) {
-          state.featured = action.payload
-          state.featuredLoaded = true
-        }
-        state.loading = false
-      })
-      .addCase(fetchFeaturedProductsThunk.rejected, (state) => { state.loading = false })
+      .addCase(fetchCatalogThunk.rejected, (state) => { state.loading = false })
   },
 })
 
+export const { setFeatured, setActiveDiscounts, resetCatalog } = productSlice.actions
 export default productSlice.reducer

@@ -1,5 +1,6 @@
 package com.petshop.controller;
 
+import com.petshop.dto.response.FeaturedProductDto;
 import com.petshop.dto.response.ProductResponse;
 import com.petshop.service.ProductService;
 import lombok.RequiredArgsConstructor;
@@ -40,8 +41,8 @@ public class ProductController {
     }
 
     @GetMapping("/featured")
-    public ResponseEntity<List<ProductResponse>> featured() {
-        return ResponseEntity.ok(productService.getFeatured());
+    public ResponseEntity<List<FeaturedProductDto>> featured() {
+        return ResponseEntity.ok(productService.getFeatured(20));
     }
 
     @GetMapping("/{slug}")

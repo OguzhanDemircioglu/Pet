@@ -113,6 +113,10 @@ export interface GeneralDiscountRequest {
   isActive?: boolean
 }
 
+export interface HomepageData {
+  featured: import('../types').FeaturedProduct[]
+}
+
 export const campaignApi = {
   list: () => api.get<CampaignResponse[]>('/admin/campaigns').then(r => r.data),
   create: (data: CampaignRequest) => api.post<CampaignResponse>('/admin/campaigns', data).then(r => r.data),
@@ -121,6 +125,7 @@ export const campaignApi = {
   getActiveEmojis: () => api.get<string[]>('/admin/campaigns/active-emojis').then(r => r.data),
   getActiveCampaigns: () => api.get<CampaignResponse[]>('/public/campaigns').then(r => r.data),
   getActiveDiscounts: () => api.get<DiscountResponse[]>('/public/active-discounts').then(r => r.data),
+  getHomepage: () => api.get<HomepageData>('/public/homepage').then(r => r.data),
 }
 
 export const discountApi = {

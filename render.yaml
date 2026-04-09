@@ -28,10 +28,6 @@ services:
       - key: JWT_SECRET
         generateValue: true
 
-      # Upload dizini — mounted disk
-      - key: UPLOAD_DIR
-        value: /uploads/products
-
       # Frontend URL — CORS için (patilya-frontend'in URL'si otomatik gelir)
       - key: FRONTEND_URL
         fromService:

@@ -25,12 +25,10 @@ public record ProductResponse(
         Boolean isActive,
         Boolean isFeatured,
         String primaryImageUrl,
-        List<PriceTierDto> priceTiers,
         Double averageRating,
         List<ImageDto> images,
         ActiveDiscountDto activeDiscount
 ) {
-    public record PriceTierDto(Integer minQuantity, Integer maxQuantity, BigDecimal unitPrice) {}
     public record ImageDto(Long id, String imageUrl, Boolean isPrimary, Integer displayOrder) {}
     public record ActiveDiscountDto(String label, String discountType, BigDecimal discountValue, String name) {}
 
@@ -44,10 +42,6 @@ public record ProductResponse(
                 .map(ProductImage::getImageUrl)
                 .findFirst()
                 .orElse(p.getImages().isEmpty() ? null : p.getImages().get(0).getImageUrl());
-
-        List<PriceTierDto> tiers = p.getPriceTiers().stream()
-                .map(t -> new PriceTierDto(t.getMinQuantity(), t.getMaxQuantity(), t.getUnitPrice()))
-                .toList();
 
         List<ImageDto> images = p.getImages().stream()
                 .map(i -> new ImageDto(i.getId(), i.getImageUrl(), i.getIsPrimary(), i.getDisplayOrder()))
@@ -64,7 +58,7 @@ public record ProductResponse(
                 p.getBasePrice(), p.getVatRate(), p.getMoq(),
                 p.getAvailableStock(), p.getUnit(),
                 p.getIsActive(), p.getIsFeatured(),
-                primaryImage, tiers, null, images, discount
+                primaryImage, null, images, discount
         );
     }
 }

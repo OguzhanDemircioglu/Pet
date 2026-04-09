@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import { campaignApi, type CampaignResponse, type DiscountResponse } from '../api/campaignApi'
+import { campaignApi, type CampaignResponse } from '../api/campaignApi'
+import { setFeatured, fetchCatalogThunk } from './productSlice'
 import type { RootState } from './index'
 
 interface Slide {
@@ -16,19 +17,8 @@ interface Slide {
 interface CampaignState {
   slides: Slide[]
   raw: CampaignResponse[]
-  activeDiscounts: DiscountResponse[]
   loading: boolean
   loaded: boolean
-  discountsLoaded: boolean
-}
-
-const initialState: CampaignState = {
-  slides: [],
-  raw: [],
-  activeDiscounts: [],
-  loading: false,
-  loaded: false,
-  discountsLoaded: false,
 }
 
 const extractFirstColor = (gradient: string): string => {
@@ -36,37 +26,36 @@ const extractFirstColor = (gradient: string): string => {
   return m ? m[0] : '#dc2626'
 }
 
-export const fetchCampaignsThunk = createAsyncThunk(
-  'campaigns/fetch',
-  async () => {
-    const data = await campaignApi.getActiveCampaigns()
-    const slides: Slide[] = data.map(c => ({
-      bg: c.bgColor,
-      badge: c.badge,
-      title: c.title,
-      sub: c.description || '',
-      btnColor: extractFirstColor(c.bgColor),
-      emoji: c.emoji || '📢',
-      sticker: c.sticker || undefined,
-      sourceType: c.sourceType === 'discount' ? 'discount' : 'info',
-    }))
-    return { raw: data, slides }
+export const FREE_SHIPPING_THRESHOLD = 750
+
+const FREE_SHIPPING_SLIDE: Slide = {
+  bg: 'linear-gradient(135deg,#1e3a5f,#2d5a8e)',
+  badge: 'Ücretsiz Kargo',
+  title: `${FREE_SHIPPING_THRESHOLD} ₺ Üzeri\nÜcretsiz Kargo`,
+  sub: 'Tüm siparişlerde geçerli. Aynı gün kargolama.',
+  btnColor: '#1e3a5f',
+  emoji: '🚚',
+  sourceType: 'info' as const,
+}
+
+const initialState: CampaignState = {
+  slides: [FREE_SHIPPING_SLIDE],  // hemen görünür, API beklenmez
+  raw: [],
+  loading: false,
+  loaded: false,
+}
+
+export const fetchHomepageThunk = createAsyncThunk(
+  'campaigns/fetchHomepage',
+  async (_, { dispatch }) => {
+    const data = await campaignApi.getHomepage()
+    dispatch(setFeatured(data.featured))
+    return data
   },
   {
-    condition: (_arg, { getState }) => {
-      const state = getState() as RootState
-      return !state.campaigns.loaded
-    },
-  }
-)
-
-export const fetchActiveDiscountsThunk = createAsyncThunk(
-  'campaigns/fetchActiveDiscounts',
-  async () => campaignApi.getActiveDiscounts(),
-  {
-    condition: (_arg, { getState }) => {
-      const state = getState() as RootState
-      return !state.campaigns.discountsLoaded
+    condition: (_, { getState }) => {
+      const state = (getState() as RootState).campaigns
+      return !state.loaded && !state.loading
     },
   }
 )
@@ -77,32 +66,38 @@ const campaignSlice = createSlice({
   reducers: {
     resetCampaigns: (state) => {
       state.loaded = false
-      state.slides = []
+      state.slides = [FREE_SHIPPING_SLIDE]
       state.raw = []
-    },
-    resetActiveDiscounts: (state) => {
-      state.discountsLoaded = false
-      state.activeDiscounts = []
     },
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchCampaignsThunk.pending, (state) => { state.loading = true })
-      .addCase(fetchCampaignsThunk.fulfilled, (state, action) => {
-        state.slides = action.payload.slides
-        state.raw = action.payload.raw
+      .addCase(fetchHomepageThunk.pending, (state) => { state.loading = true })
+      .addCase(fetchHomepageThunk.fulfilled, (state) => {
         state.loaded = true
         state.loading = false
       })
-      .addCase(fetchCampaignsThunk.rejected, (state) => { state.loading = false })
-      .addCase(fetchActiveDiscountsThunk.fulfilled, (state, action) => {
-        if (action.payload) {
-          state.activeDiscounts = action.payload
-          state.discountsLoaded = true
-        }
+      .addCase(fetchHomepageThunk.rejected, (state) => { state.loading = false })
+      // Catalog yüklenince API slides'larını ekle (ücretsiz kargo olanları filtrele — DB'deki varyanttaki çift görünmeyi önler)
+      .addCase(fetchCatalogThunk.fulfilled, (state, action) => {
+        if (!action.payload) return
+        const isFreeShipping = (c: CampaignResponse) =>
+          c.title.toLowerCase().includes('ücretsiz kargo') ||
+          c.badge.toLowerCase().includes('ücretsiz kargo') ||
+          (c.title.toLowerCase().includes('kargo') && c.title.includes(String(FREE_SHIPPING_THRESHOLD)))
+        const apiSlides: Slide[] = action.payload.slides
+          .filter(c => !isFreeShipping(c))
+          .map(c => ({
+            bg: c.bgColor, badge: c.badge, title: c.title, sub: c.description || '',
+            btnColor: extractFirstColor(c.bgColor), emoji: c.emoji || '📢',
+            sticker: c.sticker || undefined,
+            sourceType: c.sourceType === 'discount' ? 'discount' as const : 'info' as const,
+          }))
+        state.raw = action.payload.slides
+        state.slides = [FREE_SHIPPING_SLIDE, ...apiSlides]
       })
   },
 })
 
-export const { resetCampaigns, resetActiveDiscounts } = campaignSlice.actions
+export const { resetCampaigns } = campaignSlice.actions
 export default campaignSlice.reducer

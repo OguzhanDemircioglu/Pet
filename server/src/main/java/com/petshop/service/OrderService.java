@@ -119,6 +119,7 @@ public class OrderService {
         return OrderResponse.from(savedOrder);
     }
 
+    @Transactional(readOnly = true)
     public List<OrderResponse> getUserOrders(Long userId) {
         return orderRepository.findByUserIdOrderByCreatedAtDesc(userId)
                 .stream()

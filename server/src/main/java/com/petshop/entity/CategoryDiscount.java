@@ -8,7 +8,11 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "category_discounts", schema = "petshop")
+@Table(name = "category_discounts", schema = "petshop",
+       indexes = {
+           @Index(name = "idx_category_discount_category", columnList = "category_id"),
+           @Index(name = "idx_category_discount_active",   columnList = "is_active")
+       })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class CategoryDiscount {
 

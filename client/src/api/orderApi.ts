@@ -50,12 +50,12 @@ export const orderApi = {
     api.post<OrderResponse>('/orders', data).then(r => r.data),
 
   listMy: () =>
-    api.get<OrderResponse[]>('/orders/my').then(r => r.data),
+    api.get<OrderResponse[]>('/orders/myOrders').then(r => r.data),
 }
 
 export const notificationApi = {
   listMy: () =>
-    api.get<NotificationResponse[]>('/notifications/my').then(r => r.data),
+    api.get<NotificationResponse[]>('/notifications/myNotifications').then(r => r.data),
 
   markRead: (id: number) =>
     api.patch(`/notifications/${id}/read`),

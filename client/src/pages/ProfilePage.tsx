@@ -8,23 +8,22 @@ import CategoryBar from '../components/CategoryBar'
 import Footer from '../components/Footer'
 import type { RootState, AppDispatch } from '../store'
 import { logout } from '../store/authSlice'
-import { fetchProductsThunk } from '../store/productSlice'
+import { resetCatalog, fetchCatalogThunk } from '../store/productSlice'
 import { fetchBrandsThunk, resetBrands } from '../store/brandSlice'
 import { fetchAdminCampaignsThunk, resetAdminCampaigns } from '../store/adminCampaignSlice'
-import { resetCampaigns, fetchCampaignsThunk } from '../store/campaignSlice'
+import { resetCampaigns, FREE_SHIPPING_THRESHOLD } from '../store/campaignSlice'
 import { productApi, brandApi, categoryApi, userApi, productImageApi, imgUrl, type ProductForm } from '../api/productApi'
 import { campaignApi, discountApi, type CampaignResponse, type CampaignRequest, type DiscountResponse } from '../api/campaignApi'
-import { orderApi, type OrderResponse } from '../api/orderApi'
-import { fetchNotificationsThunk, markAllReadThunk, markReadThunk } from '../store/notificationSlice'
+import { fetchOrdersThunk } from '../store/orderSlice'
+import { markAllReadThunk, markReadThunk } from '../store/notificationSlice'
 import { fetchCategoriesThunk } from '../store/categorySlice'
-import type { Product, ProductImage as ProductImageType, Brand, Category, AdminUser } from '../types'
+import type { CatalogProduct, ProductImage as ProductImageType, Brand, Category, AdminUser } from '../types'
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
-type Section = 'orders' | 'addresses' | 'info' | 'notifications' | 'products' | 'brands' | 'campaigns' | 'categories' | 'users'
+type Section = 'orders' | 'info' | 'notifications' | 'products' | 'brands' | 'campaigns' | 'categories' | 'users'
 
 const NAV_CUSTOMER: { id: Section; label: string; icon: string }[] = [
   { id: 'orders', label: 'Siparişlerim', icon: '📦' },
-  { id: 'addresses', label: 'Adreslerim', icon: '📍' },
   { id: 'info', label: 'Bilgilerim', icon: '👤' },
   { id: 'notifications', label: 'Bildirimler', icon: '🔔' },
 ]
@@ -121,10 +120,9 @@ export default function ProfilePage() {
         {/* ── Main Content ── */}
         <div>
           {section === 'orders' && <OrdersSection />}
-          {section === 'addresses' && <AddressesSection />}
           {section === 'info' && <InfoSection user={user} />}
           {section === 'notifications' && <NotificationsSection />}
-          {section === 'products' && isAdmin && <AdminProductsSection products={allProducts} onRefresh={() => dispatch(fetchProductsThunk(true))} categories={categories} categoriesLoading={categoriesLoading} />}
+          {section === 'products' && isAdmin && <AdminProductsSection products={allProducts} onRefresh={() => { dispatch(resetCatalog()); dispatch(fetchCatalogThunk()) }} categories={categories} categoriesLoading={categoriesLoading} />}
           {section === 'brands' && isAdmin && <AdminBrandsSection />}
           {section === 'categories' && isAdmin && <AdminCategoriesSection categories={categories} onRefresh={() => dispatch(fetchCategoriesThunk(true))} />}
           {section === 'campaigns' && isAdmin && <AdminCampaignsSection />}
@@ -181,14 +179,17 @@ const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
 }
 
 function OrdersSection() {
-  const [orders, setOrders] = useState<OrderResponse[]>([])
-  const [loading, setLoading] = useState(true)
+  const dispatch = useDispatch<AppDispatch>()
+  const orders = useSelector((s: RootState) => s.orders.items)
+  const loading = useSelector((s: RootState) => s.orders.loading)
+  const error = useSelector((s: RootState) => s.orders.error)
 
   useEffect(() => {
-    orderApi.listMy().then(setOrders).catch(() => {}).finally(() => setLoading(false))
-  }, [])
+    dispatch(fetchOrdersThunk())
+  }, [dispatch])
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text3)' }}>Yükleniyor...</div>
+  if (error) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--primary)' }}>Siparişler yüklenemedi: {error}</div>
 
   return (
     <div>
@@ -218,40 +219,6 @@ function OrdersSection() {
             </div>
           )
         })}
-      </div>
-    </div>
-  )
-}
-
-// ─── Addresses Section ─────────────────────────────────────────────────────────
-const MOCK_ADDR = [
-  { type: 'İş Adresi', name: 'Pet Mağazası', text: 'Atatürk Cad. No:42 Kat:2, Kadıköy / İstanbul', isDefault: true },
-  { type: 'Depo Adresi', name: 'Merkez Depo', text: 'OSB Mah. 3. Cadde No:17, Gebze / Kocaeli', isDefault: false },
-]
-
-function AddressesSection() {
-  return (
-    <div>
-      <SectionHead title="Adreslerim" sub="Teslimat adresleriniz" action={
-        <button style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--r)', padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>+ Yeni Adres</button>
-      } />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-        {MOCK_ADDR.map((a, i) => (
-          <div key={i} style={{ border: `1.5px solid ${a.isDefault ? 'var(--primary)' : 'var(--border)'}`, borderRadius: 'var(--r)', padding: '14px 16px', background: a.isDefault ? 'var(--primary-bg)' : 'var(--bg2)', position: 'relative' }}>
-            {a.isDefault && <span style={{ position: 'absolute', top: 10, right: 10, background: 'var(--primary)', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4 }}>Varsayılan</span>}
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 5 }}>{a.type}</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{a.name}</div>
-            <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.5, marginBottom: 10 }}>{a.text}</div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button style={{ fontSize: 12, color: 'var(--text2)', padding: '3px 9px', border: '1px solid var(--border)', borderRadius: 5, background: 'var(--bg2)', cursor: 'pointer' }}>Düzenle</button>
-              {!a.isDefault && <button style={{ fontSize: 12, color: 'var(--primary)', padding: '3px 9px', border: '1px solid var(--border)', borderRadius: 5, background: 'var(--bg2)', cursor: 'pointer' }}>Sil</button>}
-            </div>
-          </div>
-        ))}
-        <div style={{ border: '1.5px dashed var(--border2)', borderRadius: 'var(--r)', padding: '14px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', color: 'var(--text3)', fontSize: 13, minHeight: 120 }}>
-          <span style={{ fontSize: 24 }}>＋</span>
-          Yeni adres ekle
-        </div>
       </div>
     </div>
   )
@@ -297,9 +264,6 @@ function NotificationsSection() {
   const [onlyUnread, setOnlyUnread] = useState(false)
   const [marking, setMarking] = useState(false)
 
-  useEffect(() => {
-    dispatch(fetchNotificationsThunk())
-  }, [dispatch])
 
   const handleMarkAllRead = async () => {
     setMarking(true)
@@ -378,7 +342,7 @@ function findParentForEdit(catId: number, cats: Category[]): number {
 }
 
 function AdminProductsSection({ products, onRefresh, categories, categoriesLoading }: {
-  products: Product[]
+  products: CatalogProduct[]
   onRefresh: () => void
   categories: Category[]
   categoriesLoading: boolean
@@ -386,12 +350,13 @@ function AdminProductsSection({ products, onRefresh, categories, categoriesLoadi
   const dispatch = useDispatch<AppDispatch>()
   const brands = useSelector((s: RootState) => s.brands.brands)
 
+  useEffect(() => { dispatch(fetchCatalogThunk()) }, [dispatch])
   useEffect(() => { dispatch(fetchBrandsThunk()) }, [dispatch])
 
   const [search, setSearch] = useState('')
   const [modal, setModal] = useState<null | 'add' | 'edit'>(null)
   const [step, setStep] = useState<'details' | 'images'>('details')
-  const [editing, setEditing] = useState<Product | null>(null)
+  const [editing, setEditing] = useState<CatalogProduct | null>(null)
   const [savedProductId, setSavedProductId] = useState<number | null>(null)
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [form, setForm] = useState<ProductForm>({ ...EMPTY_FORM })
@@ -418,7 +383,7 @@ function AdminProductsSection({ products, onRefresh, categories, categoriesLoadi
     setForm({ ...EMPTY_FORM }); setParentCatId(0); setSubmitted(false); setImgSubmitted(false)
     setEditing(null); setSavedProductId(null); setProductImages([]); setStep('details'); setModal('add')
   }
-  const openEdit = (p: Product) => {
+  const openEdit = (p: CatalogProduct) => {
     const pid = findParentForEdit(p.categoryId, categories)
     setParentCatId(pid > 0 ? pid : p.categoryId)
     setForm({
@@ -815,7 +780,7 @@ function AdminCampaignsSection() {
 
   useEffect(() => {
     dispatch(fetchBrandsThunk())
-    dispatch(fetchProductsThunk(false))
+    dispatch(fetchCatalogThunk())
     dispatch(fetchCategoriesThunk(false))
     dispatch(fetchAdminCampaignsThunk())
   }, [dispatch])
@@ -823,8 +788,9 @@ function AdminCampaignsSection() {
   const refreshAll = () => {
     dispatch(resetAdminCampaigns())
     dispatch(resetCampaigns())
+    dispatch(resetCatalog())
     dispatch(fetchAdminCampaignsThunk())
-    dispatch(fetchCampaignsThunk())
+    dispatch(fetchCatalogThunk())
   }
 
   const [tab, setTab] = useState<'info' | 'discount'>('info')
@@ -949,7 +915,30 @@ function AdminCampaignsSection() {
               </tr>
             </thead>
             <tbody>
-              {campaigns.map((c, i) => (
+              {/* ── Sistem kampanyası: ücretsiz kargo (silinemez) ── */}
+              <tr style={{ borderBottom: '1px solid var(--border)', background: 'rgba(30,58,95,0.04)' }}>
+                <td style={{ padding: '10px 14px' }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 10, background: 'linear-gradient(135deg,#1e3a5f,#2d5a8e)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🚚</div>
+                </td>
+                <td style={{ padding: '10px 14px', fontSize: 12.5, color: 'var(--text2)' }}>Ücretsiz Kargo</td>
+                <td style={{ padding: '10px 14px' }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', whiteSpace: 'pre-line', lineHeight: 1.3 }}>{`${FREE_SHIPPING_THRESHOLD} ₺ Üzeri\nÜcretsiz Kargo`}</div>
+                </td>
+                <td style={{ padding: '10px 14px', fontSize: 12.5, color: 'var(--text2)' }}>Tüm siparişlerde geçerli. Aynı gün kargolama.</td>
+                <td style={{ padding: '10px 14px' }}>
+                  <span style={{ display: 'inline-block', padding: '2px 9px', borderRadius: 20, fontSize: 11.5, fontWeight: 700, background: '#f0fdf4', color: '#16a34a' }}>Aktif</span>
+                </td>
+                <td style={{ padding: '10px 14px' }}>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button disabled style={{ fontSize: 12, color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 10px', cursor: 'not-allowed', opacity: 0.5 }}>Düzenle</button>
+                    <button disabled style={{ fontSize: 12, color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 10px', cursor: 'not-allowed', opacity: 0.5 }}>Sil</button>
+                  </div>
+                </td>
+              </tr>
+              {campaigns.filter(c =>
+                !c.title?.toLowerCase().includes('ücretsiz kargo') &&
+                !c.badge?.toLowerCase().includes('ücretsiz kargo')
+              ).map((c, i) => (
                 <tr key={c.id} style={{ borderBottom: i < campaigns.length - 1 ? '1px solid var(--border)' : 'none' }} className="admin-row">
                   <td style={{ padding: '10px 14px' }}>
                     <div style={{ width: 48, height: 48, borderRadius: 10, background: c.bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>{c.emoji || '📢'}</div>

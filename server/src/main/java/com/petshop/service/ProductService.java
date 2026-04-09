@@ -1,6 +1,8 @@
 package com.petshop.service;
 
 import com.petshop.dto.request.CreateProductRequest;
+import com.petshop.dto.response.CatalogProductDto;
+import com.petshop.dto.response.FeaturedProductDto;
 import com.petshop.dto.response.ProductResponse;
 import com.petshop.entity.*;
 import com.petshop.exception.ResourceNotFoundException;
@@ -8,6 +10,7 @@ import com.petshop.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,37 +28,91 @@ public class ProductService {
     private final BrandRepository brandRepository;
     private final CategoryRepository categoryRepository;
     private final ProductDiscountRepository productDiscountRepo;
-    private final CategoryDiscountRepository categoryDiscountRepo;
-    private final BrandDiscountRepository brandDiscountRepo;
 
     // ─── Public listing ───────────────────────────────────────────────────────
 
     public Page<ProductResponse> listByCategory(Long categoryId, Pageable pageable) {
-        return enrichPage(productRepository.findByIsActiveTrueAndCategoryId(categoryId, pageable), pageable);
+        return enrichPage(productRepository.findByCategoryWithDetails(categoryId, pageable), pageable);
     }
 
     public Page<ProductResponse> search(String query, Pageable pageable) {
-        return enrichPage(productRepository.search(query, pageable), pageable);
+        return enrichPage(productRepository.searchWithDetails(query, pageable), pageable);
     }
 
     public ProductResponse getBySlug(String slug) {
-        Product p = productRepository.findBySlug(slug)
+        Product p = productRepository.findBySlugWithDetails(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Ürün bulunamadı: " + slug));
         Map<Long, ProductResponse.ActiveDiscountDto> dm = buildDiscountMap();
         return ProductResponse.fromWithDiscount(p, dm.get(p.getId()));
     }
 
     public ProductResponse getById(Long id) {
-        Product p = productRepository.findById(id)
+        Product p = productRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Ürün", id));
         Map<Long, ProductResponse.ActiveDiscountDto> dm = buildDiscountMap();
         return ProductResponse.fromWithDiscount(p, dm.get(p.getId()));
     }
 
-    public List<ProductResponse> getFeatured() {
-        List<Product> products = productRepository.findByIsFeaturedTrueAndIsActiveTrueOrderByCreatedAtDesc();
+    public List<FeaturedProductDto> getFeatured(int limit) {
+        List<Product> products = productRepository.findFeaturedWithImages(PageRequest.of(0, limit));
         Map<Long, ProductResponse.ActiveDiscountDto> dm = buildDiscountMap();
-        return products.stream().map(p -> ProductResponse.fromWithDiscount(p, dm.get(p.getId()))).toList();
+        return products.stream().map(p -> toFeaturedDto(p, dm.get(p.getId()))).toList();
+    }
+
+    public List<CatalogProductDto> getAllCatalog() {
+        List<Product> all = productRepository.findAllActiveWithImages();
+        Map<Long, ProductResponse.ActiveDiscountDto> dm = buildDiscountMap();
+        return all.stream().map(p -> toCatalogDto(p, dm.get(p.getId()))).toList();
+    }
+
+    private CatalogProductDto toCatalogDto(Product p, ProductResponse.ActiveDiscountDto disc) {
+        String primaryImage = p.getImages().stream()
+                .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
+                .map(ProductImage::getImageUrl)
+                .findFirst()
+                .orElse(p.getImages().isEmpty() ? null : p.getImages().get(0).getImageUrl());
+
+        List<CatalogProductDto.ImageDto> images = p.getImages().stream()
+                .map(i -> new CatalogProductDto.ImageDto(i.getId(), i.getImageUrl(), i.getIsPrimary(), i.getDisplayOrder()))
+                .toList();
+
+        CatalogProductDto.ActiveDiscountDto discDto = disc == null ? null :
+                new CatalogProductDto.ActiveDiscountDto(
+                        disc.label(), disc.discountType(), disc.discountValue());
+
+        return new CatalogProductDto(
+                p.getId(), p.getName(), p.getSlug(),
+                p.getSku(),
+                p.getShortDescription(),
+                p.getCategory() != null ? p.getCategory().getId() : null,
+                p.getCategory() != null ? p.getCategory().getName() : null,
+                p.getCategory() != null ? p.getCategory().getSlug() : null,
+                p.getBrand() != null ? p.getBrand().getId() : null,
+                p.getBrand() != null ? p.getBrand().getName() : null,
+                p.getBasePrice(), p.getVatRate(), p.getMoq(),
+                p.getAvailableStock(), p.getUnit(),
+                p.getIsActive(), p.getIsFeatured(),
+                primaryImage, images, discDto
+        );
+    }
+
+    private FeaturedProductDto toFeaturedDto(Product p, ProductResponse.ActiveDiscountDto disc) {
+        String primaryImage = p.getImages().stream()
+                .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
+                .map(ProductImage::getImageUrl)
+                .findFirst()
+                .orElse(p.getImages().isEmpty() ? null : p.getImages().get(0).getImageUrl());
+
+        FeaturedProductDto.ActiveDiscountDto discDto = disc == null ? null :
+                new FeaturedProductDto.ActiveDiscountDto(
+                        disc.label(), disc.discountType(), disc.discountValue());
+
+        return new FeaturedProductDto(
+                p.getId(), p.getName(), p.getSlug(),
+                p.getBrand() != null ? p.getBrand().getName() : null,
+                p.getBasePrice(), p.getMoq(), p.getUnit(),
+                primaryImage, discDto
+        );
     }
 
     public Page<ProductResponse> listAll(Pageable pageable) {
@@ -149,7 +206,7 @@ public class ProductService {
     }
 
     /**
-     * Tüm aktif indirimleri yükler ve her ürün id'si → en iyi indirim map'i döndürür.
+     * Tüm aktif indirimleri 3 sabit SQL ile yükler (N+1 yok).
      * Öncelik: ürün indirim > kategori indirim > marka indirim
      */
     private Map<Long, ProductResponse.ActiveDiscountDto> buildDiscountMap() {
@@ -157,26 +214,24 @@ public class ProductService {
         Map<Long, ProductResponse.ActiveDiscountDto> map = new HashMap<>();
 
         // Marka indirimleri (en düşük öncelik)
-        brandDiscountRepo.findAll().stream()
-                .filter(d -> isActive(d.getIsActive(), d.getStartDate(), d.getEndDate(), now))
-                .forEach(d -> productRepository.findByIsActiveTrueAndBrandId(d.getBrand().getId())
-                        .forEach(p -> map.merge(p.getId(),
-                                toDto(d.getName(), d.getDiscountType().name(), d.getDiscountValue()),
-                                this::better)));
+        productRepository.findProductIdsWithBrandDiscounts(now)
+                .forEach(row -> map.merge(
+                        (Long) row[0],
+                        toDto((String) row[1], ((ProductDiscount.DiscountType) row[2]).name(), (BigDecimal) row[3]),
+                        this::better));
 
         // Kategori indirimleri
-        categoryDiscountRepo.findAll().stream()
-                .filter(d -> isActive(d.getIsActive(), d.getStartDate(), d.getEndDate(), now))
-                .forEach(d -> productRepository.findByIsActiveTrueAndCategoryId(d.getCategory().getId(), Pageable.unpaged())
-                        .getContent().forEach(p -> map.merge(p.getId(),
-                                toDto(d.getName(), d.getDiscountType().name(), d.getDiscountValue()),
-                                this::better)));
+        productRepository.findProductIdsWithCategoryDiscounts(now)
+                .forEach(row -> map.merge(
+                        (Long) row[0],
+                        toDto((String) row[1], ((ProductDiscount.DiscountType) row[2]).name(), (BigDecimal) row[3]),
+                        this::better));
 
         // Ürün indirimleri (en yüksek öncelik — her zaman üzerine yazar)
-        productDiscountRepo.findAll().stream()
-                .filter(d -> isActive(d.getIsActive(), d.getStartDate(), d.getEndDate(), now))
-                .forEach(d -> map.put(d.getProduct().getId(),
-                        toDto(d.getName(), d.getDiscountType().name(), d.getDiscountValue())));
+        productRepository.findActiveProductDiscounts(now)
+                .forEach(row -> map.put(
+                        (Long) row[0],
+                        toDto((String) row[1], ((ProductDiscount.DiscountType) row[2]).name(), (BigDecimal) row[3])));
 
         return map;
     }
@@ -190,13 +245,6 @@ public class ProductService {
 
     private ProductResponse.ActiveDiscountDto better(ProductResponse.ActiveDiscountDto a, ProductResponse.ActiveDiscountDto b) {
         return a.discountValue().compareTo(b.discountValue()) >= 0 ? a : b;
-    }
-
-    private boolean isActive(Boolean active, LocalDateTime start, LocalDateTime end, LocalDateTime now) {
-        if (!Boolean.TRUE.equals(active)) return false;
-        if (start != null && now.isBefore(start)) return false;
-        if (end != null && now.isAfter(end)) return false;
-        return true;
     }
 
     // ─── Slug ─────────────────────────────────────────────────────────────────

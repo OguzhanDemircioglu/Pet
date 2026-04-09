@@ -26,7 +26,7 @@ public class OrderController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping("/my")
+    @GetMapping("/myOrders")
     public ResponseEntity<List<OrderResponse>> getMyOrders(
             @AuthenticationPrincipal Long userId) {
         List<OrderResponse> orders = orderService.getUserOrders(userId);
