@@ -384,10 +384,10 @@ function AdminProductsSection({ products, onRefresh, categories, categoriesLoadi
     setEditing(null); setSavedProductId(null); setProductImages([]); setStep('details'); setModal('add')
   }
   const openEdit = (p: CatalogProduct) => {
-    const pid = findParentForEdit(p.categoryId, categories)
-    setParentCatId(pid > 0 ? pid : p.categoryId)
+    const pid = findParentForEdit(p.categoryId ?? 0, categories)
+    setParentCatId(pid > 0 ? pid : (p.categoryId ?? 0))
     setForm({
-      name: p.name, sku: p.sku, categoryId: p.categoryId, brandId: p.brandId ?? 0,
+      name: p.name, sku: p.sku, categoryId: p.categoryId ?? 0, brandId: p.brandId ?? 0,
       basePrice: p.basePrice, vatRate: p.vatRate, moq: p.moq, stockQuantity: p.availableStock,
       unit: p.unit, shortDescription: p.shortDescription || '', isActive: p.isActive, isFeatured: p.isFeatured,
     })
