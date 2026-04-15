@@ -153,8 +153,8 @@ public class DataSeeder implements ApplicationRunner {
 
     private void seedProducts() {
         String sql = "INSERT INTO petshop.products " +
-                "(id, base_price, created_at, description, is_active, is_featured, moq, name, review_count, " +
-                "short_description, sku, slug, stock_quantity, unit, updated_at, vat_rate, weight, brand_id, category_id) " +
+                "(id, base_price, created_at, description, is_active, is_featured, moq, name, reserved_quantity, " +
+                "short_description, sku, slug, stock_quantity, unit, updated_at, vat_rate, weight_kg, brand_id, category_id) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING";
 
         Object[][] rows = {
