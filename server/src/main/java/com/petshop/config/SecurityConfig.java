@@ -62,7 +62,14 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         String origin = frontendUrl.trim().replaceAll("/$", "");
-        config.setAllowedOrigins(List.of(origin, "http://localhost:5173", "http://localhost:3000", "http://localhost:3333"));
+        // setAllowedOriginPatterns wildcard subdomain desteği sağlar (Cloudflare preview URL'leri için)
+        config.setAllowedOriginPatterns(List.of(
+            origin,
+            "https://*.pages.dev",
+            "http://localhost:5173",
+            "http://localhost:3000",
+            "http://localhost:3333"
+        ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
