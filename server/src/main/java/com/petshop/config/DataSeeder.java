@@ -22,7 +22,7 @@ public class DataSeeder implements ApplicationRunner {
     private final JdbcTemplate jdbc;
 
     // Mock data için sabit timestamp — değeri önemli değil
-    private static final Timestamp TS = Timestamp.valueOf(TS);
+    private static final Timestamp TS = Timestamp.valueOf("2024-01-01 00:00:00");
 
     @Override
     @Transactional
