@@ -36,21 +36,15 @@ public class EmailService {
     @Value("${app.year}")
     private String appYear;
 
-    void sendHtml(String to, String subject, String html) {
-        try {
-            MimeMessage msg = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(msg, true, AppConstants.CHARSET_UTF8);
-            helper.setFrom(fromEmail, appName);
-            helper.setTo(to);
-            helper.setSubject(subject);
-            helper.setText(html, true);
-            mailSender.send(msg);
-            log.info(EmailMessages.SENT.get(), to);
-        } catch (MessagingException e) {
-            log.error(EmailMessages.FAILED.get(), to, e.getMessage());
-        } catch (Exception e) {
-            log.error(EmailMessages.SERVICE_ERROR.get(), e.getMessage());
-        }
+    void sendHtml(String to, String subject, String html) throws Exception {
+        MimeMessage msg = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(msg, true, AppConstants.CHARSET_UTF8);
+        helper.setFrom(fromEmail, appName);
+        helper.setTo(to);
+        helper.setSubject(subject);
+        helper.setText(html, true);
+        mailSender.send(msg);
+        log.info(EmailMessages.SENT.get(), to);
     }
 
     String buildOrderConfirmationEmail(String firstName, Long orderId,
