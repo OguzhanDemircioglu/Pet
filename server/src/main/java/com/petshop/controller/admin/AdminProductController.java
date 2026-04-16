@@ -13,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/admin/products")
 @PreAuthorize("hasRole('ADMIN')")
@@ -40,10 +42,11 @@ public class AdminProductController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ProductResponse> updateProduct(
+    public ResponseEntity<Map<String, String>> updateProduct(
             @PathVariable Long id,
             @Valid @RequestBody CreateProductRequest request) {
-        return ResponseEntity.ok(productService.update(id, request));
+        productService.update(id, request);
+        return ResponseEntity.ok(Map.of("message", "Ürün güncellendi"));
     }
 
     @DeleteMapping("/{id}")

@@ -19,7 +19,7 @@ public record ProductResponse(
         String brandName,
         BigDecimal basePrice,
         BigDecimal vatRate,
-        Integer moq,
+        Integer minSellingQuantity,
         Integer availableStock,
         String unit,
         Boolean isActive,
@@ -55,7 +55,7 @@ public record ProductResponse(
                 p.getCategory() != null ? p.getCategory().getId() : null,
                 p.getBrand() != null ? p.getBrand().getId() : null,
                 p.getBrand() != null ? p.getBrand().getName() : null,
-                p.getBasePrice(), p.getVatRate(), p.getMoq(),
+                p.getBasePrice(), p.getVatRate(), p.getMinSellingQuantity(),
                 p.getAvailableStock(), p.getUnit(),
                 p.getIsActive(), p.getIsFeatured(),
                 primaryImage, null, images, discount

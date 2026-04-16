@@ -16,7 +16,7 @@ public record CatalogProductDto(
         String brandName,
         BigDecimal basePrice,
         BigDecimal vatRate,
-        Integer moq,
+        Integer minSellingQuantity,
         Integer availableStock,
         String unit,
         Boolean isActive,

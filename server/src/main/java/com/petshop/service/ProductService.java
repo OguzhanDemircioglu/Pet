@@ -88,7 +88,7 @@ public class ProductService {
                 p.getCategory() != null ? p.getCategory().getSlug() : null,
                 p.getBrand() != null ? p.getBrand().getId() : null,
                 p.getBrand() != null ? p.getBrand().getName() : null,
-                p.getBasePrice(), p.getVatRate(), p.getMoq(),
+                p.getBasePrice(), p.getVatRate(), p.getMinSellingQuantity(),
                 p.getAvailableStock(), p.getUnit(),
                 p.getIsActive(), p.getIsFeatured(),
                 primaryImage, images, discDto
@@ -109,7 +109,7 @@ public class ProductService {
         return new FeaturedProductDto(
                 p.getId(), p.getName(), p.getSlug(),
                 p.getBrand() != null ? p.getBrand().getName() : null,
-                p.getBasePrice(), p.getMoq(), p.getUnit(),
+                p.getBasePrice(), p.getMinSellingQuantity(), p.getUnit(),
                 primaryImage, discDto
         );
     }
@@ -141,7 +141,7 @@ public class ProductService {
                 .brand(brand)
                 .basePrice(req.basePrice())
                 .vatRate(req.vatRate() != null ? req.vatRate() : new BigDecimal("20.00"))
-                .moq(req.moq() != null ? req.moq() : 1)
+                .minSellingQuantity(req.minSellingQuantity() != null ? req.minSellingQuantity() : 1)
                 .stockQuantity(req.stockQuantity() != null ? req.stockQuantity() : 0)
                 .unit(req.unit() != null ? req.unit() : "adet")
                 .shortDescription(req.shortDescription())
@@ -164,7 +164,7 @@ public class ProductService {
         product.setBasePrice(req.basePrice());
 
         if (req.vatRate() != null) product.setVatRate(req.vatRate());
-        if (req.moq() != null) product.setMoq(req.moq());
+        if (req.minSellingQuantity() != null) product.setMinSellingQuantity(req.minSellingQuantity());
         if (req.stockQuantity() != null) product.setStockQuantity(req.stockQuantity());
         if (req.unit() != null) product.setUnit(req.unit());
         if (req.shortDescription() != null) product.setShortDescription(req.shortDescription());

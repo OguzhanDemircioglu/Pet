@@ -10,6 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/orders")
@@ -19,11 +20,11 @@ public class OrderController {
     private final OrderService orderService;
 
     @PostMapping
-    public ResponseEntity<OrderResponse> createOrder(
+    public ResponseEntity<Map<String, String>> createOrder(
             @AuthenticationPrincipal Long userId,
             @RequestBody OrderRequest request) {
-        OrderResponse response = orderService.createOrder(userId, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        orderService.createOrder(userId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "Sipariş alındı"));
     }
 
     @GetMapping("/myOrders")

@@ -47,7 +47,7 @@ export interface NotificationResponse {
 
 export const orderApi = {
   create: (data: OrderRequest) =>
-    api.post<OrderResponse>('/orders', data).then(r => r.data),
+    api.post<{ message: string }>('/orders', data).then(r => r.data),
 
   listMy: () =>
     api.get<OrderResponse[]>('/orders/myOrders').then(r => r.data),

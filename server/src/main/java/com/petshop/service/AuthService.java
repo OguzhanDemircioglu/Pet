@@ -40,7 +40,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
-    private final EmailService emailService;
+    private final NotificationOutboxService notificationOutboxService;
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -93,7 +93,11 @@ public class AuthService {
                 .build();
 
         userRepository.save(user);
-        emailService.sendVerificationCode(req.email(), req.firstName(), code);
+        try {
+            notificationOutboxService.enqueueVerificationCode(req.email(), req.firstName(), code);
+        } catch (Exception e) {
+            log.error("Email kuyruğa alınamadı (kayıt etkilenmedi): {}", e.getMessage());
+        }
     }
 
     @Transactional

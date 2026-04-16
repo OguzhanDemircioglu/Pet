@@ -410,13 +410,13 @@ export default function Header({ showSearch = true }: HeaderProps) {
                             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.35, marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>{item.name}</div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
                               <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid var(--border)', borderRadius: 'var(--r)', overflow: 'hidden' }}>
-                                <button onClick={() => dispatch(updateQuantity({ productId: item.productId, quantity: item.quantity - item.moq }))} style={{ width: 28, height: 28, border: 'none', background: 'var(--bg3)', color: 'var(--text)', fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                                <button onClick={() => dispatch(updateQuantity({ productId: item.productId, quantity: item.quantity - item.minSellingQuantity }))} style={{ width: 28, height: 28, border: 'none', background: 'var(--bg3)', color: 'var(--text)', fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
                                 <span style={{ minWidth: 32, textAlign: 'center', fontSize: 13, fontWeight: 700 }}>{item.quantity}</span>
-                                <button onClick={() => dispatch(updateQuantity({ productId: item.productId, quantity: item.quantity + item.moq }))} style={{ width: 28, height: 28, border: 'none', background: 'var(--bg3)', color: 'var(--text)', fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                                <button onClick={() => dispatch(updateQuantity({ productId: item.productId, quantity: item.quantity + item.minSellingQuantity }))} style={{ width: 28, height: 28, border: 'none', background: 'var(--bg3)', color: 'var(--text)', fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                               </div>
                               <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--primary)' }}>₺{(item.basePrice * item.quantity).toFixed(2)}</div>
                             </div>
-                            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3 }}>₺{item.basePrice.toFixed(2)} / {item.unit} · Min. {item.moq} {item.unit}</div>
+                            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3 }}>₺{item.basePrice.toFixed(2)} / {item.unit} · Min. {item.minSellingQuantity} {item.unit}</div>
                           </div>
                           <button onClick={() => dispatch(removeFromCart(item.productId))} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 16, padding: 2, flexShrink: 0, lineHeight: 1 }}>×</button>
                         </div>

@@ -58,8 +58,8 @@ public class Product {
     private BigDecimal vatRate = new BigDecimal("20.00");
 
     // Minimum sipariş miktarı
-    @Column(nullable = false)
-    private Integer moq = 1;
+    @Column(name = "moq", nullable = false)
+    private Integer minSellingQuantity = 1;
 
     @Column(name = "stock_quantity", nullable = false)
     private Integer stockQuantity = 0;

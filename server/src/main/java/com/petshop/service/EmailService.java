@@ -7,7 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -20,20 +19,7 @@ public class EmailService {
     @Value("${app.mail-from:info@patilyapetshop.com.tr}")
     private String fromEmail;
 
-    public void sendOrderConfirmation(String toEmail, String firstName, Long orderId,
-                                       String itemsHtml, String deliveryAddress, String totalAmount) {
-        String subject = "Siparişiniz Alındı - #" + orderId;
-        String html = buildOrderConfirmationEmail(firstName, orderId, itemsHtml, deliveryAddress, totalAmount);
-        sendHtml(toEmail, subject, html);
-    }
-
-    public void sendVerificationCode(String toEmail, String firstName, String code) {
-        String subject = "PatilyaPetshop — E-posta Doğrulama Kodunuz";
-        String html = buildVerificationEmail(firstName, code);
-        sendHtml(toEmail, subject, html);
-    }
-
-    private void sendHtml(String to, String subject, String html) {
+    void sendHtml(String to, String subject, String html) {
         try {
             MimeMessage msg = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
@@ -50,7 +36,7 @@ public class EmailService {
         }
     }
 
-    private String buildOrderConfirmationEmail(String firstName, Long orderId,
+    String buildOrderConfirmationEmail(String firstName, Long orderId,
                                                String itemsHtml, String deliveryAddress, String totalAmount) {
         return """
             <!DOCTYPE html>
@@ -127,7 +113,7 @@ public class EmailService {
             """.formatted(firstName, orderId, itemsHtml, totalAmount, deliveryAddress);
     }
 
-    private String buildVerificationEmail(String firstName, String code) {
+    String buildVerificationEmail(String firstName, String code) {
         return """
             <!DOCTYPE html>
             <html lang="tr">

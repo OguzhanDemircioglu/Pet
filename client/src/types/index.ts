@@ -42,7 +42,7 @@ export interface Product {
   brandName: string | null
   basePrice: number
   vatRate: number
-  moq: number
+  minSellingQuantity: number
   availableStock: number
   unit: string
   isActive: boolean
@@ -94,7 +94,7 @@ export interface CatalogProduct {
   brandName: string | null
   basePrice: number
   vatRate: number
-  moq: number
+  minSellingQuantity: number
   availableStock: number
   unit: string
   isActive: boolean
@@ -110,7 +110,7 @@ export interface FeaturedProduct {
   slug: string
   brandName: string | null
   basePrice: number
-  moq: number
+  minSellingQuantity: number
   unit: string
   primaryImageUrl: string | null
   activeDiscount: ActiveDiscount | null

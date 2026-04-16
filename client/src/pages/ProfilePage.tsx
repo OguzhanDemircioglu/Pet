@@ -39,7 +39,7 @@ const UNITS = ['adet', 'kg', 'lt', 'kutu', 'paket', 'çift']
 
 const EMPTY_FORM: ProductForm = {
   name: '', sku: '', categoryId: 0, brandId: 0,
-  basePrice: 0, vatRate: 20, moq: 1, stockQuantity: 0,
+  basePrice: 0, vatRate: 20, minSellingQuantity: 1, stockQuantity: 0,
   unit: 'adet', shortDescription: '', isActive: true, isFeatured: false,
 }
 
@@ -388,7 +388,7 @@ function AdminProductsSection({ products, onRefresh, categories, categoriesLoadi
     setParentCatId(pid > 0 ? pid : (p.categoryId ?? 0))
     setForm({
       name: p.name, sku: p.sku, categoryId: p.categoryId ?? 0, brandId: p.brandId ?? 0,
-      basePrice: p.basePrice, vatRate: p.vatRate, moq: p.moq, stockQuantity: p.availableStock,
+      basePrice: p.basePrice, vatRate: p.vatRate, minSellingQuantity: p.minSellingQuantity, stockQuantity: p.availableStock,
       unit: p.unit, shortDescription: p.shortDescription || '', isActive: p.isActive, isFeatured: p.isFeatured,
     })
     setSubmitted(false); setImgSubmitted(false); setEditing(p); setSavedProductId(p.id)
@@ -610,7 +610,7 @@ function AdminProductsSection({ products, onRefresh, categories, categoriesLoadi
                       <input type="number" value={form.vatRate} onChange={e => setForm(p => ({ ...p, vatRate: Number(e.target.value) }))} style={inputStyle} min={0} max={100} />
                     </FormField>
                     <FormField label="Min. Sipariş Adedi">
-                      <input type="number" value={form.moq} onChange={e => setForm(p => ({ ...p, moq: Number(e.target.value) }))} style={inputStyle} min={1} />
+                      <input type="number" value={form.minSellingQuantity} onChange={e => setForm(p => ({ ...p, minSellingQuantity: Number(e.target.value) }))} style={inputStyle} min={1} />
                     </FormField>
                     <FormField label="Stok Miktarı">
                       <input type="number" value={form.stockQuantity} onChange={e => setForm(p => ({ ...p, stockQuantity: Number(e.target.value) }))} style={inputStyle} min={0} />
@@ -823,7 +823,7 @@ function AdminCampaignsSection() {
       if (modal === 'camp-add') { await campaignApi.create(payload); toast.success('Kampanya eklendi') }
       else if (editCamp) { await campaignApi.update(editCamp.id!, payload); toast.success('Kampanya güncellendi') }
       setModal(null); refreshAll()
-    } catch (err: any) { toast.error(err?.response?.data?.message || 'Bir hata oluştu') }
+    } catch (err: any) { toast.error(err?.message || 'Bir hata oluştu') }
     finally { setSaving(false) }
   }
 
@@ -850,7 +850,7 @@ function AdminCampaignsSection() {
         toast.success('İndirim kampanyası eklendi')
       }
       setModal(null); refreshAll()
-    } catch (err: any) { toast.error(err?.response?.data?.message || 'Bir hata oluştu') }
+    } catch (err: any) { toast.error(err?.message || 'Bir hata oluştu') }
     finally { setSaving(false) }
   }
 
@@ -860,7 +860,7 @@ function AdminCampaignsSection() {
       if (deleteConfirm.kind === 'campaign') { await campaignApi.delete(deleteConfirm.id); toast.success('Kampanya silindi') }
       else { await discountApi.delete(deleteConfirm.dtype!, deleteConfirm.id); toast.success('İndirim silindi') }
       setDeleteConfirm(null); refreshAll()
-    } catch (err: any) { toast.error(err?.response?.data?.message || 'Silinemedi'); setDeleteConfirm(null) }
+    } catch (err: any) { toast.error(err?.message || 'Silinemedi'); setDeleteConfirm(null) }
   }
 
   const categoryMap = useMemo(() => new Map(categories.map(c => [c.category_id, c.category_name])), [categories])
@@ -1204,13 +1204,13 @@ function AdminBrandsSection() {
       else if (editBrand) { await brandApi.adminUpdate(editBrand.id, form); toast.success('Marka güncellendi') }
       setModal(null); refresh()
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Bir hata oluştu')
+      toast.error(err?.message || 'Bir hata oluştu')
     } finally { setSaving(false) }
   }
 
   const handleDelete = async (id: number) => {
     try { await brandApi.adminDelete(id); toast.success('Marka silindi'); refresh() }
-    catch (err: any) { toast.error(err?.response?.data?.message || 'Silinemedi — markada ürün mevcut olabilir') }
+    catch (err: any) { toast.error(err?.message || 'Silinemedi — markada ürün mevcut olabilir') }
     setDeleteId(null)
   }
 
@@ -1392,7 +1392,7 @@ function AdminCategoriesSection({ categories, onRefresh }: { categories: Categor
     try {
       await categoryApi.adminDelete(id); toast.success('Kategori silindi'); onRefresh()
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Silinemedi — kategoride ürün mevcut olabilir')
+      toast.error(err?.message || 'Silinemedi — kategoride ürün mevcut olabilir')
     }
     setDeleteId(null)
   }

@@ -8,7 +8,7 @@ public record FeaturedProductDto(
         String slug,
         String brandName,
         BigDecimal basePrice,
-        Integer moq,
+        Integer minSellingQuantity,
         String unit,
         String primaryImageUrl,
         ActiveDiscountDto activeDiscount

@@ -5,7 +5,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -26,8 +25,7 @@ public class TelegramService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Async
-    public void sendMessage(String text) {
+    void sendMessage(String text) {
         if (botToken == null || botToken.isBlank() || chatId == null || chatId.isBlank()) {
             log.warn("Telegram bildirimi atlandı: bot-token veya chat-id tanımlı değil");
             return;

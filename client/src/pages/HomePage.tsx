@@ -59,7 +59,7 @@ function ProductCard({ p }: { p: FeaturedProduct }) {
         <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>{p.brandName}</div>
         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.4, marginBottom: 8, flex: 1 }}>{p.name}</div>
         <div style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 2 }}>Min. {p.moq} {p.unit}</div>
+          <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 2 }}>Min. {p.minSellingQuantity} {p.unit}</div>
           {p.activeDiscount ? (() => {
             const disc = p.activeDiscount!
             const newPrice = disc.discountType === 'PERCENT'
@@ -77,7 +77,7 @@ function ProductCard({ p }: { p: FeaturedProduct }) {
         </div>
         <button onClick={e => {
           e.stopPropagation(); e.preventDefault()
-          dispatch(addToCart({ productId: p.id, name: p.name, slug: p.slug, brandName: p.brandName, basePrice: p.basePrice, unit: p.unit, moq: p.moq, primaryImageUrl: p.primaryImageUrl }))
+          dispatch(addToCart({ productId: p.id, name: p.name, slug: p.slug, brandName: p.brandName, basePrice: p.basePrice, unit: p.unit, minSellingQuantity: p.minSellingQuantity, primaryImageUrl: p.primaryImageUrl }))
           toast.success('Sepete eklendi')
         }} style={{
           width: '100%', background: 'var(--primary)', color: '#fff',

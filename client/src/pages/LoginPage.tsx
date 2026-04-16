@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useGoogleLogin } from '@react-oauth/google'
@@ -137,6 +137,26 @@ export default function LoginPage() {
   const [regVerifyCode, setRegVerifyCode] = useState('')
   const [regVerifyError, setRegVerifyError] = useState('')
 
+  // Doğrulama ekranı geri sayım (180 sn = 3 dk)
+  const VERIFY_SECONDS = 180
+  const [secondsLeft, setSecondsLeft] = useState(VERIFY_SECONDS)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const startTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current)
+    setSecondsLeft(VERIFY_SECONDS)
+    timerRef.current = setInterval(() => {
+      setSecondsLeft(s => {
+        if (s <= 1) { clearInterval(timerRef.current!); return 0 }
+        return s - 1
+      })
+    }, 1000)
+  }, [])
+
+  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current) }, [])
+
+  const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     const errs: typeof loginErrors = {}
@@ -155,38 +175,59 @@ export default function LoginPage() {
       if (msg.toLowerCase().includes('doğrulan')) {
         setPendingEmail(loginEmail)
         setShowVerify(true)
+        startTimer()
         toast.error('E-posta doğrulanmamış, kodu girin')
       } else {
-        setLoginErrors({ password: msg })
+        toast.error(msg)
       }
     } finally {
       setLoading(false)
     }
   }
 
-  const handleLoginVerify = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!verifyCode || verifyCode.length !== 6) { setVerifyError('6 haneli kodu girin'); return }
+  const handleLoginVerify = async (code = verifyCode) => {
+    if (!code || code.length !== 6) { setVerifyError('6 haneli kodu girin'); return }
     setVerifyError('')
     setLoading(true)
     try {
-      await dispatch(verifyEmailThunk({ email: pendingEmail, code: verifyCode })).unwrap()
+      await dispatch(verifyEmailThunk({ email: pendingEmail, code })).unwrap()
       toast.success('Doğrulama başarılı, giriş yapıldı')
       navigate('/')
     } catch (err: unknown) {
-      setVerifyError((err as Error).message ?? 'Doğrulama başarısız')
+      toast.error((err as Error).message ?? 'Doğrulama başarısız')
+      setVerifyCode('')
     } finally {
       setLoading(false)
     }
   }
 
-  const handlePhoneChange = (raw: string) => {
+  const phoneInputRef = useRef<HTMLInputElement>(null)
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value
+    const cursorPos = e.target.selectionStart ?? raw.length
+    const digitsBeforeCursor = raw.slice(0, cursorPos).replace(/\D/g, '').length
+
     const digits = raw.replace(/\D/g, '').slice(0, 11)
     let formatted = digits
     if (digits.length > 4) formatted = digits.slice(0, 4) + ' ' + digits.slice(4)
     if (digits.length > 7) formatted = digits.slice(0, 4) + ' ' + digits.slice(4, 7) + ' ' + digits.slice(7)
     if (digits.length > 9) formatted = digits.slice(0, 4) + ' ' + digits.slice(4, 7) + ' ' + digits.slice(7, 9) + ' ' + digits.slice(9)
     setRegPhone(formatted)
+    setRegErrors(p => ({ ...p, phone: '' }))
+
+    requestAnimationFrame(() => {
+      if (!phoneInputRef.current) return
+      let digitCount = 0
+      let newCursor = formatted.length
+      for (let i = 0; i < formatted.length; i++) {
+        if (/\d/.test(formatted[i])) {
+          digitCount++
+          if (digitCount === digitsBeforeCursor) { newCursor = i + 1; break }
+        }
+      }
+      phoneInputRef.current.setSelectionRange(newCursor, newCursor)
+    })
   }
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -211,26 +252,26 @@ export default function LoginPage() {
       })).unwrap()
       setPendingEmail(regEmail)
       setShowRegVerify(true)
+      startTimer()
       toast.success('Doğrulama kodu e-postanıza gönderildi')
     } catch (err: unknown) {
-      const msg = (err as Error).message ?? 'Kayıt başarısız'
-      setRegErrors({ email: msg })
+      toast.error((err as Error).message ?? 'Kayıt başarısız')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleRegVerify = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!regVerifyCode || regVerifyCode.length !== 6) { setRegVerifyError('6 haneli kodu girin'); return }
+  const handleRegVerify = async (code = regVerifyCode) => {
+    if (!code || code.length !== 6) { setRegVerifyError('6 haneli kodu girin'); return }
     setRegVerifyError('')
     setLoading(true)
     try {
-      await dispatch(verifyEmailThunk({ email: pendingEmail, code: regVerifyCode })).unwrap()
+      await dispatch(verifyEmailThunk({ email: pendingEmail, code })).unwrap()
       toast.success('Hesabınız doğrulandı, giriş yapıldı')
       navigate('/')
     } catch (err: unknown) {
-      setRegVerifyError((err as Error).message ?? 'Doğrulama başarısız')
+      toast.error((err as Error).message ?? 'Doğrulama başarısız')
+      setRegVerifyCode('')
     } finally {
       setLoading(false)
     }
@@ -335,19 +376,26 @@ export default function LoginPage() {
                   <div style={{ fontSize: 13.5, color: 'var(--text2)', lineHeight: 1.5 }}>
                     <strong>{pendingEmail}</strong> adresine gönderilen 6 haneli kodu girin
                   </div>
-                </div>
-                <form onSubmit={handleLoginVerify}>
-                  <div style={{ marginBottom: 16 }}>
-                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text2)', marginBottom: 6 }}>Doğrulama Kodu</label>
-                    <input value={verifyCode} onChange={e => { setVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6)); setVerifyError('') }}
-                      placeholder="000000" maxLength={6}
-                      style={{ width: '100%', height: 54, border: `1.5px solid ${verifyError ? '#dc2626' : 'var(--border)'}`, borderRadius: 8, background: verifyError ? '#fef2f2' : 'var(--bg3)', color: 'var(--text)', fontSize: 24, letterSpacing: 8, textAlign: 'center', outline: 'none', fontFamily: 'inherit' }} />
-                    {verifyError && <div style={{ fontSize: 12, color: '#dc2626', marginTop: 4 }}>{verifyError}</div>}
+                  <div style={{ marginTop: 10, fontSize: 13, fontWeight: 700, color: secondsLeft <= 20 ? '#dc2626' : 'var(--text3)' }}>
+                    {secondsLeft > 0 ? <>⏱ Kodun geçerlilik süresi: <span>{fmtTime(secondsLeft)}</span></> : '⛔ Kodun süresi doldu'}
                   </div>
-                  <button type="submit" disabled={loading} style={btnStyle}>
-                    {loading ? 'Doğrulanıyor...' : 'Doğrula ve Giriş Yap'}
-                  </button>
-                </form>
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text2)', marginBottom: 6 }}>Doğrulama Kodu</label>
+                  <input
+                    autoFocus
+                    value={verifyCode}
+                    onChange={e => {
+                      const v = e.target.value.replace(/\D/g, '').slice(0, 6)
+                      setVerifyCode(v)
+                      setVerifyError('')
+                      if (v.length === 6) handleLoginVerify(v)
+                    }}
+                    placeholder="------" maxLength={6} disabled={secondsLeft === 0 || loading}
+                    style={{ width: '100%', height: 54, border: `1.5px solid ${verifyError ? '#dc2626' : 'var(--border)'}`, borderRadius: 8, background: verifyError ? '#fef2f2' : 'var(--bg3)', color: 'var(--text)', fontSize: 24, letterSpacing: 8, textAlign: 'center', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                  {loading && <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 6, textAlign: 'center' }}>Doğrulanıyor...</div>}
+                  {verifyError && <div style={{ fontSize: 12, color: '#dc2626', marginTop: 4 }}>{verifyError}</div>}
+                </div>
                 <div style={{ textAlign: 'center', marginTop: 16 }}>
                   <a href="#" onClick={() => setShowVerify(false)} style={{ fontSize: 13, color: 'var(--text3)' }}>← Geri dön</a>
                 </div>
@@ -378,9 +426,25 @@ export default function LoginPage() {
                   <Field label="E-posta Adresi" type="email" value={regEmail}
                     onChange={v => { setRegEmail(v); setRegErrors(p => ({ ...p, email: '' })) }}
                     placeholder="ornek@email.com" error={regErrors.email} />
-                  <Field label="Telefon Numarası" value={regPhone}
-                    onChange={v => { handlePhoneChange(v); setRegErrors(p => ({ ...p, phone: '' })) }}
-                    placeholder="0532 123 45 67" error={regErrors.phone} />
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text2)', marginBottom: 6 }}>Telefon Numarası</label>
+                    <input
+                      ref={phoneInputRef}
+                      type="text"
+                      value={regPhone}
+                      onChange={handlePhoneChange}
+                      placeholder="0532 123 45 67"
+                      style={{
+                        width: '100%', height: 46,
+                        border: `1.5px solid ${regErrors.phone ? '#dc2626' : 'var(--border)'}`,
+                        borderRadius: 8, background: regErrors.phone ? '#fef2f2' : 'var(--bg3)',
+                        color: 'var(--text)', fontSize: 14.5, padding: '0 14px',
+                        outline: 'none', fontFamily: 'inherit', transition: 'border-color .15s',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                    {regErrors.phone && <div style={{ fontSize: 12, color: '#dc2626', marginTop: 4 }}>{regErrors.phone}</div>}
+                  </div>
                   <Field label="Şifre" type={regShowPass ? 'text' : 'password'} value={regPassword}
                     onChange={v => { setRegPassword(v); setRegErrors(p => ({ ...p, password: '' })) }}
                     placeholder="En az 8 karakter" error={regErrors.password}
@@ -402,19 +466,26 @@ export default function LoginPage() {
                   <div style={{ fontSize: 13.5, color: 'var(--text2)', lineHeight: 1.5 }}>
                     <strong>{pendingEmail}</strong> adresine gönderilen 6 haneli kodu girin
                   </div>
-                </div>
-                <form onSubmit={handleRegVerify}>
-                  <div style={{ marginBottom: 16 }}>
-                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text2)', marginBottom: 6 }}>Doğrulama Kodu</label>
-                    <input value={regVerifyCode} onChange={e => { setRegVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6)); setRegVerifyError('') }}
-                      placeholder="000000" maxLength={6}
-                      style={{ width: '100%', height: 54, border: `1.5px solid ${regVerifyError ? '#dc2626' : 'var(--border)'}`, borderRadius: 8, background: regVerifyError ? '#fef2f2' : 'var(--bg3)', color: 'var(--text)', fontSize: 24, letterSpacing: 8, textAlign: 'center', outline: 'none', fontFamily: 'inherit' }} />
-                    {regVerifyError && <div style={{ fontSize: 12, color: '#dc2626', marginTop: 4 }}>{regVerifyError}</div>}
+                  <div style={{ marginTop: 10, fontSize: 13, fontWeight: 700, color: secondsLeft <= 20 ? '#dc2626' : 'var(--text3)' }}>
+                    {secondsLeft > 0 ? <>⏱ Kodun geçerlilik süresi: <span>{fmtTime(secondsLeft)}</span></> : '⛔ Kodun süresi doldu'}
                   </div>
-                  <button type="submit" disabled={loading} style={btnStyle}>
-                    {loading ? 'Doğrulanıyor...' : 'Hesabı Doğrula'}
-                  </button>
-                </form>
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text2)', marginBottom: 6 }}>Doğrulama Kodu</label>
+                  <input
+                    autoFocus
+                    value={regVerifyCode}
+                    onChange={e => {
+                      const v = e.target.value.replace(/\D/g, '').slice(0, 6)
+                      setRegVerifyCode(v)
+                      setRegVerifyError('')
+                      if (v.length === 6) handleRegVerify(v)
+                    }}
+                    placeholder="------" maxLength={6} disabled={secondsLeft === 0 || loading}
+                    style={{ width: '100%', height: 54, border: `1.5px solid ${regVerifyError ? '#dc2626' : 'var(--border)'}`, borderRadius: 8, background: regVerifyError ? '#fef2f2' : 'var(--bg3)', color: 'var(--text)', fontSize: 24, letterSpacing: 8, textAlign: 'center', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                  {loading && <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 6, textAlign: 'center' }}>Doğrulanıyor...</div>}
+                  {regVerifyError && <div style={{ fontSize: 12, color: '#dc2626', marginTop: 4 }}>{regVerifyError}</div>}
+                </div>
               </div>
             )}
 

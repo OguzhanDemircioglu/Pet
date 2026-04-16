@@ -30,8 +30,8 @@ public class OrderService {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final NotificationService notificationService;
-    private final EmailService emailService;
-    private final TelegramService telegramService;
+    private final NotificationOutboxService notificationOutboxService;
+    private final TelegramOutboxService telegramOutboxService;
 
     @Transactional
     public OrderResponse createOrder(Long userId, OrderRequest req) {
@@ -92,11 +92,11 @@ public class OrderService {
             log.error("Bildirim kaydedilemedi (sipariş etkilenmedi): {}", e.getMessage());
         }
 
-        // Email gönder
+        // Email kuyruğa al
         try {
             String itemsHtml = buildItemsHtml(savedOrder);
             String deliveryAddress = req.city() + " / " + req.district() + "\n" + req.address();
-            emailService.sendOrderConfirmation(
+            notificationOutboxService.enqueueOrderConfirmation(
                     user.getEmail(),
                     user.getFirstName() != null ? user.getFirstName() : req.fullName(),
                     savedOrder.getId(),
@@ -105,15 +105,15 @@ public class OrderService {
                     req.totalAmount().toString()
             );
         } catch (Exception e) {
-            log.error("Sipariş emaili gönderilemedi (sipariş etkilenmedi): {}", e.getMessage());
+            log.error("Email kuyruğa alınamadı (sipariş etkilenmedi): {}", e.getMessage());
         }
 
         // Telegram bildir
         try {
             String telegramMsg = buildTelegramMessage(savedOrder, user, req);
-            telegramService.sendMessage(telegramMsg);
+            telegramOutboxService.enqueue(telegramMsg);
         } catch (Exception e) {
-            log.error("Telegram bildirimi gönderilemedi (sipariş etkilenmedi): {}", e.getMessage());
+            log.error("Telegram kuyruğa alınamadı (sipariş etkilenmedi): {}", e.getMessage());
         }
 
         return OrderResponse.from(savedOrder);

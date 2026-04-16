@@ -8,7 +8,7 @@ export interface CartItem {
   brandName: string | null
   basePrice: number
   unit: string
-  moq: number
+  minSellingQuantity: number
   primaryImageUrl: string | null
   quantity: number
 }
@@ -40,7 +40,7 @@ const cartSlice = createSlice({
   reducers: {
     addToCart(state, action: PayloadAction<Omit<CartItem, 'quantity'> & { quantity?: number }>) {
       const existing = state.items.find(i => i.productId === action.payload.productId)
-      const addQty = action.payload.quantity ?? action.payload.moq
+      const addQty = action.payload.quantity ?? action.payload.minSellingQuantity
       if (existing) {
         existing.quantity += addQty
       } else {
@@ -55,7 +55,7 @@ const cartSlice = createSlice({
     updateQuantity(state, action: PayloadAction<{ productId: number; quantity: number }>) {
       const item = state.items.find(i => i.productId === action.payload.productId)
       if (item) {
-        item.quantity = Math.max(item.moq, action.payload.quantity)
+        item.quantity = Math.max(item.minSellingQuantity, action.payload.quantity)
         saveToStorage(state.items)
       }
     },

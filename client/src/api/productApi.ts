@@ -20,7 +20,7 @@ export interface ProductForm {
   brandId: number
   basePrice: number
   vatRate: number
-  moq: number
+  minSellingQuantity: number
   stockQuantity: number
   unit: string
   shortDescription: string
@@ -45,7 +45,7 @@ export const productApi = {
     api.post<Product>('/admin/products', data).then(r => r.data),
 
   adminUpdate: (id: number, data: ProductForm) =>
-    api.put<Product>(`/admin/products/${id}`, data).then(r => r.data),
+    api.put<{ message: string }>(`/admin/products/${id}`, data).then(r => r.data),
 
   adminDelete: (id: number) =>
     api.delete(`/admin/products/${id}`),

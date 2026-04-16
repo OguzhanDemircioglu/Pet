@@ -64,7 +64,7 @@ export default function ProductDetailPage() {
   useEffect(() => {
     if (!slug) return
     productApi.getBySlug(slug)
-      .then(p => { setProduct(p); setQty(p.moq) })
+      .then(p => { setProduct(p); setQty(p.minSellingQuantity) })
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [slug])
@@ -84,7 +84,7 @@ export default function ProductDetailPage() {
   )
 
   const handleAddToCart = () => {
-    dispatch(addToCart({ productId: product.id, name: product.name, slug: product.slug, brandName: product.brandName, basePrice: Number(product.basePrice), unit: product.unit, moq: product.moq, primaryImageUrl: product.primaryImageUrl, quantity: qty }))
+    dispatch(addToCart({ productId: product.id, name: product.name, slug: product.slug, brandName: product.brandName, basePrice: Number(product.basePrice), unit: product.unit, minSellingQuantity: product.minSellingQuantity, primaryImageUrl: product.primaryImageUrl, quantity: qty }))
     toast.success('Sepete eklendi')
     setAddedToCart(true)
     setTimeout(() => setAddedToCart(false), 1800)
@@ -207,7 +207,7 @@ export default function ProductDetailPage() {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, padding: '5px 11px', borderRadius: 20, background: '#f0fdf4', color: '#16a34a', border: '1px solid rgba(34,197,94,.3)' }}>✓ Stokta Var</span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, padding: '5px 11px', borderRadius: 20, background: 'var(--primary-bg)', color: 'var(--primary)', border: '1px solid rgba(220,38,38,.3)' }}>Min. {product.moq} adet</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, padding: '5px 11px', borderRadius: 20, background: 'var(--primary-bg)', color: 'var(--primary)', border: '1px solid rgba(220,38,38,.3)' }}>Min. {product.minSellingQuantity} adet</span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, padding: '5px 11px', borderRadius: 20, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>🚚 1-3 İş Günü Teslimat</span>
             </div>
 
@@ -238,11 +238,11 @@ export default function ProductDetailPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
               <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>Adet:</span>
               <div style={{ display: 'flex', alignItems: 'center', border: '2px solid var(--border2)', borderRadius: 'var(--r)', overflow: 'hidden' }}>
-                <button onClick={() => setQty(Math.max(product.moq, qty - 1))} style={{ width: 38, height: 38, background: 'var(--primary)', color: '#fff', fontSize: 20, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}>−</button>
+                <button onClick={() => setQty(Math.max(product.minSellingQuantity, qty - 1))} style={{ width: 38, height: 38, background: 'var(--primary)', color: '#fff', fontSize: 20, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}>−</button>
                 <div style={{ width: 48, textAlign: 'center', fontSize: 16, fontWeight: 800, color: 'var(--text)', background: 'var(--bg2)', height: 38, lineHeight: '38px', borderLeft: '2px solid var(--border2)', borderRight: '2px solid var(--border2)' }}>{qty}</div>
                 <button onClick={() => setQty(qty + 1)} style={{ width: 38, height: 38, background: 'var(--primary)', color: '#fff', fontSize: 20, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}>+</button>
               </div>
-              <span style={{ fontSize: 12, color: 'var(--text3)' }}>Min. {product.moq} · Stok: {product.availableStock} {product.unit}</span>
+              <span style={{ fontSize: 12, color: 'var(--text3)' }}>Min. {product.minSellingQuantity} · Stok: {product.availableStock} {product.unit}</span>
             </div>
 
             {/* Action Buttons */}
@@ -302,7 +302,7 @@ export default function ProductDetailPage() {
                 🏆 Patilya, en kaliteli pet ürünlerini toptan fiyatlarla sunan güvenilir platfromunuzdur.
               </div>
               <p style={{ fontSize: 15, color: 'var(--text2)', lineHeight: 1.75, marginBottom: 14 }}>
-                <strong style={{ color: 'var(--text)' }}>Toptan alım avantajı:</strong> Bu ürün minimum {product.moq} adet ile özel toptan fiyatlarıyla sunulmaktadır. Pet shop, veteriner klinikleri ve işletmeler için ideal toptan çözüm.
+                <strong style={{ color: 'var(--text)' }}>Toptan alım avantajı:</strong> Bu ürün minimum {product.minSellingQuantity} adet ile özel toptan fiyatlarıyla sunulmaktadır. Pet shop, veteriner klinikleri ve işletmeler için ideal toptan çözüm.
               </p>
             </div>
           )}
@@ -314,7 +314,7 @@ export default function ProductDetailPage() {
                 { key: 'Marka', val: product.brandName },
                 { key: 'SKU', val: product.sku },
                 { key: 'Birim', val: product.unit },
-                { key: 'Min. Sipariş', val: `${product.moq} adet` },
+                { key: 'Min. Sipariş', val: `${product.minSellingQuantity} adet` },
                 { key: 'Stok', val: `${product.availableStock} adet` },
               ].map(s => (
                 <div key={s.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '12px 16px' }}>

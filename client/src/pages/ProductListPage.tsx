@@ -234,11 +234,11 @@ function ProductCard({ p }: { p: CatalogProduct }) {
         <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 }}>{p.brandName}</div>
         <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', lineHeight: 1.4, marginBottom: 7, flex: 1 }}>{p.name}</div>
         <div style={{ fontSize: 16, fontWeight: 900, color: 'var(--primary)', marginBottom: 8 }}>₺{p.basePrice.toFixed(2)}</div>
-        <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 8 }}>Min. {p.moq} {p.unit}</div>
+        <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 8 }}>Min. {p.minSellingQuantity} {p.unit}</div>
         <button
           onClick={e => {
             e.stopPropagation(); e.preventDefault()
-            dispatch(addToCart({ productId: p.id, name: p.name, slug: p.slug, brandName: p.brandName, basePrice: p.basePrice, unit: p.unit, moq: p.moq, primaryImageUrl: p.primaryImageUrl }))
+            dispatch(addToCart({ productId: p.id, name: p.name, slug: p.slug, brandName: p.brandName, basePrice: p.basePrice, unit: p.unit, minSellingQuantity: p.minSellingQuantity, primaryImageUrl: p.primaryImageUrl }))
             toast.success('Sepete eklendi')
           }}
           style={{ width: '100%', background: 'var(--primary)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '8px 0', borderRadius: 'var(--r)', border: 'none', cursor: 'pointer', transition: '0.2s' }}>
