@@ -1,24 +1,27 @@
 package com.petshop.service;
 
-import com.petshop.constant.AppConstants;
 import com.petshop.constant.EmailMessages;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.List;
+import java.util.Map;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    private static final String BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
-    @Value("${app.mail-from:info@patilyapetshop.com.tr}")
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    @Value("${app.brevo-api-key:}")
+    private String brevoApiKey;
+
+    @Value("${app.mail-from:info@petshop.com.tr}")
     private String fromEmail;
 
     @Value("${app.name}")
@@ -37,13 +40,29 @@ public class EmailService {
     private String appYear;
 
     void sendHtml(String to, String subject, String html) throws Exception {
-        MimeMessage msg = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(msg, true, AppConstants.CHARSET_UTF8);
-        helper.setFrom(fromEmail, appName);
-        helper.setTo(to);
-        helper.setSubject(subject);
-        helper.setText(html, true);
-        mailSender.send(msg);
+        if (brevoApiKey == null || brevoApiKey.isBlank()) {
+            log.warn("BREVO_API_KEY tanımlı değil, email gönderilmiyor: {}", to);
+            return;
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("api-key", brevoApiKey);
+
+        Map<String, Object> body = Map.of(
+                "sender",      Map.of("name", appName, "email", fromEmail),
+                "to",          List.of(Map.of("email", to)),
+                "subject",     subject,
+                "htmlContent", html
+        );
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+        ResponseEntity<String> response = restTemplate.postForEntity(BREVO_API_URL, request, String.class);
+
+        if (!response.getStatusCode().is2xxSuccessful()) {
+            throw new RuntimeException("Brevo API hatası: " + response.getStatusCode() + " — " + response.getBody());
+        }
+
         log.info(EmailMessages.SENT.get(), to);
     }
 
