@@ -7,11 +7,9 @@ import { loginThunk, registerThunk, verifyEmailThunk, setUser } from '../store/a
 import { authApi } from '../api/authApi'
 import InfoBar from '../components/InfoBar'
 import { useTheme } from '../context/ThemeContext'
+import { EMAIL_RE, PHONE_RE, NON_DIGIT_RE, WHITESPACE_RE } from '../constants/regex'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
-
-const EMAIL_RE = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/
-const PHONE_RE = /^05\d{2}\s?\d{3}\s?\d{2}\s?\d{2}$/
 
 function validateEmail(v: string) {
   if (!v) return 'E-posta zorunludur'
@@ -137,10 +135,15 @@ export default function LoginPage() {
   const [regVerifyCode, setRegVerifyCode] = useState('')
   const [regVerifyError, setRegVerifyError] = useState('')
 
-  // Doğrulama ekranı geri sayım (180 sn = 3 dk)
-  const VERIFY_SECONDS = 180
+  // Doğrulama ekranı geri sayım — süre backend'den gelir
+  const [verifyMinutes, setVerifyMinutes] = useState(3)
+  const VERIFY_SECONDS = verifyMinutes * 60
   const [secondsLeft, setSecondsLeft] = useState(VERIFY_SECONDS)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    authApi.getConfig().then(c => setVerifyMinutes(c.verifyExpiryMinutes)).catch(() => {})
+  }, [])
 
   const startTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current)
@@ -151,7 +154,7 @@ export default function LoginPage() {
         return s - 1
       })
     }, 1000)
-  }, [])
+  }, [VERIFY_SECONDS])
 
   useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current) }, [])
 
@@ -206,9 +209,13 @@ export default function LoginPage() {
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value
     const cursorPos = e.target.selectionStart ?? raw.length
-    const digitsBeforeCursor = raw.slice(0, cursorPos).replace(/\D/g, '').length
+    const digitsBeforeCursor = raw.slice(0, cursorPos).replace(NON_DIGIT_RE, '').length
 
-    const digits = raw.replace(/\D/g, '').slice(0, 11)
+    let digits = raw.replace(NON_DIGIT_RE, '').slice(0, 11)
+    // 05 zorunluluğu
+    if (digits.length >= 1 && digits[0] !== '0') digits = '0' + digits.slice(0, 10)
+    if (digits.length >= 2 && digits[1] !== '5') digits = digits[0] + '5' + digits.slice(2)
+
     let formatted = digits
     if (digits.length > 4) formatted = digits.slice(0, 4) + ' ' + digits.slice(4)
     if (digits.length > 7) formatted = digits.slice(0, 4) + ' ' + digits.slice(4, 7) + ' ' + digits.slice(7)
@@ -248,7 +255,7 @@ export default function LoginPage() {
       await dispatch(registerThunk({
         email: regEmail, password: regPassword,
         firstName: regFirstName, lastName: regLastName,
-        phone: regPhone.replace(/\s/g, ''),
+        phone: regPhone.replace(WHITESPACE_RE, ''),
       })).unwrap()
       setPendingEmail(regEmail)
       setShowRegVerify(true)
@@ -258,6 +265,16 @@ export default function LoginPage() {
       toast.error((err as Error).message ?? 'Kayıt başarısız')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleResend = async () => {
+    try {
+      await authApi.resendVerification(pendingEmail)
+      toast.success('Doğrulama kodu tekrar gönderildi')
+      startTimer()
+    } catch (err: unknown) {
+      toast.error((err as Error).message ?? 'Kod gönderilemedi')
     }
   }
 
@@ -396,7 +413,12 @@ export default function LoginPage() {
                   {loading && <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 6, textAlign: 'center' }}>Doğrulanıyor...</div>}
                   {verifyError && <div style={{ fontSize: 12, color: '#dc2626', marginTop: 4 }}>{verifyError}</div>}
                 </div>
-                <div style={{ textAlign: 'center', marginTop: 16 }}>
+                {secondsLeft === 0 && (
+                  <button onClick={handleResend} style={{ width: '100%', height: 44, background: 'var(--bg3)', border: '1.5px solid var(--border)', borderRadius: 8, fontSize: 14, fontWeight: 700, color: 'var(--primary)', cursor: 'pointer', marginBottom: 12 }}>
+                    🔄 Kodu Tekrar Gönder
+                  </button>
+                )}
+                <div style={{ textAlign: 'center', marginTop: 8 }}>
                   <a href="#" onClick={() => setShowVerify(false)} style={{ fontSize: 13, color: 'var(--text3)' }}>← Geri dön</a>
                 </div>
               </div>
@@ -486,6 +508,11 @@ export default function LoginPage() {
                   {loading && <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 6, textAlign: 'center' }}>Doğrulanıyor...</div>}
                   {regVerifyError && <div style={{ fontSize: 12, color: '#dc2626', marginTop: 4 }}>{regVerifyError}</div>}
                 </div>
+                {secondsLeft === 0 && (
+                  <button onClick={handleResend} style={{ width: '100%', height: 44, background: 'var(--bg3)', border: '1.5px solid var(--border)', borderRadius: 8, fontSize: 14, fontWeight: 700, color: 'var(--primary)', cursor: 'pointer' }}>
+                    🔄 Kodu Tekrar Gönder
+                  </button>
+                )}
               </div>
             )}
 
@@ -504,7 +531,7 @@ export default function LoginPage() {
 
       <footer style={{ background: 'var(--bg2)', borderTop: '1px solid var(--border)', padding: '18px 24px', textAlign: 'center' }}>
         <div style={{ fontSize: 12, color: 'var(--text3)' }}>
-          © 2025 Patilya &nbsp;·&nbsp;
+          © 2025 {import.meta.env.VITE_BRAND_PART1}{import.meta.env.VITE_BRAND_PART2} &nbsp;·&nbsp;
           <a href="#" style={{ color: 'var(--primary)' }}>Gizlilik Politikası</a> &nbsp;·&nbsp;
           <a href="#" style={{ color: 'var(--primary)' }}>Kullanım Koşulları</a>
         </div>

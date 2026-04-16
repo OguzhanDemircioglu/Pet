@@ -11,11 +11,11 @@
     <relativePath/>
   </parent>
 
-  <groupId>com.patilya</groupId>
-  <artifactId>patilya-server</artifactId>
+  <groupId>com.petshop</groupId>
+  <artifactId>petshop-server</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  <name>patilya-server</name>
-  <description>Patilya B2B Toptan Pet Ürünleri Backend</description>
+  <name>petshop-server</name>
+  <description>PetShop B2B Toptan Pet Ürünleri Backend</description>
 
   <properties>
     <java.version>17</java.version>

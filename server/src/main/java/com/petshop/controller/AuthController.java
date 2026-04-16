@@ -40,6 +40,12 @@ public class AuthController {
         return ResponseEntity.ok(authService.verifyEmail(email, code));
     }
 
+    @PostMapping("/resend-verification")
+    public ResponseEntity<Map<String, String>> resendVerification(@RequestBody Map<String, String> body) {
+        authService.resendVerificationCode(body.get("email"));
+        return ResponseEntity.ok(Map.of("message", "Doğrulama kodu tekrar gönderildi."));
+    }
+
     @PostMapping("/google")
     public ResponseEntity<AuthResponse> google(@Valid @RequestBody GoogleAuthRequest req) {
         return ResponseEntity.ok(authService.googleAuth(req));

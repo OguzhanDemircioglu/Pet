@@ -299,7 +299,7 @@ export default function ProductDetailPage() {
             <div>
               {product.shortDescription && <p style={{ fontSize: 15, color: 'var(--text2)', lineHeight: 1.75, marginBottom: 14 }}>{product.shortDescription}</p>}
               <div style={{ background: 'var(--primary-bg)', borderLeft: '4px solid var(--primary)', padding: '14px 18px', borderRadius: '0 var(--r) var(--r) 0', margin: '18px 0', fontSize: 14, color: 'var(--text2)', lineHeight: 1.6 }}>
-                🏆 Patilya, en kaliteli pet ürünlerini toptan fiyatlarla sunan güvenilir platfromunuzdur.
+                🏆 {import.meta.env.VITE_BRAND_PART1}{import.meta.env.VITE_BRAND_PART2}, en kaliteli pet ürünlerini toptan fiyatlarla sunan güvenilir platformunuzdur.
               </div>
               <p style={{ fontSize: 15, color: 'var(--text2)', lineHeight: 1.75, marginBottom: 14 }}>
                 <strong style={{ color: 'var(--text)' }}>Toptan alım avantajı:</strong> Bu ürün minimum {product.minSellingQuantity} adet ile özel toptan fiyatlarıyla sunulmaktadır. Pet shop, veteriner klinikleri ve işletmeler için ideal toptan çözüm.

@@ -2,13 +2,13 @@ services:
 
   # ── Backend (Spring Boot) ────────────────────────────────────────────────────
   - type: web
-    name: patilya-backend
+    name: petshop-backend
     runtime: docker
     dockerfilePath: ./server/Dockerfile
     plan: starter          # $7/mo — always on, persistent disk desteği var
     healthCheckPath: /public/health
     disk:
-      name: patilya-uploads
+      name: petshop-uploads
       mountPath: /uploads
       sizeGB: 1
     envVars:
@@ -28,11 +28,11 @@ services:
       - key: JWT_SECRET
         generateValue: true
 
-      # Frontend URL — CORS için (patilya-frontend'in URL'si otomatik gelir)
+      # Frontend URL — CORS için (petshop-frontend'in URL'si otomatik gelir)
       - key: FRONTEND_URL
         fromService:
           type: static
-          name: patilya-frontend
+          name: petshop-frontend
           property: deployedURL
 
       # Mail (Brevo) — dashboard'dan gir
@@ -55,16 +55,16 @@ services:
 
   # ── Frontend (React/Vite) ────────────────────────────────────────────────────
   - type: static
-    name: patilya-frontend
+    name: petshop-frontend
     rootDir: client
     buildCommand: npm install && npm run build
     staticPublishPath: dist
     envVars:
-      # Backend URL — patilya-backend'in URL'si otomatik gelir
+      # Backend URL — petshop-backend'in URL'si otomatik gelir
       - key: VITE_API_URL
         fromService:
           type: web
-          name: patilya-backend
+          name: petshop-backend
           property: deployedURL
     headers:
       - path: /assets/*

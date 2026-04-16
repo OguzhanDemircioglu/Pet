@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import { campaignApi, type CampaignResponse } from '../api/campaignApi'
 import { setFeatured, fetchCatalogThunk } from './productSlice'
 import type { RootState } from './index'
+import { HEX_COLOR_RE } from '../constants/regex'
 
 interface Slide {
   bg: string
@@ -22,7 +23,7 @@ interface CampaignState {
 }
 
 const extractFirstColor = (gradient: string): string => {
-  const m = gradient.match(/#[0-9a-fA-F]{6}/)
+  const m = gradient.match(HEX_COLOR_RE)
   return m ? m[0] : '#dc2626'
 }
 

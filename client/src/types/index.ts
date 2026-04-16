@@ -125,3 +125,24 @@ export interface AdminUser {
   role: 'ADMIN' | 'CUSTOMER'
   createdAt: string
 }
+
+export interface Address {
+  id: number
+  title: string
+  fullName: string
+  phone: string
+  city: string
+  district: string
+  addressLine: string
+  isDefault: boolean
+}
+
+export interface AddressRequest {
+  title: string
+  fullName: string
+  phone: string
+  city: string
+  district: string
+  addressLine: string
+  isDefault: boolean
+}

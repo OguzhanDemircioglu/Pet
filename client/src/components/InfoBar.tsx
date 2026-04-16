@@ -6,7 +6,7 @@ const WA_SVG = (
   </svg>
 )
 
-const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_EMAIL || 'info@patilya.com.tr'
+const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_EMAIL || 'info@petshop.com.tr'
 const CONTACT_PHONE = import.meta.env.VITE_CONTACT_PHONE || '905527735994'
 
 function formatDisplayPhone(raw: string): string {

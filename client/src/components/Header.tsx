@@ -11,12 +11,14 @@ import { markReadThunk, markAllReadThunk } from '../store/notificationSlice'
 import { setUser, updateUserPhone } from '../store/authSlice'
 import { imgUrl } from '../api/productApi'
 import { authApi } from '../api/authApi'
+import { addressApi } from '../api/addressApi'
 import { TURKEY_DISTRICTS } from '../data/turkeyDistricts'
+import type { Address } from '../types'
+import { PHONE_RE, NON_DIGIT_RE } from '../constants/regex'
 
 type CheckoutStep = 'cart' | 'login' | 'phone' | 'address' | 'confirm'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
-const PHONE_RE = /^05\d{2}\s?\d{3}\s?\d{2}\s?\d{2}$/
 
 const GOOGLE_SVG = (
   <svg viewBox="0 0 24 24" style={{ width: 18, height: 18, flexShrink: 0 }}>
@@ -108,9 +110,13 @@ export default function Header({ showSearch = true }: HeaderProps) {
   const [phoneVal, setPhoneVal] = useState('')
   const [phoneError, setPhoneError] = useState('')
   const [phoneSaving, setPhoneSaving] = useState(false)
+  const [savedAddresses, setSavedAddresses] = useState<Address[]>([])
+  const [selectedSavedId, setSelectedSavedId] = useState<number | null>(null)
+  const [showManualForm, setShowManualForm] = useState(false)
 
   const notifRef = useRef<HTMLDivElement>(null)
   const cartRef = useRef<HTMLDivElement>(null)
+  const phoneInputRef = useRef<HTMLInputElement>(null)
 
   const cartTotal = cartItems.reduce((sum, i) => sum + i.basePrice * i.quantity, 0)
   const cartCount = cartItems.reduce((sum, i) => sum + i.quantity, 0)
@@ -130,10 +136,20 @@ export default function Header({ showSearch = true }: HeaderProps) {
 
   // Sepet kapanınca adımı sıfırla
   useEffect(() => {
-    if (!cartOpen) { setCheckoutStep('cart'); setAddrSubmitted(false); setLoginEmail(''); setLoginPassword(''); setPhoneVal(''); setPhoneError('') }
+    if (!cartOpen) {
+      setCheckoutStep('cart')
+      setAddrSubmitted(false)
+      setLoginEmail('')
+      setLoginPassword('')
+      setPhoneVal('')
+      setPhoneError('')
+      setSavedAddresses([])
+      setSelectedSavedId(null)
+      setShowManualForm(false)
+    }
   }, [cartOpen])
 
-  // Adres adımına geçince kullanıcı bilgilerini pre-fill et
+  // Adres adımına geçince kayıtlı adresleri çek ve kullanıcı bilgilerini pre-fill et
   useEffect(() => {
     if (checkoutStep === 'address' && user) {
       setAddressForm(prev => ({
@@ -141,6 +157,16 @@ export default function Header({ showSearch = true }: HeaderProps) {
         fullName: prev.fullName || `${user.firstName} ${user.lastName}`.trim(),
         phone: prev.phone || (user.phone ?? ''),
       }))
+      addressApi.list().then(list => {
+        setSavedAddresses(list)
+        const def = list.find(a => a.isDefault) ?? list[0]
+        if (def) {
+          setSelectedSavedId(def.id)
+          setShowManualForm(false)
+        } else {
+          setShowManualForm(true)
+        }
+      }).catch(() => setShowManualForm(true))
     }
   }, [checkoutStep, user])
 
@@ -150,6 +176,21 @@ export default function Header({ showSearch = true }: HeaderProps) {
   }
 
   const handleAddressNext = async () => {
+    // Kayıtlı adres seçiliyse form'u onunla doldur
+    if (selectedSavedId !== null && !showManualForm) {
+      const saved = savedAddresses.find(a => a.id === selectedSavedId)
+      if (saved) {
+        setAddressForm({
+          fullName: saved.fullName,
+          phone: saved.phone,
+          city: saved.city,
+          district: saved.district,
+          address: saved.addressLine,
+        })
+      }
+      setCheckoutStep('confirm')
+      return
+    }
     setAddrSubmitted(true)
     if (!addressForm.fullName.trim() || !addressForm.phone.trim() || !addressForm.city || !addressForm.district.trim() || !addressForm.address.trim()) {
       toast.error('Tüm alanları doldurun')
@@ -186,12 +227,42 @@ export default function Header({ showSearch = true }: HeaderProps) {
     }
   }
 
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value
+    const cursorPos = e.target.selectionStart ?? raw.length
+    const digitsBeforeCursor = raw.slice(0, cursorPos).replace(NON_DIGIT_RE, '').length
+
+    let digits = raw.replace(NON_DIGIT_RE, '').slice(0, 11)
+    if (digits.length >= 1 && digits[0] !== '0') digits = '0' + digits.slice(0, 10)
+    if (digits.length >= 2 && digits[1] !== '5') digits = digits[0] + '5' + digits.slice(2)
+
+    let formatted = digits
+    if (digits.length > 4) formatted = digits.slice(0, 4) + ' ' + digits.slice(4)
+    if (digits.length > 7) formatted = digits.slice(0, 4) + ' ' + digits.slice(4, 7) + ' ' + digits.slice(7)
+    if (digits.length > 9) formatted = digits.slice(0, 4) + ' ' + digits.slice(4, 7) + ' ' + digits.slice(7, 9) + ' ' + digits.slice(9)
+    setPhoneVal(formatted)
+    setPhoneError('')
+
+    requestAnimationFrame(() => {
+      if (!phoneInputRef.current) return
+      let digitCount = 0
+      let newCursor = formatted.length
+      for (let i = 0; i < formatted.length; i++) {
+        if (/\d/.test(formatted[i])) {
+          digitCount++
+          if (digitCount === digitsBeforeCursor) { newCursor = i + 1; break }
+        }
+      }
+      phoneInputRef.current.setSelectionRange(newCursor, newCursor)
+    })
+  }
+
   const handlePhoneSubmit = async () => {
-    const val = phoneVal.trim()
-    if (!PHONE_RE.test(val)) {
+    if (!PHONE_RE.test(phoneVal)) {
       setPhoneError('05XX XXX XX XX formatında girin')
       return
     }
+    const val = phoneVal.replace(/\s/g, '')
     setPhoneSaving(true)
     try {
       await authApi.updatePhone(val)
@@ -252,7 +323,7 @@ export default function Header({ showSearch = true }: HeaderProps) {
         {/* Logo + Theme */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginRight: 20 }}>
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            <img src="/logo.svg" alt="Patilya" style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0 }} />
+            <img src="/logo.svg" alt="Logo" style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0 }} />
             <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.5, whiteSpace: 'nowrap' }}>
               <span style={{ color: 'var(--primary)' }}>{import.meta.env.VITE_BRAND_PART1}</span>
               <span style={{ color: 'var(--accent)' }}>{import.meta.env.VITE_BRAND_PART2}</span>
@@ -504,10 +575,11 @@ export default function Header({ showSearch = true }: HeaderProps) {
                     <div>
                       <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)', display: 'block', marginBottom: 6 }}>Telefon Numarası *</label>
                       <input
+                        ref={phoneInputRef}
                         type="tel"
                         value={phoneVal}
-                        onChange={e => { setPhoneVal(e.target.value); setPhoneError('') }}
-                        placeholder="05xx xxx xx xx"
+                        onChange={handlePhoneChange}
+                        placeholder="0532 123 45 67"
                         onKeyDown={e => e.key === 'Enter' && handlePhoneSubmit()}
                         autoFocus
                         style={{ width: '100%', height: 46, border: `1.5px solid ${phoneError ? '#dc2626' : 'var(--border)'}`, borderRadius: 'var(--r)', background: phoneError ? '#fef2f2' : 'var(--bg3)', color: 'var(--text)', fontSize: 15, padding: '0 14px', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', transition: '0.15s' }}
@@ -531,6 +603,40 @@ export default function Header({ showSearch = true }: HeaderProps) {
                   <>
                     <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+                        {/* Kayıtlı adresler */}
+                        {savedAddresses.length > 0 && !showManualForm && (
+                          <div>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)', marginBottom: 8 }}>KAYITLI ADRESLER</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              {savedAddresses.map(addr => (
+                                <div key={addr.id} onClick={() => setSelectedSavedId(addr.id)}
+                                  style={{ padding: '12px 14px', border: `2px solid ${selectedSavedId === addr.id ? 'var(--primary)' : 'var(--border)'}`, borderRadius: 'var(--r)', background: selectedSavedId === addr.id ? 'var(--primary-bg)' : 'var(--bg3)', cursor: 'pointer', transition: '0.15s' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{addr.title}</span>
+                                    {addr.isDefault && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--primary)', background: 'rgba(220,38,38,.1)', padding: '2px 8px', borderRadius: 10 }}>Varsayılan</span>}
+                                  </div>
+                                  <div style={{ fontSize: 12, color: 'var(--text2)' }}>{addr.fullName} · {addr.phone}</div>
+                                  <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>{addr.city} / {addr.district} · {addr.addressLine}</div>
+                                </div>
+                              ))}
+                            </div>
+                            <button onClick={() => { setShowManualForm(true); setSelectedSavedId(null) }}
+                              style={{ marginTop: 10, fontSize: 12, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: 0 }}>
+                              + Farklı bir adres kullan
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Manuel form (kayıtlı adres yoksa veya "farklı adres" seçildiyse) */}
+                        {(showManualForm || savedAddresses.length === 0) && (
+                          <>
+                            {savedAddresses.length > 0 && (
+                              <button onClick={() => { setShowManualForm(false); const def = savedAddresses.find(a => a.isDefault) ?? savedAddresses[0]; if (def) setSelectedSavedId(def.id) }}
+                                style={{ fontSize: 12, color: 'var(--text3)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: 0, textAlign: 'left' }}>
+                                ← Kayıtlı adreslerime dön
+                              </button>
+                            )}
                         {/* Ad Soyad */}
                         <div>
                           <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)', display: 'block', marginBottom: 5 }}>Ad Soyad *</label>
@@ -572,6 +678,8 @@ export default function Header({ showSearch = true }: HeaderProps) {
                             placeholder="Mahalle, sokak, bina no, daire..." rows={3}
                             style={{ width: '100%', border: `1.5px solid ${addrField('address') ? 'var(--primary)' : 'var(--border)'}`, borderRadius: 'var(--r)', background: 'var(--bg3)', color: 'var(--text)', fontSize: 13.5, padding: '10px 12px', outline: 'none', fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box' }} />
                         </div>
+                          </>
+                        )}
                         {/* Order summary */}
                         <div style={{ background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '12px 14px', marginTop: 4 }}>
                           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)', marginBottom: 8 }}>SİPARİŞ ÖZETİ</div>

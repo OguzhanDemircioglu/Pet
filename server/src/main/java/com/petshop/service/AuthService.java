@@ -1,6 +1,7 @@
 package com.petshop.service;
 
 import com.petshop.constant.AuthMessages;
+import com.petshop.constant.SchedulerConstants;
 import com.petshop.dto.request.GoogleAuthRequest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -90,7 +91,7 @@ public class AuthService {
                 .isActive(true)
                 .emailVerified(false)
                 .verificationCode(code)
-                .verificationCodeExpiresAt(LocalDateTime.now().plusHours(24))
+                .verificationCodeExpiresAt(LocalDateTime.now().plusMinutes(SchedulerConstants.VERIFICATION_CODE_EXPIRY_MINUTES))
                 .build();
 
         userRepository.save(user);
@@ -125,6 +126,27 @@ public class AuthService {
         userRepository.save(user);
 
         return generateAuthResponse(user);
+    }
+
+    @Transactional
+    public void resendVerificationCode(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException(AuthMessages.INVALID_EMAIL.get()));
+
+        if (user.getEmailVerified()) {
+            throw new BusinessException(AuthMessages.EMAIL_ALREADY_VERIFIED.get());
+        }
+
+        String code = String.format("%06d", RANDOM.nextInt(1_000_000));
+        user.setVerificationCode(code);
+        user.setVerificationCodeExpiresAt(LocalDateTime.now().plusMinutes(SchedulerConstants.VERIFICATION_CODE_EXPIRY_MINUTES));
+        userRepository.save(user);
+
+        try {
+            notificationOutboxService.enqueueVerificationCode(email, user.getFirstName(), code);
+        } catch (Exception e) {
+            log.error(AuthMessages.LOG_EMAIL_QUEUE_FAIL.get(), e.getMessage());
+        }
     }
 
     @Transactional

@@ -1,5 +1,6 @@
 package com.petshop.controller;
 
+import com.petshop.constant.SchedulerConstants;
 import com.petshop.dto.response.*;
 import com.petshop.entity.User;
 import com.petshop.repository.UserRepository;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/public")
@@ -30,6 +32,14 @@ public class PublicController {
     @GetMapping("/health")
     public ResponseEntity<String> health() {
         return ResponseEntity.ok("OK");
+    }
+
+    /** Frontend doğrulama geri sayımı için backend sabiti */
+    @GetMapping("/config")
+    public ResponseEntity<Map<String, Object>> config() {
+        return ResponseEntity.ok(Map.of(
+            "verifyExpiryMinutes", SchedulerConstants.VERIFICATION_CODE_EXPIRY_MINUTES
+        ));
     }
 
     @GetMapping("/admin-info")

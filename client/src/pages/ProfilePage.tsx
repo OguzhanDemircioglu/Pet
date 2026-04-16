@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from 'react'
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import toast from 'react-hot-toast'
@@ -17,14 +17,17 @@ import { campaignApi, discountApi, type CampaignResponse, type CampaignRequest, 
 import { fetchOrdersThunk } from '../store/orderSlice'
 import { markAllReadThunk, markReadThunk } from '../store/notificationSlice'
 import { fetchCategoriesThunk } from '../store/categorySlice'
-import type { CatalogProduct, ProductImage as ProductImageType, Brand, Category, AdminUser } from '../types'
+import type { CatalogProduct, ProductImage as ProductImageType, Brand, Category, AdminUser, Address, AddressRequest } from '../types'
+import { addressApi } from '../api/addressApi'
+import { TURKEY_DISTRICTS } from '../data/turkeyDistricts'
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
-type Section = 'orders' | 'info' | 'notifications' | 'products' | 'brands' | 'campaigns' | 'categories' | 'users'
+type Section = 'orders' | 'info' | 'addresses' | 'notifications' | 'products' | 'brands' | 'campaigns' | 'categories' | 'users'
 
 const NAV_CUSTOMER: { id: Section; label: string; icon: string }[] = [
   { id: 'orders', label: 'Siparişlerim', icon: '📦' },
   { id: 'info', label: 'Bilgilerim', icon: '👤' },
+  { id: 'addresses', label: 'Adreslerim', icon: '📍' },
   { id: 'notifications', label: 'Bildirimler', icon: '🔔' },
 ]
 const NAV_ADMIN: { id: Section; label: string; icon: string }[] = [
@@ -121,6 +124,7 @@ export default function ProfilePage() {
         <div>
           {section === 'orders' && <OrdersSection />}
           {section === 'info' && <InfoSection user={user} />}
+          {section === 'addresses' && <AddressesSection />}
           {section === 'notifications' && <NotificationsSection />}
           {section === 'products' && isAdmin && <AdminProductsSection products={allProducts} onRefresh={() => { dispatch(resetCatalog()); dispatch(fetchCatalogThunk()) }} categories={categories} categoriesLoading={categoriesLoading} />}
           {section === 'brands' && isAdmin && <AdminBrandsSection />}
@@ -252,6 +256,204 @@ function InfoSection({ user }: { user: { firstName: string; lastName: string; em
             style={{ background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '9px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>İptal</button>
         </div>
       </div>
+    </div>
+  )
+}
+
+// ─── Addresses Section ────────────────────────────────────────────────────────
+const EMPTY_ADDRESS_FORM: AddressRequest = {
+  title: '', fullName: '', phone: '', city: '', district: '', addressLine: '', isDefault: false,
+}
+
+function AddressesSection() {
+  const [addresses, setAddresses] = useState<Address[]>([])
+  const [loading, setLoading] = useState(true)
+  const [formOpen, setFormOpen] = useState(false)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [form, setForm] = useState<AddressRequest>({ ...EMPTY_ADDRESS_FORM })
+  const [saving, setSaving] = useState(false)
+  const phoneInputRef = useRef<HTMLInputElement>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try { setAddresses(await addressApi.list()) } catch { toast.error('Adresler yüklenemedi') }
+    finally { setLoading(false) }
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  const openNew = () => {
+    setEditingId(null)
+    setForm({ ...EMPTY_ADDRESS_FORM })
+    setFormOpen(true)
+  }
+  const openEdit = (a: Address) => {
+    setEditingId(a.id)
+    setForm({ title: a.title, fullName: a.fullName, phone: a.phone, city: a.city, district: a.district, addressLine: a.addressLine, isDefault: a.isDefault })
+    setFormOpen(true)
+  }
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value
+    const cursorPos = e.target.selectionStart ?? raw.length
+    const digitsBeforeCursor = raw.slice(0, cursorPos).replace(/\D/g, '').length
+    let digits = raw.replace(/\D/g, '').slice(0, 11)
+    if (digits.length >= 1 && digits[0] !== '0') digits = '0' + digits.slice(0, 10)
+    if (digits.length >= 2 && digits[1] !== '5') digits = digits[0] + '5' + digits.slice(2)
+    let formatted = digits
+    if (digits.length > 4) formatted = digits.slice(0, 4) + ' ' + digits.slice(4)
+    if (digits.length > 7) formatted = digits.slice(0, 4) + ' ' + digits.slice(4, 7) + ' ' + digits.slice(7)
+    if (digits.length > 9) formatted = digits.slice(0, 4) + ' ' + digits.slice(4, 7) + ' ' + digits.slice(7, 9) + ' ' + digits.slice(9)
+    setForm(p => ({ ...p, phone: formatted }))
+    requestAnimationFrame(() => {
+      if (!phoneInputRef.current) return
+      let digitCount = 0; let newCursor = formatted.length
+      for (let i = 0; i < formatted.length; i++) {
+        if (/\d/.test(formatted[i])) { digitCount++; if (digitCount === digitsBeforeCursor) { newCursor = i + 1; break } }
+      }
+      phoneInputRef.current.setSelectionRange(newCursor, newCursor)
+    })
+  }
+
+  const handleSave = async () => {
+    if (!form.title.trim() || !form.fullName.trim() || !form.phone.trim() || !form.city || !form.district || !form.addressLine.trim()) {
+      toast.error('Tüm alanları doldurun'); return
+    }
+    setSaving(true)
+    try {
+      const payload = { ...form, phone: form.phone.replace(/\s/g, '') }
+      if (editingId !== null) await addressApi.update(editingId, payload)
+      else await addressApi.create(payload)
+      toast.success(editingId !== null ? 'Adres güncellendi' : 'Adres eklendi')
+      setFormOpen(false)
+      await load()
+    } catch (err: unknown) {
+      toast.error((err as Error).message ?? 'Kayıt başarısız')
+    } finally { setSaving(false) }
+  }
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm('Bu adresi silmek istediğinize emin misiniz?')) return
+    try { await addressApi.remove(id); toast.success('Adres silindi'); await load() }
+    catch { toast.error('Silme başarısız') }
+  }
+
+  const handleSetDefault = async (id: number) => {
+    try { await addressApi.setDefault(id); await load() }
+    catch { toast.error('İşlem başarısız') }
+  }
+
+  const cities = Object.keys(TURKEY_DISTRICTS).sort()
+
+  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text3)' }}>Yükleniyor...</div>
+
+  return (
+    <div>
+      <SectionHead title="Adreslerim" sub={`${addresses.length} kayıtlı adres`}
+        action={!formOpen && addresses.length < 10 ? (
+          <button onClick={openNew} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--r)', padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+            + Yeni Adres
+          </button>
+        ) : undefined}
+      />
+
+      {/* Form */}
+      {formOpen && (
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', padding: 20, marginBottom: 20 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 16 }}>{editingId ? 'Adresi Düzenle' : 'Yeni Adres Ekle'}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            {/* Adres başlığı */}
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: 5 }}>Adres Başlığı *</label>
+              <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} placeholder="Örn: Ev, İş, Depo"
+                style={{ width: '100%', height: 40, border: '1.5px solid var(--border)', borderRadius: 'var(--r)', background: 'var(--bg3)', color: 'var(--text)', fontSize: 13.5, padding: '0 12px', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+            </div>
+            {/* Ad Soyad */}
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: 5 }}>Ad Soyad *</label>
+              <input value={form.fullName} onChange={e => setForm(p => ({ ...p, fullName: e.target.value }))} placeholder="Ad Soyad"
+                style={{ width: '100%', height: 40, border: '1.5px solid var(--border)', borderRadius: 'var(--r)', background: 'var(--bg3)', color: 'var(--text)', fontSize: 13.5, padding: '0 12px', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+            </div>
+            {/* Telefon */}
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: 5 }}>Telefon *</label>
+              <input ref={phoneInputRef} type="tel" value={form.phone} onChange={handlePhoneChange} placeholder="0532 123 45 67"
+                style={{ width: '100%', height: 40, border: '1.5px solid var(--border)', borderRadius: 'var(--r)', background: 'var(--bg3)', color: 'var(--text)', fontSize: 13.5, padding: '0 12px', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+            </div>
+            {/* İl */}
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: 5 }}>İl *</label>
+              <select value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value, district: '' }))}
+                style={{ width: '100%', height: 40, border: '1.5px solid var(--border)', borderRadius: 'var(--r)', background: 'var(--bg3)', color: form.city ? 'var(--text)' : 'var(--text3)', fontSize: 13, padding: '0 10px', outline: 'none', fontFamily: 'inherit' }}>
+                <option value="">İl seçin</option>
+                {cities.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            {/* İlçe */}
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: 5 }}>İlçe *</label>
+              <select value={form.district} onChange={e => setForm(p => ({ ...p, district: e.target.value }))} disabled={!form.city}
+                style={{ width: '100%', height: 40, border: '1.5px solid var(--border)', borderRadius: 'var(--r)', background: 'var(--bg3)', color: form.district ? 'var(--text)' : 'var(--text3)', fontSize: 13, padding: '0 10px', outline: 'none', fontFamily: 'inherit', opacity: !form.city ? 0.5 : 1, cursor: !form.city ? 'not-allowed' : 'pointer' }}>
+                <option value="">{form.city ? 'İlçe seçin' : 'Önce il seçin'}</option>
+                {(TURKEY_DISTRICTS[form.city] ?? []).map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+            {/* Adres satırı */}
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: 5 }}>Adres *</label>
+              <textarea value={form.addressLine} onChange={e => setForm(p => ({ ...p, addressLine: e.target.value }))}
+                placeholder="Mahalle, sokak, bina no, daire..." rows={3}
+                style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 'var(--r)', background: 'var(--bg3)', color: 'var(--text)', fontSize: 13.5, padding: '10px 12px', outline: 'none', fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box' }} />
+            </div>
+          </div>
+          {/* Varsayılan toggle */}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginTop: 12, userSelect: 'none' }} onClick={() => setForm(p => ({ ...p, isDefault: !p.isDefault }))}>
+            <div style={{ width: 36, height: 20, borderRadius: 10, background: form.isDefault ? 'var(--primary)' : 'var(--border2)', position: 'relative', transition: '0.25s', flexShrink: 0 }}>
+              <div style={{ position: 'absolute', width: 14, height: 14, borderRadius: '50%', background: '#fff', top: 3, left: form.isDefault ? 19 : 3, transition: '0.25s' }} />
+            </div>
+            <span style={{ fontSize: 13, color: 'var(--text2)', fontWeight: 500 }}>Varsayılan adresim olarak kaydet</span>
+          </label>
+          <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+            <button onClick={handleSave} disabled={saving} style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--r)', padding: '9px 20px', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+              {saving ? 'Kaydediliyor...' : 'Kaydet'}
+            </button>
+            <button onClick={() => setFormOpen(false)} style={{ background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '9px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>İptal</button>
+          </div>
+        </div>
+      )}
+
+      {/* Address cards */}
+      {addresses.length === 0 && !formOpen ? (
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', padding: 48, textAlign: 'center', color: 'var(--text3)' }}>
+          <div style={{ fontSize: 40, marginBottom: 10 }}>📍</div>
+          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Henüz kayıtlı adres yok</div>
+          <button onClick={openNew} style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--r)', padding: '9px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+            İlk Adresi Ekle
+          </button>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          {addresses.map(addr => (
+            <div key={addr.id} style={{ background: 'var(--bg2)', border: `2px solid ${addr.isDefault ? 'var(--primary)' : 'var(--border)'}`, borderRadius: 'var(--r2)', padding: '16px 18px', position: 'relative' }}>
+              {addr.isDefault && (
+                <span style={{ position: 'absolute', top: 12, right: 12, fontSize: 10, fontWeight: 800, color: 'var(--primary)', background: 'var(--primary-bg)', padding: '2px 8px', borderRadius: 10 }}>Varsayılan</span>
+              )}
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 6 }}>{addr.title}</div>
+              <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 2 }}>{addr.fullName}</div>
+              <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 2 }}>{addr.phone}</div>
+              <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 2 }}>{addr.city} / {addr.district}</div>
+              <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 14, lineHeight: 1.4 }}>{addr.addressLine}</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button onClick={() => openEdit(addr)} style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '4px 10px', cursor: 'pointer' }}>✏️ Düzenle</button>
+                {!addr.isDefault && (
+                  <button onClick={() => handleSetDefault(addr.id)} style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--primary)', background: 'var(--primary-bg)', border: '1px solid rgba(220,38,38,.2)', borderRadius: 'var(--r)', padding: '4px 10px', cursor: 'pointer' }}>⭐ Varsayılan Yap</button>
+                )}
+                <button onClick={() => handleDelete(addr.id)} style={{ fontSize: 11.5, fontWeight: 600, color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 'var(--r)', padding: '4px 10px', cursor: 'pointer' }}>🗑️ Sil</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
