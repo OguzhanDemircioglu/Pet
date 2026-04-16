@@ -41,8 +41,7 @@ public class EmailService {
 
     void sendHtml(String to, String subject, String html) throws Exception {
         if (brevoApiKey == null || brevoApiKey.isBlank()) {
-            log.warn("BREVO_API_KEY tanımlı değil, email gönderilmiyor: {}", to);
-            return;
+            throw new IllegalStateException("BREVO_API_KEY tanımlı değil");
         }
 
         HttpHeaders headers = new HttpHeaders();
