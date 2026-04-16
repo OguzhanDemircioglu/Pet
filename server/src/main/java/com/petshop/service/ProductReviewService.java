@@ -7,6 +7,7 @@ import com.petshop.entity.Order;
 import com.petshop.entity.Product;
 import com.petshop.entity.ProductReview;
 import com.petshop.entity.User;
+import com.petshop.constant.ReviewMessages;
 import com.petshop.exception.ResourceNotFoundException;
 import com.petshop.repository.OrderRepository;
 import com.petshop.repository.ProductRepository;
@@ -31,7 +32,7 @@ public class ProductReviewService {
 
     public List<ReviewResponse> getApprovedReviews(String slug) {
         Product product = productRepository.findBySlug(slug)
-                .orElseThrow(() -> new ResourceNotFoundException("Ürün bulunamadı: " + slug));
+                .orElseThrow(() -> new ResourceNotFoundException(ReviewMessages.PRODUCT_NOT_FOUND.get() + slug));
         return reviewRepository
                 .findByProductIdAndIsApprovedTrue(product.getId(),
                         PageRequest.of(0, 50, Sort.by(Sort.Direction.DESC, "createdAt")))
@@ -42,11 +43,11 @@ public class ProductReviewService {
 
     public CanReviewResponse canReview(Long userId, String slug) {
         Product product = productRepository.findBySlug(slug)
-                .orElseThrow(() -> new ResourceNotFoundException("Ürün bulunamadı: " + slug));
+                .orElseThrow(() -> new ResourceNotFoundException(ReviewMessages.PRODUCT_NOT_FOUND.get() + slug));
 
         List<Order> orders = orderRepository.findByUserIdAndProductId(userId, product.getId());
         if (orders.isEmpty()) {
-            return new CanReviewResponse(false, "not_ordered", null);
+            return new CanReviewResponse(false, ReviewMessages.STATUS_NOT_ORDERED.get(), null);
         }
 
         // Check if already reviewed from any of these orders
@@ -55,11 +56,11 @@ public class ProductReviewService {
                     .findByOrderIdAndProductId(order.getId(), product.getId())
                     .isPresent();
             if (!alreadyReviewed) {
-                return new CanReviewResponse(true, "ok", order.getId());
+                return new CanReviewResponse(true, ReviewMessages.STATUS_OK.get(), order.getId());
             }
         }
 
-        return new CanReviewResponse(false, "already_reviewed", null);
+        return new CanReviewResponse(false, ReviewMessages.STATUS_REVIEWED.get(), null);
     }
 
     @Transactional
@@ -70,11 +71,11 @@ public class ProductReviewService {
         }
 
         Product product = productRepository.findBySlug(slug)
-                .orElseThrow(() -> new ResourceNotFoundException("Ürün bulunamadı: " + slug));
+                .orElseThrow(() -> new ResourceNotFoundException(ReviewMessages.PRODUCT_NOT_FOUND.get() + slug));
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı"));
+                .orElseThrow(() -> new ResourceNotFoundException(ReviewMessages.USER_NOT_FOUND.get()));
         Order order = orderRepository.findById(check.orderId())
-                .orElseThrow(() -> new ResourceNotFoundException("Sipariş bulunamadı"));
+                .orElseThrow(() -> new ResourceNotFoundException(ReviewMessages.ORDER_NOT_FOUND.get()));
 
         ProductReview review = ProductReview.builder()
                 .product(product)

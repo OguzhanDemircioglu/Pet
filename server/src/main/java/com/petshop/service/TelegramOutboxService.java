@@ -1,5 +1,7 @@
 package com.petshop.service;
 
+import com.petshop.constant.OutboxMessages;
+import com.petshop.constant.SchedulerConstants;
 import com.petshop.entity.TelegramOutbox;
 import com.petshop.entity.TelegramOutbox.Status;
 import com.petshop.repository.TelegramOutboxRepository;
@@ -27,30 +29,30 @@ public class TelegramOutboxService {
                 .build());
     }
 
-    @Scheduled(fixedDelay = 60_000)
+    @Scheduled(fixedDelay = SchedulerConstants.TELEGRAM_OUTBOX_DELAY_MS)
     @Transactional
     public void processOutbox() {
         List<TelegramOutbox> pending = outboxRepository.findByStatusAndAttemptCountLessThan(
-                Status.PENDING, 3);
+                Status.PENDING, SchedulerConstants.OUTBOX_MAX_ATTEMPTS);
 
         if (pending.isEmpty()) return;
-        log.debug("Telegram outbox (job): {} kayıt işleniyor", pending.size());
+        log.debug(OutboxMessages.TELEGRAM_OUTBOX_PROCESSING.get(), pending.size());
 
         for (TelegramOutbox record : pending) {
             try {
                 telegramService.sendMessage(record.getBody());
                 record.setStatus(Status.SENT);
                 record.setSentAt(LocalDateTime.now());
-                log.info("Telegram mesajı gönderildi (job) (id={})", record.getId());
+                log.info(OutboxMessages.TELEGRAM_SENT_JOB.get(), record.getId());
             } catch (Exception e) {
                 int attempt = record.getAttemptCount() + 1;
                 record.setAttemptCount(attempt);
                 record.setErrorMessage(e.getMessage());
-                if (attempt >= 3) {
+                if (attempt >= SchedulerConstants.OUTBOX_MAX_ATTEMPTS) {
                     record.setStatus(Status.FAILED);
-                    log.error("Telegram mesajı kalıcı olarak gönderilemedi (id={}): {}", record.getId(), e.getMessage());
+                    log.error(OutboxMessages.TELEGRAM_FAILED_PERMANENT.get(), record.getId(), e.getMessage());
                 } else {
-                    log.warn("Telegram mesajı gönderilemedi, tekrar denenecek (id={}, attempt={}): {}", record.getId(), attempt, e.getMessage());
+                    log.warn(OutboxMessages.TELEGRAM_FAILED_RETRY.get(), record.getId(), attempt, e.getMessage());
                 }
             }
             outboxRepository.save(record);

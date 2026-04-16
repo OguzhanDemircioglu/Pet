@@ -1,5 +1,6 @@
 package com.petshop.service;
 
+import com.petshop.constant.AuthMessages;
 import com.petshop.dto.request.GoogleAuthRequest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -50,22 +51,22 @@ public class AuthService {
     @Transactional
     public AuthResponse login(LoginRequest req) {
         User user = userRepository.findByEmail(req.email())
-                .orElseThrow(() -> new BadCredentialsException("Email veya şifre hatalı"));
+                .orElseThrow(() -> new BadCredentialsException(AuthMessages.INVALID_CREDENTIALS.get()));
 
         if (user.getPasswordHash() == null) {
-            throw new BusinessException("Bu hesap Google ile kayıtlıdır. Google ile giriş yapın.");
+            throw new BusinessException(AuthMessages.GOOGLE_ACCOUNT_NO_PASSWORD.get());
         }
 
         if (!passwordEncoder.matches(req.password(), user.getPasswordHash())) {
-            throw new BadCredentialsException("Email veya şifre hatalı");
+            throw new BadCredentialsException(AuthMessages.INVALID_CREDENTIALS.get());
         }
 
         if (!user.getIsActive()) {
-            throw new BusinessException("Hesabınız devre dışı bırakılmıştır.");
+            throw new BusinessException(AuthMessages.ACCOUNT_DISABLED.get());
         }
 
         if (!user.getEmailVerified()) {
-            throw new BusinessException("Lütfen önce e-posta adresinizi doğrulayın.");
+            throw new BusinessException(AuthMessages.EMAIL_NOT_VERIFIED.get());
         }
 
         return generateAuthResponse(user);
@@ -74,7 +75,7 @@ public class AuthService {
     @Transactional
     public void register(RegisterRequest req) {
         if (userRepository.existsByEmail(req.email())) {
-            throw new BusinessException("Bu email adresi zaten kayıtlıdır.");
+            throw new BusinessException(AuthMessages.EMAIL_ALREADY_EXISTS.get());
         }
 
         String code = String.format("%06d", RANDOM.nextInt(1_000_000));
@@ -96,26 +97,26 @@ public class AuthService {
         try {
             notificationOutboxService.enqueueVerificationCode(req.email(), req.firstName(), code);
         } catch (Exception e) {
-            log.error("Email kuyruğa alınamadı (kayıt etkilenmedi): {}", e.getMessage());
+            log.error(AuthMessages.LOG_EMAIL_QUEUE_FAIL.get(), e.getMessage());
         }
     }
 
     @Transactional
     public AuthResponse verifyEmail(String email, String code) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new BusinessException("Geçersiz e-posta adresi."));
+                .orElseThrow(() -> new BusinessException(AuthMessages.INVALID_EMAIL.get()));
 
         if (user.getEmailVerified()) {
-            throw new BusinessException("E-posta zaten doğrulanmış.");
+            throw new BusinessException(AuthMessages.EMAIL_ALREADY_VERIFIED.get());
         }
 
         if (user.getVerificationCode() == null
                 || !user.getVerificationCode().equals(code)) {
-            throw new BusinessException("Doğrulama kodu hatalı.");
+            throw new BusinessException(AuthMessages.INVALID_VERIFICATION_CODE.get());
         }
 
         if (LocalDateTime.now().isAfter(user.getVerificationCodeExpiresAt())) {
-            throw new BusinessException("Doğrulama kodunun süresi dolmuş.");
+            throw new BusinessException(AuthMessages.VERIFICATION_CODE_EXPIRED.get());
         }
 
         user.setEmailVerified(true);
@@ -136,7 +137,7 @@ public class AuthService {
         String lastName = info.path("family_name").asText("");
 
         if (email.isBlank() || googleId.isBlank()) {
-            throw new BusinessException("Google hesabından e-posta bilgisi alınamadı.");
+            throw new BusinessException(AuthMessages.GOOGLE_NO_EMAIL.get());
         }
 
         User user = userRepository.findByGoogleId(googleId)
@@ -167,10 +168,10 @@ public class AuthService {
     @Transactional
     public AuthResponse refreshToken(String refreshTokenStr) {
         RefreshToken rt = refreshTokenRepository.findByToken(refreshTokenStr)
-                .orElseThrow(() -> new BusinessException("Geçersiz refresh token"));
+                .orElseThrow(() -> new BusinessException(AuthMessages.INVALID_REFRESH_TOKEN.get()));
 
         if (rt.getIsRevoked() || rt.isExpired()) {
-            throw new BusinessException("Refresh token süresi dolmuş veya iptal edilmiş");
+            throw new BusinessException(AuthMessages.REFRESH_TOKEN_EXPIRED.get());
         }
 
         rt.setIsRevoked(true);
@@ -186,14 +187,14 @@ public class AuthService {
 
     public UserResponse me(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı", userId));
+                .orElseThrow(() -> new ResourceNotFoundException(AuthMessages.USER_NOT_FOUND.get(), userId));
         return UserResponse.from(user);
     }
 
     @Transactional
     public UserResponse updatePhone(Long userId, String phone) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı", userId));
+                .orElseThrow(() -> new ResourceNotFoundException(AuthMessages.USER_NOT_FOUND.get(), userId));
         user.setPhone(phone);
         userRepository.save(user);
         return UserResponse.from(user);
@@ -226,14 +227,14 @@ public class AuthService {
                     .build();
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200) {
-                throw new BusinessException("Google token geçersiz veya süresi dolmuş.");
+                throw new BusinessException(AuthMessages.GOOGLE_TOKEN_INVALID.get());
             }
             return new ObjectMapper().readTree(response.body());
         } catch (BusinessException e) {
             throw e;
         } catch (IOException | InterruptedException e) {
-            log.error("Google userinfo fetch failed", e);
-            throw new BusinessException("Google ile giriş başarısız");
+            log.error(AuthMessages.LOG_GOOGLE_FETCH_FAIL.get(), e);
+            throw new BusinessException(AuthMessages.GOOGLE_AUTH_FAILED.get());
         }
     }
 }

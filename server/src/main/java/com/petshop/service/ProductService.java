@@ -5,6 +5,8 @@ import com.petshop.dto.response.CatalogProductDto;
 import com.petshop.dto.response.FeaturedProductDto;
 import com.petshop.dto.response.ProductResponse;
 import com.petshop.entity.*;
+import com.petshop.constant.AppConstants;
+import com.petshop.constant.ProductMessages;
 import com.petshop.exception.ResourceNotFoundException;
 import com.petshop.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -40,14 +42,14 @@ public class ProductService {
 
     public ProductResponse getBySlug(String slug) {
         Product p = productRepository.findBySlugWithDetails(slug)
-                .orElseThrow(() -> new ResourceNotFoundException("Ürün bulunamadı: " + slug));
+                .orElseThrow(() -> new ResourceNotFoundException(ProductMessages.PRODUCT_NOT_FOUND.get() + " bulunamadı: " + slug));
         Map<Long, ProductResponse.ActiveDiscountDto> dm = buildDiscountMap();
         return ProductResponse.fromWithDiscount(p, dm.get(p.getId()));
     }
 
     public ProductResponse getById(Long id) {
         Product p = productRepository.findByIdWithDetails(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Ürün", id));
+                .orElseThrow(() -> new ResourceNotFoundException(ProductMessages.PRODUCT_NOT_FOUND.get(), id));
         Map<Long, ProductResponse.ActiveDiscountDto> dm = buildDiscountMap();
         return ProductResponse.fromWithDiscount(p, dm.get(p.getId()));
     }
@@ -125,12 +127,12 @@ public class ProductService {
         String slug = toSlug(req.name());
 
         Category category = categoryRepository.findById(req.categoryId())
-                .orElseThrow(() -> new ResourceNotFoundException("Kategori", req.categoryId()));
+                .orElseThrow(() -> new ResourceNotFoundException(ProductMessages.CATEGORY_NOT_FOUND.get(), req.categoryId()));
 
         Brand brand = null;
         if (req.brandId() != null) {
             brand = brandRepository.findById(req.brandId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Marka", req.brandId()));
+                    .orElseThrow(() -> new ResourceNotFoundException(ProductMessages.BRAND_NOT_FOUND.get(), req.brandId()));
         }
 
         Product product = Product.builder()
@@ -143,7 +145,7 @@ public class ProductService {
                 .vatRate(req.vatRate() != null ? req.vatRate() : new BigDecimal("20.00"))
                 .minSellingQuantity(req.minSellingQuantity() != null ? req.minSellingQuantity() : 1)
                 .stockQuantity(req.stockQuantity() != null ? req.stockQuantity() : 0)
-                .unit(req.unit() != null ? req.unit() : "adet")
+                .unit(req.unit() != null ? req.unit() : ProductMessages.DEFAULT_UNIT.get())
                 .shortDescription(req.shortDescription())
                 .description(req.description())
                 .isActive(req.isActive() != null ? req.isActive() : true)
@@ -156,7 +158,7 @@ public class ProductService {
     @Transactional
     public ProductResponse update(Long id, CreateProductRequest req) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Ürün", id));
+                .orElseThrow(() -> new ResourceNotFoundException(ProductMessages.PRODUCT_NOT_FOUND.get(), id));
 
         product.setName(req.name());
         product.setSlug(toSlug(req.name()));
@@ -173,13 +175,13 @@ public class ProductService {
         if (req.isFeatured() != null) product.setIsFeatured(req.isFeatured());
 
         Category category = categoryRepository.findById(req.categoryId())
-                .orElseThrow(() -> new ResourceNotFoundException("Kategori", req.categoryId()));
+                .orElseThrow(() -> new ResourceNotFoundException(ProductMessages.CATEGORY_NOT_FOUND.get(), req.categoryId()));
         product.setCategory(category);
 
         Brand brand = null;
         if (req.brandId() != null) {
             brand = brandRepository.findById(req.brandId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Marka", req.brandId()));
+                    .orElseThrow(() -> new ResourceNotFoundException(ProductMessages.BRAND_NOT_FOUND.get(), req.brandId()));
         }
         product.setBrand(brand);
 
@@ -189,7 +191,7 @@ public class ProductService {
     @Transactional
     public void delete(Long id) {
         productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Ürün", id));
+                .orElseThrow(() -> new ResourceNotFoundException(ProductMessages.PRODUCT_NOT_FOUND.get(), id));
         productRepository.deleteById(id);
     }
 
@@ -240,7 +242,7 @@ public class ProductService {
     }
 
     private ProductResponse.ActiveDiscountDto toDto(String name, String discountType, BigDecimal value) {
-        String label = "PERCENT".equals(discountType)
+        String label = AppConstants.DISCOUNT_PERCENT.equals(discountType)
                 ? "%" + value.stripTrailingZeros().toPlainString()
                 : value.stripTrailingZeros().toPlainString() + " ₺";
         return new ProductResponse.ActiveDiscountDto(label, discountType, value, name);

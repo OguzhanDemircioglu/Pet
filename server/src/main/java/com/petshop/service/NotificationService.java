@@ -3,6 +3,7 @@ package com.petshop.service;
 import com.petshop.dto.response.NotificationResponse;
 import com.petshop.entity.Notification;
 import com.petshop.entity.User;
+import com.petshop.constant.NotificationMessages;
 import com.petshop.exception.ResourceNotFoundException;
 import com.petshop.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +37,7 @@ public class NotificationService {
     public void markRead(Long notificationId, Long userId) {
         int updated = notificationRepository.markReadByIdAndUserId(notificationId, userId);
         if (updated == 0) {
-            throw new ResourceNotFoundException("Bildirim bulunamadı");
+            throw new ResourceNotFoundException(NotificationMessages.NOT_FOUND.get());
         }
     }
 

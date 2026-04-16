@@ -1,5 +1,7 @@
 package com.petshop.service;
 
+import com.petshop.constant.AppConstants;
+import com.petshop.constant.EmailMessages;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -19,20 +21,35 @@ public class EmailService {
     @Value("${app.mail-from:info@patilyapetshop.com.tr}")
     private String fromEmail;
 
+    @Value("${app.name}")
+    private String appName;
+
+    @Value("${app.name-part1}")
+    private String appNamePart1;
+
+    @Value("${app.name-part2}")
+    private String appNamePart2;
+
+    @Value("${app.domain}")
+    private String appDomain;
+
+    @Value("${app.year}")
+    private String appYear;
+
     void sendHtml(String to, String subject, String html) {
         try {
             MimeMessage msg = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
-            helper.setFrom(fromEmail, "PatilyaPetshop");
+            MimeMessageHelper helper = new MimeMessageHelper(msg, true, AppConstants.CHARSET_UTF8);
+            helper.setFrom(fromEmail, appName);
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(html, true);
             mailSender.send(msg);
-            log.info("Email gönderildi → {}", to);
+            log.info(EmailMessages.SENT.get(), to);
         } catch (MessagingException e) {
-            log.error("Email gönderilemedi → {}: {}", to, e.getMessage());
+            log.error(EmailMessages.FAILED.get(), to, e.getMessage());
         } catch (Exception e) {
-            log.error("Email servis hatası: {}", e.getMessage());
+            log.error(EmailMessages.SERVICE_ERROR.get(), e.getMessage());
         }
     }
 
@@ -51,7 +68,7 @@ public class EmailService {
                     <tr>
                       <td style="background:#1e3a5f;padding:28px 40px;text-align:center">
                         <span style="font-size:22px;font-weight:700;color:#ffffff">
-                          <span style="color:#dc2626">Pet</span><span style="color:#38bdf8">Toptan</span>
+                          <span style="color:#dc2626">%s</span><span style="color:#38bdf8">%s</span>
                         </span>
                       </td>
                     </tr>
@@ -101,7 +118,7 @@ public class EmailService {
                     <!-- Footer -->
                     <tr>
                       <td style="background:#f8f9fa;padding:20px 40px;text-align:center;border-top:1px solid #e2e8f0">
-                        <p style="margin:0;font-size:12px;color:#94a3b8">© 2024 PetToptan · pettoptan.com.tr</p>
+                        <p style="margin:0;font-size:12px;color:#94a3b8">© %s %s%s · %s</p>
                       </td>
                     </tr>
 
@@ -110,7 +127,7 @@ public class EmailService {
               </table>
             </body>
             </html>
-            """.formatted(firstName, orderId, itemsHtml, totalAmount, deliveryAddress);
+            """.formatted(appNamePart1, appNamePart2, firstName, orderId, itemsHtml, totalAmount, deliveryAddress, appYear, appNamePart1, appNamePart2, appDomain);
     }
 
     String buildVerificationEmail(String firstName, String code) {
@@ -127,7 +144,7 @@ public class EmailService {
                     <tr>
                       <td style="background:#1e3a5f;padding:28px 40px;text-align:center">
                         <span style="font-size:22px;font-weight:700;color:#ffffff">
-                          <span style="color:#dc2626">Pet</span><span style="color:#38bdf8">Toptan</span>
+                          <span style="color:#dc2626">%s</span><span style="color:#38bdf8">%s</span>
                         </span>
                       </td>
                     </tr>
@@ -137,7 +154,7 @@ public class EmailService {
                       <td style="padding:40px">
                         <p style="margin:0 0 16px;font-size:16px;color:#1a1a1a">Merhaba <strong>%s</strong>,</p>
                         <p style="margin:0 0 28px;font-size:15px;color:#64748b;line-height:1.6">
-                          PatilyaPetshop hesabınızı doğrulamak için aşağıdaki 6 haneli kodu kullanın.
+                          %s hesabınızı doğrulamak için aşağıdaki 6 haneli kodu kullanın.
                           Bu kod <strong>24 saat</strong> geçerlidir.
                         </p>
 
@@ -158,7 +175,7 @@ public class EmailService {
                     <!-- Footer -->
                     <tr>
                       <td style="background:#f8f9fa;padding:20px 40px;text-align:center;border-top:1px solid #e2e8f0">
-                        <p style="margin:0;font-size:12px;color:#94a3b8">© 2024 PatilyaPetshop · patilyapetshop.com.tr</p>
+                        <p style="margin:0;font-size:12px;color:#94a3b8">© %s %s · %s</p>
                       </td>
                     </tr>
 
@@ -167,6 +184,6 @@ public class EmailService {
               </table>
             </body>
             </html>
-            """.formatted(firstName, code);
+            """.formatted(appNamePart1, appNamePart2, firstName, appName, code, appYear, appName, appDomain);
     }
 }

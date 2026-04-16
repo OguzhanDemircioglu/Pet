@@ -63,6 +63,11 @@ jwt:
 app:
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
   mail-from: ${MAIL_FROM:info@patilya.com.tr}
+  name: ${APP_NAME:PatilyaPetshop}
+  name-part1: ${APP_NAME_PART1:Patilya}
+  name-part2: ${APP_NAME_PART2:Petshop}
+  domain: ${APP_DOMAIN:patilyapetshop.com.tr}
+  year: ${APP_YEAR:2025}
   telegram:
     chat-id: ${TELEGRAM_CHAT_ID:}
     api-key: ${TELEGRAM_API_KEY:}

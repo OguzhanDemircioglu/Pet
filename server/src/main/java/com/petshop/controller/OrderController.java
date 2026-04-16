@@ -2,6 +2,7 @@ package com.petshop.controller;
 
 import com.petshop.dto.request.OrderRequest;
 import com.petshop.dto.response.OrderResponse;
+import com.petshop.constant.ResponseMessages;
 import com.petshop.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -24,7 +25,7 @@ public class OrderController {
             @AuthenticationPrincipal Long userId,
             @RequestBody OrderRequest request) {
         orderService.createOrder(userId, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "Sipariş alındı"));
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", ResponseMessages.ORDER_CREATED.get()));
     }
 
     @GetMapping("/myOrders")

@@ -5,6 +5,8 @@ import com.petshop.dto.response.CampaignResponse;
 import com.petshop.dto.response.CouponValidationResponse;
 import com.petshop.dto.response.DiscountResponse;
 import com.petshop.entity.*;
+import com.petshop.constant.AppConstants;
+import com.petshop.constant.DiscountMessages;
 import com.petshop.exception.BusinessException;
 import com.petshop.exception.ResourceNotFoundException;
 import com.petshop.repository.*;
@@ -124,7 +126,7 @@ public class DiscountService {
                 if (!generalDiscountRepo.existsById(id)) throw new ResourceNotFoundException("İndirim", id);
                 generalDiscountRepo.deleteById(id);
             }
-            default -> throw new BusinessException("Geçersiz indirim tipi: " + type);
+            default -> throw new BusinessException(DiscountMessages.INVALID_TYPE.get() + type);
         }
     }
 
@@ -203,13 +205,13 @@ public class DiscountService {
                 if (req.isActive() != null) d.setIsActive(req.isActive());
                 return toResponse(brandDiscountRepo.save(d));
             }
-            default -> throw new BusinessException("Geçersiz indirim tipi: " + type);
+            default -> throw new BusinessException(DiscountMessages.INVALID_TYPE.get() + type);
         }
     }
 
     private CampaignResponse discountToSlide(Long id, String name, String emoji,
             String discountType, BigDecimal discountValue, String targetName, String bgColor) {
-        String valueLabel = "PERCENT".equals(discountType)
+        String valueLabel = AppConstants.DISCOUNT_PERCENT.equals(discountType)
                 ? "%" + discountValue.stripTrailingZeros().toPlainString()
                 : discountValue.stripTrailingZeros().toPlainString() + " ₺";
         String usedEmoji = (emoji != null && !emoji.isBlank()) ? emoji : "🏷️";
@@ -245,16 +247,16 @@ public class DiscountService {
                     BigDecimal discount = d.getDiscountType() == ProductDiscount.DiscountType.PERCENT
                             ? orderAmount.multiply(d.getDiscountValue()).divide(BigDecimal.valueOf(100))
                             : d.getDiscountValue();
-                    return new CouponValidationResponse(true, "Kupon geçerli", discount, d.getDiscountType().name(), d.getCouponCode());
+                    return new CouponValidationResponse(true, DiscountMessages.COUPON_VALID.get(), discount, d.getDiscountType().name(), d.getCouponCode());
                 })
-                .orElse(new CouponValidationResponse(false, "Kupon geçersiz veya süresi dolmuş", BigDecimal.ZERO, null, code));
+                .orElse(new CouponValidationResponse(false, DiscountMessages.COUPON_INVALID.get(), BigDecimal.ZERO, null, code));
     }
 
     // --- toResponse helpers ---
 
     private DiscountResponse toResponse(CategoryDiscount d) {
         return new DiscountResponse(
-                d.getId(), "category", d.getName(), d.getEmoji(),
+                d.getId(), DiscountMessages.TYPE_CATEGORY.get(), d.getName(), d.getEmoji(),
                 d.getDiscountType().name(), d.getDiscountValue(),
                 d.getCategory().getName(), d.getCategory().getId(),
                 d.getStartDate(), d.getEndDate(), d.getIsActive(), d.getCreatedAt(),
@@ -263,7 +265,7 @@ public class DiscountService {
 
     private DiscountResponse toResponse(ProductDiscount d) {
         return new DiscountResponse(
-                d.getId(), "product", d.getName(), d.getEmoji(),
+                d.getId(), DiscountMessages.TYPE_PRODUCT.get(), d.getName(), d.getEmoji(),
                 d.getDiscountType().name(), d.getDiscountValue(),
                 d.getProduct().getName(), d.getProduct().getId(),
                 d.getStartDate(), d.getEndDate(), d.getIsActive(), d.getCreatedAt(),
@@ -272,7 +274,7 @@ public class DiscountService {
 
     private DiscountResponse toResponse(BrandDiscount d) {
         return new DiscountResponse(
-                d.getId(), "brand", d.getName(), d.getEmoji(),
+                d.getId(), DiscountMessages.TYPE_BRAND.get(), d.getName(), d.getEmoji(),
                 d.getDiscountType().name(), d.getDiscountValue(),
                 d.getBrand().getName(), d.getBrand().getId(),
                 d.getStartDate(), d.getEndDate(), d.getIsActive(), d.getCreatedAt(),
@@ -281,7 +283,7 @@ public class DiscountService {
 
     private DiscountResponse toResponse(GeneralDiscount d) {
         return new DiscountResponse(
-                d.getId(), "general", d.getName(), d.getEmoji(),
+                d.getId(), DiscountMessages.TYPE_GENERAL.get(), d.getName(), d.getEmoji(),
                 d.getDiscountType().name(), d.getDiscountValue(),
                 d.getCouponCode(), null,
                 d.getStartDate(), d.getEndDate(), d.getIsActive(), d.getCreatedAt(),

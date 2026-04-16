@@ -7,6 +7,7 @@ import com.petshop.entity.Order;
 import com.petshop.entity.OrderItem;
 import com.petshop.entity.Product;
 import com.petshop.entity.User;
+import com.petshop.constant.OrderMessages;
 import com.petshop.exception.ResourceNotFoundException;
 import com.petshop.repository.OrderRepository;
 import com.petshop.repository.ProductRepository;
@@ -36,7 +37,7 @@ public class OrderService {
     @Transactional
     public OrderResponse createOrder(Long userId, OrderRequest req) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı: " + userId));
+                .orElseThrow(() -> new ResourceNotFoundException(OrderMessages.USER_NOT_FOUND.get() + userId));
 
         // Sipariş numarası üret
         String orderNumber = generateOrderNumber();
@@ -81,15 +82,14 @@ public class OrderService {
         }
 
         Order savedOrder = orderRepository.save(order);
-        log.info("Sipariş oluşturuldu: #{} — kullanıcı: {}", orderNumber, userId);
+        log.info(OrderMessages.LOG_ORDER_CREATED.get(), orderNumber, userId);
 
         // Bildirim kaydet
         try {
-            String notifMessage = "Siparişiniz #" + savedOrder.getId()
-                    + " alındı. En kısa sürede sizinle iletişime geçeceğiz.";
-            notificationService.createNotification(user, notifMessage, "ORDER");
+            String notifMessage = OrderMessages.ORDER_NOTIFICATION_TEMPLATE.format(savedOrder.getId());
+            notificationService.createNotification(user, notifMessage, OrderMessages.NOTIFICATION_TYPE_ORDER.get());
         } catch (Exception e) {
-            log.error("Bildirim kaydedilemedi (sipariş etkilenmedi): {}", e.getMessage());
+            log.error(OrderMessages.LOG_NOTIF_FAIL.get(), e.getMessage());
         }
 
         // Email kuyruğa al
@@ -105,7 +105,7 @@ public class OrderService {
                     req.totalAmount().toString()
             );
         } catch (Exception e) {
-            log.error("Email kuyruğa alınamadı (sipariş etkilenmedi): {}", e.getMessage());
+            log.error(OrderMessages.LOG_EMAIL_QUEUE_FAIL.get(), e.getMessage());
         }
 
         // Telegram bildir
@@ -113,7 +113,7 @@ public class OrderService {
             String telegramMsg = buildTelegramMessage(savedOrder, user, req);
             telegramOutboxService.enqueue(telegramMsg);
         } catch (Exception e) {
-            log.error("Telegram kuyruğa alınamadı (sipariş etkilenmedi): {}", e.getMessage());
+            log.error(OrderMessages.LOG_TELEGRAM_QUEUE_FAIL.get(), e.getMessage());
         }
 
         return OrderResponse.from(savedOrder);
@@ -134,12 +134,12 @@ public class OrderService {
                 .map(last -> {
                     try {
                         long num = Long.parseLong(last.substring(2));
-                        return "PT" + String.format("%08d", num + 1);
+                        return OrderMessages.ORDER_NUMBER_PREFIX.get() + String.format("%08d", num + 1);
                     } catch (Exception e) {
-                        return "PT" + String.format("%08d", System.currentTimeMillis() % 100_000_000L);
+                        return OrderMessages.ORDER_NUMBER_PREFIX.get() + String.format("%08d", System.currentTimeMillis() % 100_000_000L);
                     }
                 })
-                .orElse("PT" + String.format("%08d", 1L));
+                .orElse(OrderMessages.ORDER_NUMBER_PREFIX.get() + String.format("%08d", 1L));
     }
 
     private String buildItemsHtml(Order order) {

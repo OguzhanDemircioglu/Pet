@@ -2,6 +2,7 @@ package com.petshop.controller.admin;
 
 import com.petshop.dto.request.CreateProductRequest;
 import com.petshop.dto.response.ProductResponse;
+import com.petshop.constant.ResponseMessages;
 import com.petshop.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -46,7 +47,7 @@ public class AdminProductController {
             @PathVariable Long id,
             @Valid @RequestBody CreateProductRequest request) {
         productService.update(id, request);
-        return ResponseEntity.ok(Map.of("message", "Ürün güncellendi"));
+        return ResponseEntity.ok(Map.of("message", ResponseMessages.PRODUCT_UPDATED.get()));
     }
 
     @DeleteMapping("/{id}")
