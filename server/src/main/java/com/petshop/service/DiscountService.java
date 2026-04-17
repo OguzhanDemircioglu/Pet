@@ -17,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -221,19 +223,18 @@ public class DiscountService {
     }
 
     private boolean isCurrentlyActive(Boolean active, LocalDateTime start, LocalDateTime end, LocalDateTime now) {
-        if (!Boolean.TRUE.equals(active)) return false;
-        if (start != null && now.isBefore(start)) return false;
-        if (end != null && now.isAfter(end)) return false;
-        return true;
+        return Boolean.TRUE.equals(active)
+                && (start == null || !now.isBefore(start))
+                && (end == null || !now.isAfter(end));
     }
 
     public Set<String> getActiveEmojis() {
-        Set<String> emojis = new HashSet<>();
-        emojis.addAll(categoryDiscountRepo.findActiveEmojis());
-        emojis.addAll(productDiscountRepo.findActiveEmojis());
-        emojis.addAll(brandDiscountRepo.findActiveEmojis());
-        emojis.addAll(generalDiscountRepo.findActiveEmojis());
-        return emojis;
+        return Stream.of(
+                categoryDiscountRepo.findActiveEmojis(),
+                productDiscountRepo.findActiveEmojis(),
+                brandDiscountRepo.findActiveEmojis(),
+                generalDiscountRepo.findActiveEmojis()
+        ).flatMap(Collection::stream).collect(Collectors.toSet());
     }
 
     public CouponValidationResponse validateCoupon(String code, BigDecimal orderAmount) {

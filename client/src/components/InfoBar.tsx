@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { CONTACT_PHONE } from '../constants/app'
 
 const WA_SVG = (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="rgba(255,255,255,.9)" style={{ flexShrink: 0 }}>
@@ -7,7 +8,6 @@ const WA_SVG = (
 )
 
 const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_EMAIL || 'info@petshop.com.tr'
-const CONTACT_PHONE = import.meta.env.VITE_CONTACT_PHONE || '905527735994'
 
 function formatDisplayPhone(raw: string): string {
   // raw: "905527735994" → "+90 552 773 59 94"

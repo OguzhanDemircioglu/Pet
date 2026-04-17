@@ -28,11 +28,12 @@ const extractFirstColor = (gradient: string): string => {
 }
 
 export const FREE_SHIPPING_THRESHOLD = 750
+export const FREE_SHIPPING_TITLE = `${FREE_SHIPPING_THRESHOLD} ₺ Üzeri\nÜcretsiz Kargo`
 
 const FREE_SHIPPING_SLIDE: Slide = {
   bg: 'linear-gradient(135deg,#1e3a5f,#2d5a8e)',
   badge: 'Ücretsiz Kargo',
-  title: `${FREE_SHIPPING_THRESHOLD} ₺ Üzeri\nÜcretsiz Kargo`,
+  title: FREE_SHIPPING_TITLE,
   sub: 'Tüm siparişlerde geçerli. Aynı gün kargolama.',
   btnColor: '#1e3a5f',
   emoji: '🚚',

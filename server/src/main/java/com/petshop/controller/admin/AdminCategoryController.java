@@ -6,6 +6,7 @@ import com.petshop.entity.Category;
 import com.petshop.repository.CategoryRepository;
 import com.petshop.repository.ProductRepository;
 import com.petshop.service.CategoryService;
+import com.petshop.util.SlugUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -29,7 +30,7 @@ public class AdminCategoryController {
         Category category = new Category();
         category.setName(request.name());
         category.setEmoji(request.emoji());
-        category.setSlug(toSlug(request.name()));
+        category.setSlug(SlugUtil.toSlug(request.name()));
         category.setDescription(request.description());
         category.setDisplayOrder(request.displayOrder() != null ? request.displayOrder() : 1);
         category.setIsActive(true);
@@ -54,7 +55,7 @@ public class AdminCategoryController {
 
         category.setName(request.name());
         category.setEmoji(request.emoji());
-        category.setSlug(toSlug(request.name()));
+        category.setSlug(SlugUtil.toSlug(request.name()));
         category.setDescription(request.description());
         if (request.displayOrder() != null) {
             category.setDisplayOrder(request.displayOrder());
@@ -89,17 +90,4 @@ public class AdminCategoryController {
         return ResponseEntity.noContent().build();
     }
 
-    private static String toSlug(String input) {
-        if (input == null) return "";
-        String s = input.toLowerCase()
-                .replace('ş', 's')
-                .replace('ç', 'c')
-                .replace('ğ', 'g')
-                .replace('ü', 'u')
-                .replace('ö', 'o')
-                .replace('ı', 'i');
-        s = s.replaceAll("[^a-z0-9]+", "-");
-        s = s.replaceAll("^-+|-+$", "");
-        return s;
-    }
 }

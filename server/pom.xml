@@ -21,7 +21,6 @@
     <java.version>17</java.version>
     <jjwt.version>0.12.5</jjwt.version>
     <itext.version>8.0.3</itext.version>
-    <mapstruct.version>1.5.5.Final</mapstruct.version>
     <lombok.version>1.18.32</lombok.version>
   </properties>
 
@@ -94,13 +93,6 @@
       <optional>true</optional>
     </dependency>
 
-    <!-- MapStruct -->
-    <dependency>
-      <groupId>org.mapstruct</groupId>
-      <artifactId>mapstruct</artifactId>
-      <version>${mapstruct.version}</version>
-    </dependency>
-
     <!-- Cloudinary -->
     <dependency>
       <groupId>com.cloudinary</groupId>
@@ -147,11 +139,6 @@
               <groupId>org.projectlombok</groupId>
               <artifactId>lombok</artifactId>
               <version>${lombok.version}</version>
-            </path>
-            <path>
-              <groupId>org.mapstruct</groupId>
-              <artifactId>mapstruct-processor</artifactId>
-              <version>${mapstruct.version}</version>
             </path>
           </annotationProcessorPaths>
         </configuration>

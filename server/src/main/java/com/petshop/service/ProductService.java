@@ -9,6 +9,7 @@ import com.petshop.constant.AppConstants;
 import com.petshop.constant.ProductMessages;
 import com.petshop.exception.ResourceNotFoundException;
 import com.petshop.repository.*;
+import com.petshop.util.SlugUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -124,7 +125,7 @@ public class ProductService {
 
     @Transactional
     public ProductResponse create(CreateProductRequest req) {
-        String slug = toSlug(req.name());
+        String slug = SlugUtil.toSlug(req.name());
 
         Category category = categoryRepository.findById(req.categoryId())
                 .orElseThrow(() -> new ResourceNotFoundException(ProductMessages.CATEGORY_NOT_FOUND.get(), req.categoryId()));
@@ -161,7 +162,7 @@ public class ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException(ProductMessages.PRODUCT_NOT_FOUND.get(), id));
 
         product.setName(req.name());
-        product.setSlug(toSlug(req.name()));
+        product.setSlug(SlugUtil.toSlug(req.name()));
         product.setSku(req.sku());
         product.setBasePrice(req.basePrice());
 
@@ -252,20 +253,4 @@ public class ProductService {
         return a.discountValue().compareTo(b.discountValue()) >= 0 ? a : b;
     }
 
-    // ─── Slug ─────────────────────────────────────────────────────────────────
-
-    private String toSlug(String input) {
-        if (input == null) return "";
-        String result = input.trim().toLowerCase();
-        result = result
-                .replace('ş', 's').replace('ç', 'c').replace('ğ', 'g')
-                .replace('ü', 'u').replace('ö', 'o').replace('ı', 'i')
-                .replace('İ', 'i').replace('Ş', 's').replace('Ç', 'c')
-                .replace('Ğ', 'g').replace('Ü', 'u').replace('Ö', 'o');
-        result = result.replaceAll("[^a-z0-9\\s-]", "");
-        result = result.replaceAll("[\\s]+", "-");
-        result = result.replaceAll("-{2,}", "-");
-        result = result.replaceAll("^-|-$", "");
-        return result;
-    }
 }

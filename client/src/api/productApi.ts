@@ -1,4 +1,4 @@
-import api from './axios'
+import api, { BASE_URL } from './axios'
 import type { Product, CatalogProduct, ProductImage, Brand, Category, Page, AdminUser } from '../types'
 import type { DiscountResponse, CampaignResponse } from './campaignApi'
 
@@ -9,9 +9,8 @@ export interface CatalogResponse {
   slides: CampaignResponse[]
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 export const imgUrl = (path: string | null | undefined): string | undefined =>
-  path ? (path.startsWith('http') ? path : `${API_BASE}${path}`) : undefined
+  path ? (path.startsWith('http') ? path : `${BASE_URL}${path}`) : undefined
 
 export interface ProductForm {
   name: string

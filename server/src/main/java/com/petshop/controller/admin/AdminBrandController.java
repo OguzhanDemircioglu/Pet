@@ -31,9 +31,7 @@ public class AdminBrandController {
 
     @PostMapping
     public ResponseEntity<BrandResponse> create(@Valid @RequestBody BrandRequest req) {
-        boolean exists = brandRepository.findAll().stream()
-                .anyMatch(b -> b.getName().equalsIgnoreCase(req.name().trim()));
-        if (exists) {
+        if (brandRepository.existsByNameIgnoreCase(req.name().trim())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Bu isimde marka zaten var");
         }
         Brand brand = Brand.builder()

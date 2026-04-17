@@ -12,6 +12,7 @@ import InfoBar from '../components/InfoBar'
 import Header from '../components/Header'
 import CategoryBar from '../components/CategoryBar'
 import Footer from '../components/Footer'
+import { CONTACT_PHONE } from '../constants/app'
 
 const THUMB_BG = [
   'linear-gradient(135deg,#fce7f3,#fdf2f8)',
@@ -65,7 +66,7 @@ export default function ProductDetailPage() {
     if (!slug) return
     productApi.getBySlug(slug)
       .then(p => { setProduct(p); setQty(p.minSellingQuantity) })
-      .catch(console.error)
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [slug])
 
@@ -255,7 +256,7 @@ export default function ProductDetailPage() {
               }}>
                 {addedToCart ? '✅ Sepete Eklendi!' : '🛒 Sepete Ekle'}
               </button>
-              <a href={`https://wa.me/${import.meta.env.VITE_CONTACT_PHONE || '905527735994'}?text=${encodeURIComponent(`Merhaba, "${product.name}" ürünü hakkında bilgi almak istiyorum.`)}`}
+              <a href={`https://wa.me/${CONTACT_PHONE}?text=${encodeURIComponent(`Merhaba, "${product.name}" ürünü hakkında bilgi almak istiyorum.`)}`}
                 target="_blank" rel="noopener noreferrer"
                 style={{
                   width: '100%', background: '#22c55e', color: '#fff',

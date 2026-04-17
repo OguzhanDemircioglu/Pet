@@ -11,7 +11,7 @@ import { logout } from '../store/authSlice'
 import { resetCatalog, fetchCatalogThunk } from '../store/productSlice'
 import { fetchBrandsThunk, resetBrands } from '../store/brandSlice'
 import { fetchAdminCampaignsThunk, resetAdminCampaigns } from '../store/adminCampaignSlice'
-import { resetCampaigns, FREE_SHIPPING_THRESHOLD } from '../store/campaignSlice'
+import { resetCampaigns, FREE_SHIPPING_TITLE } from '../store/campaignSlice'
 import { productApi, brandApi, categoryApi, userApi, productImageApi, imgUrl, type ProductForm } from '../api/productApi'
 import { campaignApi, discountApi, type CampaignResponse, type CampaignRequest, type DiscountResponse } from '../api/campaignApi'
 import { fetchOrdersThunk } from '../store/orderSlice'
@@ -245,7 +245,7 @@ function InfoSection({ user }: { user: { firstName: string; lastName: string; em
           ].map(f => (
             <div key={f.key} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>{f.label}</label>
-              <input value={(form as any)[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
+              <input value={form[f.key as keyof typeof form]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
                 style={{ height: 40, border: '1.5px solid var(--border)', borderRadius: 'var(--r)', background: 'var(--bg3)', color: 'var(--text)', fontSize: 13.5, padding: '0 12px', outline: 'none', fontFamily: 'inherit' }} />
             </div>
           ))}
@@ -1012,7 +1012,7 @@ function AdminCampaignsSection() {
   }
   const openDiscAdd = () => { setDiscForm({ name: '', emoji: '', scope: 'category', discountType: 'PERCENT', discountValue: '', categoryId: '', productId: '', brandId: '', startDate: '', endDate: '', isActive: true }); setSubmitted(false); setEditDisc(null); setModal('disc-add') }
   const openDiscEdit = (d: DiscountResponse) => {
-    setDiscForm({ name: d.name, emoji: d.emoji || '', scope: d.type as any, discountType: d.discountType || 'PERCENT', discountValue: String(d.discountValue ?? ''), categoryId: '', productId: '', brandId: '', startDate: d.startDate ? d.startDate.slice(0, 16) : '', endDate: d.endDate ? d.endDate.slice(0, 16) : '', isActive: d.isActive })
+    setDiscForm({ name: d.name, emoji: d.emoji || '', scope: d.type as DiscountScope, discountType: d.discountType || 'PERCENT', discountValue: String(d.discountValue ?? ''), categoryId: '', productId: '', brandId: '', startDate: d.startDate ? d.startDate.slice(0, 16) : '', endDate: d.endDate ? d.endDate.slice(0, 16) : '', isActive: d.isActive })
     setSubmitted(false); setEditDisc(d); setModal('disc-edit')
   }
 
@@ -1124,7 +1124,7 @@ function AdminCampaignsSection() {
                 </td>
                 <td style={{ padding: '10px 14px', fontSize: 12.5, color: 'var(--text2)' }}>Ücretsiz Kargo</td>
                 <td style={{ padding: '10px 14px' }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', whiteSpace: 'pre-line', lineHeight: 1.3 }}>{`${FREE_SHIPPING_THRESHOLD} ₺ Üzeri\nÜcretsiz Kargo`}</div>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', whiteSpace: 'pre-line', lineHeight: 1.3 }}>{FREE_SHIPPING_TITLE}</div>
                 </td>
                 <td style={{ padding: '10px 14px', fontSize: 12.5, color: 'var(--text2)' }}>Tüm siparişlerde geçerli. Aynı gün kargolama.</td>
                 <td style={{ padding: '10px 14px' }}>
