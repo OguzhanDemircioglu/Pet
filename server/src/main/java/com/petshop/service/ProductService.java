@@ -30,6 +30,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final BrandRepository brandRepository;
     private final CategoryRepository categoryRepository;
+    private final ProductReviewRepository productReviewRepository;
 
     // ─── Public listing ───────────────────────────────────────────────────────
 
@@ -45,14 +46,18 @@ public class ProductService {
         Product p = productRepository.findBySlugWithDetails(slug)
                 .orElseThrow(() -> new ResourceNotFoundException(ProductMessages.PRODUCT_NOT_FOUND.get() + " bulunamadı: " + slug));
         Map<Long, ProductResponse.ActiveDiscountDto> dm = buildDiscountMap();
-        return ProductResponse.fromWithDiscount(p, dm.get(p.getId()));
+        Double avg = productReviewRepository.findAverageRatingByProductId(p.getId());
+        int cnt = (int) productReviewRepository.countByProductId(p.getId());
+        return ProductResponse.fromWithDetails(p, dm.get(p.getId()), avg, cnt > 0 ? cnt : null);
     }
 
     public ProductResponse getById(Long id) {
         Product p = productRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new ResourceNotFoundException(ProductMessages.PRODUCT_NOT_FOUND.get(), id));
         Map<Long, ProductResponse.ActiveDiscountDto> dm = buildDiscountMap();
-        return ProductResponse.fromWithDiscount(p, dm.get(p.getId()));
+        Double avg = productReviewRepository.findAverageRatingByProductId(p.getId());
+        int cnt = (int) productReviewRepository.countByProductId(p.getId());
+        return ProductResponse.fromWithDetails(p, dm.get(p.getId()), avg, cnt > 0 ? cnt : null);
     }
 
     public List<FeaturedProductDto> getFeatured(int limit) {
@@ -112,8 +117,8 @@ public class ProductService {
         return new FeaturedProductDto(
                 p.getId(), p.getName(), p.getSlug(),
                 p.getBrand() != null ? p.getBrand().getName() : null,
-                p.getBasePrice(), p.getMinSellingQuantity(), p.getUnit(),
-                primaryImage, discDto
+                p.getBasePrice(), p.getMinSellingQuantity(), p.getAvailableStock(),
+                p.getUnit(), primaryImage, discDto
         );
     }
 

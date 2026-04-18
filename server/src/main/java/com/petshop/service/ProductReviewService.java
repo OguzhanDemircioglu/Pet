@@ -30,11 +30,12 @@ public class ProductReviewService {
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
 
+    @Transactional(readOnly = true)
     public List<ReviewResponse> getApprovedReviews(String slug) {
         Product product = productRepository.findBySlug(slug)
                 .orElseThrow(() -> new ResourceNotFoundException(ReviewMessages.PRODUCT_NOT_FOUND.get() + slug));
         return reviewRepository
-                .findByProductIdAndIsApprovedTrue(product.getId(),
+                .findByProductId(product.getId(),
                         PageRequest.of(0, 50, Sort.by(Sort.Direction.DESC, "createdAt")))
                 .stream()
                 .map(ReviewResponse::from)
@@ -61,6 +62,28 @@ public class ProductReviewService {
         }
 
         return new CanReviewResponse(false, ReviewMessages.STATUS_REVIEWED.get(), null);
+    }
+
+    @Transactional
+    public ReviewResponse updateReview(Long userId, Long reviewId, ReviewRequest req) {
+        ProductReview review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("Yorum bulunamadı", reviewId));
+        if (review.getUser() == null || !review.getUser().getId().equals(userId)) {
+            throw new IllegalStateException("Bu yorumu düzenleme yetkiniz yok");
+        }
+        review.setRating(req.rating());
+        review.setComment(req.comment());
+        return ReviewResponse.from(reviewRepository.save(review));
+    }
+
+    @Transactional
+    public void deleteReview(Long userId, Long reviewId) {
+        ProductReview review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("Yorum bulunamadı", reviewId));
+        if (review.getUser() == null || !review.getUser().getId().equals(userId)) {
+            throw new IllegalStateException("Bu yorumu silme yetkiniz yok");
+        }
+        reviewRepository.deleteById(reviewId);
     }
 
     @Transactional

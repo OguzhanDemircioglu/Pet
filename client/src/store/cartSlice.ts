@@ -9,6 +9,7 @@ export interface CartItem {
   basePrice: number
   unit: string
   minSellingQuantity: number
+  availableStock: number
   primaryImageUrl: string | null
   quantity: number
 }
@@ -20,13 +21,16 @@ interface CartState {
 
 function loadFromStorage(): CartItem[] {
   try {
-    const raw = localStorage.getItem('pettoptan_cart')
-    return raw ? JSON.parse(raw) : []
+    const raw = localStorage.getItem('petshop_cart')
+    if (!raw) return []
+    const items = JSON.parse(raw) as CartItem[]
+    // Eski localStorage kayıtlarında availableStock olmayabilir
+    return items.map(i => ({ ...i, availableStock: i.availableStock ?? 999999 }))
   } catch { return [] }
 }
 
 function saveToStorage(items: CartItem[]) {
-  localStorage.setItem('pettoptan_cart', JSON.stringify(items))
+  localStorage.setItem('petshop_cart', JSON.stringify(items))
 }
 
 const initialState: CartState = {
@@ -41,10 +45,12 @@ const cartSlice = createSlice({
     addToCart(state, action: PayloadAction<Omit<CartItem, 'quantity'> & { quantity?: number }>) {
       const existing = state.items.find(i => i.productId === action.payload.productId)
       const addQty = action.payload.quantity ?? action.payload.minSellingQuantity
+      const stock = action.payload.availableStock
       if (existing) {
-        existing.quantity += addQty
+        existing.quantity = Math.min(existing.quantity + addQty, stock)
+        existing.availableStock = stock   // stoğu güncel tut
       } else {
-        state.items.push({ ...action.payload, quantity: addQty })
+        state.items.push({ ...action.payload, quantity: Math.min(addQty, stock) })
       }
       saveToStorage(state.items)
     },
@@ -55,7 +61,7 @@ const cartSlice = createSlice({
     updateQuantity(state, action: PayloadAction<{ productId: number; quantity: number }>) {
       const item = state.items.find(i => i.productId === action.payload.productId)
       if (item) {
-        item.quantity = Math.max(item.minSellingQuantity, action.payload.quantity)
+        item.quantity = Math.max(item.minSellingQuantity, Math.min(action.payload.quantity, item.availableStock))
         saveToStorage(state.items)
       }
     },

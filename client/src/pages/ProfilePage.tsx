@@ -15,6 +15,7 @@ import { resetCampaigns, FREE_SHIPPING_TITLE } from '../store/campaignSlice'
 import { productApi, brandApi, categoryApi, userApi, productImageApi, imgUrl, type ProductForm } from '../api/productApi'
 import { campaignApi, discountApi, type CampaignResponse, type CampaignRequest, type DiscountResponse } from '../api/campaignApi'
 import { fetchOrdersThunk } from '../store/orderSlice'
+import { adminOrderApi, type OrderResponse as AdminOrderResponse } from '../api/orderApi'
 import { markAllReadThunk, markReadThunk } from '../store/notificationSlice'
 import { fetchCategoriesThunk } from '../store/categorySlice'
 import type { CatalogProduct, ProductImage as ProductImageType, Brand, Category, AdminUser, Address, AddressRequest } from '../types'
@@ -22,7 +23,7 @@ import { addressApi } from '../api/addressApi'
 import { TURKEY_DISTRICTS } from '../data/turkeyDistricts'
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
-type Section = 'orders' | 'info' | 'addresses' | 'notifications' | 'products' | 'brands' | 'campaigns' | 'categories' | 'users'
+type Section = 'orders' | 'info' | 'addresses' | 'notifications' | 'products' | 'brands' | 'campaigns' | 'categories' | 'users' | 'adminorders'
 
 const NAV_CUSTOMER: { id: Section; label: string; icon: string }[] = [
   { id: 'orders', label: 'Siparişlerim', icon: '📦' },
@@ -31,6 +32,7 @@ const NAV_CUSTOMER: { id: Section; label: string; icon: string }[] = [
   { id: 'notifications', label: 'Bildirimler', icon: '🔔' },
 ]
 const NAV_ADMIN: { id: Section; label: string; icon: string }[] = [
+  { id: 'adminorders', label: 'Sipariş Yönetimi', icon: '📋' },
   { id: 'products', label: 'Ürün Yönetimi', icon: '🛍️' },
   { id: 'brands', label: 'Markalar', icon: '🏷️' },
   { id: 'categories', label: 'Kategoriler', icon: '🗂️' },
@@ -56,7 +58,7 @@ export default function ProfilePage() {
   const categoriesLoading = useSelector((s: RootState) => s.categories.loading)
   const isAdmin = user?.role === 'ADMIN'
 
-  const [section, setSection] = useState<Section>(isAdmin ? 'products' : 'orders')
+  const [section, setSection] = useState<Section>(isAdmin ? 'adminorders' : 'orders')
 
   useEffect(() => {
     if (!user) navigate('/login')
@@ -126,6 +128,7 @@ export default function ProfilePage() {
           {section === 'info' && <InfoSection user={user} />}
           {section === 'addresses' && <AddressesSection />}
           {section === 'notifications' && <NotificationsSection />}
+          {section === 'adminorders' && isAdmin && <AdminOrdersSection />}
           {section === 'products' && isAdmin && <AdminProductsSection products={allProducts} onRefresh={() => { dispatch(resetCatalog()); dispatch(fetchCatalogThunk()) }} categories={categories} categoriesLoading={categoriesLoading} />}
           {section === 'brands' && isAdmin && <AdminBrandsSection />}
           {section === 'categories' && isAdmin && <AdminCategoriesSection categories={categories} onRefresh={() => dispatch(fetchCategoriesThunk(true))} />}
@@ -171,15 +174,24 @@ function SectionHead({ title, sub, action }: { title: string; sub?: string; acti
 
 // ─── Orders Section ────────────────────────────────────────────────────────────
 const STATUS_LABEL: Record<string, string> = {
-  PENDING: 'Beklemede', PROCESSING: 'Hazırlanıyor', SHIPPED: 'Kargoda',
-  DELIVERED: 'Teslim Edildi', CANCELLED: 'İptal',
+  PENDING:    'Beklemede',
+  PAID:       'Ödendi',
+  PROCESSING: 'Onaylandı',
+  SHIPPED:    'Kargoda',
+  DELIVERED:  'Teslim Edildi',
+  CANCELLED:  'İptal',
 }
 const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
   PENDING:    { bg: '#fffbeb', color: '#d97706' },
-  PROCESSING: { bg: '#fffbeb', color: '#d97706' },
+  PAID:       { bg: '#f0fdf4', color: '#16a34a' },
+  PROCESSING: { bg: '#f0fdf4', color: '#16a34a' },
   SHIPPED:    { bg: '#eff6ff', color: '#2563eb' },
   DELIVERED:  { bg: '#f0fdf4', color: '#16a34a' },
   CANCELLED:  { bg: 'var(--primary-bg)', color: 'var(--primary)' },
+}
+const PAYMENT_LABEL: Record<string, string> = {
+  CREDIT_CARD: '💳 Kart',
+  COD:         '💵 Teslimatta',
 }
 
 function OrdersSection() {
@@ -218,7 +230,129 @@ function OrdersSection() {
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
                 <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 6 }}>₺{Number(o.totalAmount).toFixed(2)}</div>
-                <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: st.bg, color: st.color }}>{label}</span>
+                <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                  <span style={{ display: 'inline-block', padding: '3px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: 'var(--bg3)', color: 'var(--text3)' }}>{PAYMENT_LABEL[o.paymentMethod] || '💵 Teslimatta'}</span>
+                  <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: st.bg, color: st.color }}>{label}</span>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ─── Admin Orders Section ─────────────────────────────────────────────────────
+const ADMIN_FILTER_TABS = [
+  { key: 'ALL',        label: 'Tümü' },
+  { key: 'PENDING',    label: 'Bekleyen' },
+  { key: 'PAID',       label: 'Ödendi' },
+  { key: 'PROCESSING', label: 'Onaylandı' },
+  { key: 'SHIPPED',    label: 'Kargoda' },
+  { key: 'DELIVERED',  label: 'Teslim' },
+  { key: 'CANCELLED',  label: 'İptal' },
+]
+
+function AdminOrdersSection() {
+  const [orders, setOrders] = useState<AdminOrderResponse[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState('ALL')
+  const [actionLoading, setActionLoading] = useState<number | null>(null)
+
+  const load = async () => {
+    setLoading(true)
+    try { setOrders(await adminOrderApi.list()) } catch { /* ignore */ }
+    finally { setLoading(false) }
+  }
+
+  useEffect(() => { load() }, [])
+
+  const handleAction = async (id: number, action: 'approve' | 'reject') => {
+    setActionLoading(id)
+    try {
+      const updated = action === 'approve'
+        ? await adminOrderApi.approve(id)
+        : await adminOrderApi.reject(id)
+      setOrders(prev => prev.map(o => o.id === id ? updated : o))
+    } catch { /* ignore */ }
+    finally { setActionLoading(null) }
+  }
+
+  const filtered = filter === 'ALL' ? orders : orders.filter(o => o.status === filter)
+
+  return (
+    <div>
+      <SectionHead title="Sipariş Yönetimi" sub={`${orders.length} sipariş`}
+        action={
+          <button onClick={load} style={{ fontSize: 12, fontWeight: 600, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer' }}>
+            🔄 Yenile
+          </button>
+        }
+      />
+
+      {/* Filter tabs */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+        {ADMIN_FILTER_TABS.map(t => (
+          <button key={t.key} onClick={() => setFilter(t.key)}
+            style={{ fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 20, border: '1.5px solid', cursor: 'pointer',
+              borderColor: filter === t.key ? 'var(--primary)' : 'var(--border)',
+              background: filter === t.key ? 'var(--primary)' : 'var(--bg2)',
+              color: filter === t.key ? '#fff' : 'var(--text2)',
+            }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', overflow: 'hidden' }}>
+        {loading ? (
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text3)' }}>Yükleniyor...</div>
+        ) : filtered.length === 0 ? (
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text3)' }}>
+            <div style={{ fontSize: 36, marginBottom: 8 }}>📋</div>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>Sipariş yok</div>
+          </div>
+        ) : filtered.map((o, i) => {
+          const st = STATUS_STYLE[o.status] || STATUS_STYLE['PENDING']
+          const label = STATUS_LABEL[o.status] || o.status
+          const itemSummary = o.items.map(it => `${it.productName} ×${it.quantity}`).join(', ')
+          const date = new Date(o.createdAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })
+          const canAct = o.status === 'PENDING' || o.status === 'PAID'
+          return (
+            <div key={o.id} style={{ padding: '16px 20px', borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>#{String(o.id).padStart(6, '0')}</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: 'var(--bg3)', color: 'var(--text3)' }}>{PAYMENT_LABEL[o.paymentMethod] || '💵'}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: st.bg, color: st.color }}>{label}</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 3 }}>
+                    {date} · {o.fullName} · {o.phone}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 4 }}>{o.city} / {o.district}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{itemSummary}</div>
+                </div>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>₺{Number(o.totalAmount).toFixed(2)}</div>
+                  {canAct && (
+                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                      <button
+                        disabled={actionLoading === o.id}
+                        onClick={() => handleAction(o.id, 'approve')}
+                        style={{ fontSize: 12, fontWeight: 700, padding: '5px 14px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 'var(--r)', cursor: actionLoading === o.id ? 'not-allowed' : 'pointer', opacity: actionLoading === o.id ? 0.6 : 1 }}>
+                        ✓ Onayla
+                      </button>
+                      <button
+                        disabled={actionLoading === o.id}
+                        onClick={() => handleAction(o.id, 'reject')}
+                        style={{ fontSize: 12, fontWeight: 600, padding: '5px 10px', background: 'var(--bg3)', color: 'var(--primary)', border: '1.5px solid var(--primary)', borderRadius: 'var(--r)', cursor: actionLoading === o.id ? 'not-allowed' : 'pointer', opacity: actionLoading === o.id ? 0.6 : 1 }}>
+                        ✗ İptal
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )

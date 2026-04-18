@@ -27,6 +27,7 @@ export interface OrderItemResponse {
 export interface OrderResponse {
   id: number
   status: string
+  paymentMethod: string
   totalAmount: number
   fullName: string
   phone: string
@@ -43,6 +44,12 @@ export interface NotificationResponse {
   type: string
   isRead: boolean
   createdAt: string
+  relatedOrderId?: number
+}
+
+export interface PaymentInitiateResponse {
+  orderId: number
+  paymentPageUrl: string
 }
 
 export const orderApi = {
@@ -51,6 +58,9 @@ export const orderApi = {
 
   listMy: () =>
     api.get<OrderResponse[]>('/orders/myOrders').then(r => r.data),
+
+  initiatePayment: (data: OrderRequest) =>
+    api.post<PaymentInitiateResponse>('/payment/iyzico/initiate', data).then(r => r.data),
 }
 
 export const notificationApi = {
@@ -62,4 +72,15 @@ export const notificationApi = {
 
   markAllRead: () =>
     api.patch('/notifications/read-all'),
+}
+
+export const adminOrderApi = {
+  list: () =>
+    api.get<OrderResponse[]>('/admin/orders').then(r => r.data),
+
+  approve: (id: number) =>
+    api.patch<OrderResponse>(`/admin/orders/${id}/approve`).then(r => r.data),
+
+  reject: (id: number) =>
+    api.patch<OrderResponse>(`/admin/orders/${id}/reject`).then(r => r.data),
 }

@@ -22,6 +22,7 @@ const WHY_CARDS = [
 function ProductCard({ p }: { p: FeaturedProduct }) {
   const navigate = useNavigate()
   const dispatch = useDispatch<AppDispatch>()
+  const cartItems = useSelector((s: RootState) => s.cart.items)
   const BG_COLORS = [
     'linear-gradient(135deg,#fce7f3,#fdf2f8)',
     'linear-gradient(135deg,#dbeafe,#eff6ff)',
@@ -75,15 +76,26 @@ function ProductCard({ p }: { p: FeaturedProduct }) {
             <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--primary)' }}>₺{p.basePrice.toFixed(2)}</div>
           )}
         </div>
-        <button onClick={e => {
-          e.stopPropagation(); e.preventDefault()
-          dispatch(addToCart({ productId: p.id, name: p.name, slug: p.slug, brandName: p.brandName, basePrice: p.basePrice, unit: p.unit, minSellingQuantity: p.minSellingQuantity, primaryImageUrl: p.primaryImageUrl }))
-          toast.success('Sepete eklendi')
-        }} style={{
-          width: '100%', background: 'var(--primary)', color: '#fff',
-          fontSize: 13, fontWeight: 700, padding: '9px 0',
-          borderRadius: 'var(--r)', border: 'none', cursor: 'pointer', transition: '0.2s',
-        }}>Sepete Ekle</button>
+        <button
+          disabled={p.availableStock <= 0}
+          onClick={p.availableStock > 0 ? e => {
+            e.stopPropagation(); e.preventDefault()
+            const inCart = cartItems.find(i => i.productId === p.id)?.quantity ?? 0
+            if (inCart >= p.availableStock) { toast.error('Stokta yeterli ürün yok'); return }
+            dispatch(addToCart({ productId: p.id, name: p.name, slug: p.slug, brandName: p.brandName, basePrice: p.basePrice, unit: p.unit, minSellingQuantity: p.minSellingQuantity, availableStock: p.availableStock, primaryImageUrl: p.primaryImageUrl }))
+            toast.success('Sepete eklendi')
+          } : undefined}
+          style={{
+            width: '100%',
+            background: p.availableStock <= 0 ? '#e5e7eb' : 'var(--primary)',
+            color: p.availableStock <= 0 ? '#111' : '#fff',
+            fontSize: 13, fontWeight: 700, padding: '9px 0',
+            borderRadius: 'var(--r)', border: 'none',
+            cursor: p.availableStock <= 0 ? 'not-allowed' : 'pointer',
+            transition: '0.2s',
+          }}>
+          {p.availableStock <= 0 ? 'Stokta Yok' : 'Sepete Ekle'}
+        </button>
       </div>
     </div>
   )

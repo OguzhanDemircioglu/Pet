@@ -5,12 +5,14 @@ import type { User } from '../types'
 interface AuthState {
   user: User | null
   loading: boolean
+  initialized: boolean  // loadMeThunk tamamlandı mı?
   error: string | null
 }
 
 const initialState: AuthState = {
   user: null,
   loading: false,
+  initialized: false,
   error: null,
 }
 
@@ -71,7 +73,9 @@ const authSlice = createSlice({
       .addCase(loginThunk.pending, (state) => { state.loading = true; state.error = null })
       .addCase(loginThunk.fulfilled, (state, action) => { state.loading = false; state.user = action.payload })
       .addCase(loginThunk.rejected, (state, action) => { state.loading = false; state.error = action.error.message ?? 'Hata' })
-      .addCase(loadMeThunk.fulfilled, (state, action) => { state.user = action.payload })
+      .addCase(loadMeThunk.pending,    (state) => { state.initialized = false })
+      .addCase(loadMeThunk.fulfilled,  (state, action) => { state.user = action.payload; state.initialized = true })
+      .addCase(loadMeThunk.rejected,   (state) => { state.initialized = true })
       .addCase(verifyEmailThunk.fulfilled, (state, action) => { state.loading = false; state.user = action.payload })
   },
 })

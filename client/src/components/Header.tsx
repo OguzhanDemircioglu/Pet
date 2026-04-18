@@ -6,7 +6,7 @@ import { useGoogleLogin } from '@react-oauth/google'
 import toast from 'react-hot-toast'
 import type { RootState, AppDispatch } from '../store'
 import { toggleCart, closeCart, removeFromCart, updateQuantity, clearCart } from '../store/cartSlice'
-import { orderApi } from '../api/orderApi'
+import { orderApi, adminOrderApi } from '../api/orderApi'
 import { markReadThunk, markAllReadThunk } from '../store/notificationSlice'
 import { setUser, updateUserPhone } from '../store/authSlice'
 import { imgUrl } from '../api/productApi'
@@ -146,6 +146,7 @@ export default function Header({ showSearch = true }: HeaderProps) {
       setSavedAddresses([])
       setSelectedSavedId(null)
       setShowManualForm(false)
+      setPaymentMethod('COD')
     }
   }, [cartOpen])
 
@@ -276,6 +277,7 @@ export default function Header({ showSearch = true }: HeaderProps) {
   }
 
   const [orderLoading, setOrderLoading] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'CREDIT_CARD'>('COD')
 
   const handleConfirmOrder = async () => {
     setOrderLoading(true)
@@ -301,6 +303,49 @@ export default function Header({ showSearch = true }: HeaderProps) {
       toast.error('Sipariş oluşturulamadı, lütfen tekrar deneyin.')
     } finally {
       setOrderLoading(false)
+    }
+  }
+
+  const handleCreditCardOrder = async () => {
+    setOrderLoading(true)
+    try {
+      const res = await orderApi.initiatePayment({
+        fullName: addressForm.fullName,
+        phone: addressForm.phone,
+        city: addressForm.city,
+        district: addressForm.district,
+        address: addressForm.address,
+        totalAmount: cartTotal,
+        items: cartItems.map(i => ({
+          productId: i.productId,
+          productName: i.name,
+          quantity: i.quantity,
+          unitPrice: i.basePrice,
+        })),
+      })
+      dispatch(clearCart())
+      dispatch(closeCart())
+      window.location.href = res.paymentPageUrl
+    } catch {
+      toast.error('Ödeme başlatılamadı, lütfen tekrar deneyin.')
+    } finally {
+      setOrderLoading(false)
+    }
+  }
+
+  const handleOrderAction = async (n: { id: number; relatedOrderId?: number }, action: 'approve' | 'reject') => {
+    if (!n.relatedOrderId) return
+    try {
+      if (action === 'approve') {
+        await adminOrderApi.approve(n.relatedOrderId)
+        toast.success('Sipariş onaylandı')
+      } else {
+        await adminOrderApi.reject(n.relatedOrderId)
+        toast.error('Sipariş reddedildi')
+      }
+      dispatch(markReadThunk(n.id))
+    } catch {
+      toast.error('İşlem başarısız, tekrar deneyin.')
     }
   }
 
@@ -371,16 +416,28 @@ export default function Header({ showSearch = true }: HeaderProps) {
                     {notifications.length === 0 ? (
                       <div style={{ padding: '32px 20px', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Bildirim yok</div>
                     ) : notifications.slice(0, 10).map(n => (
-                      <div key={n.id} onClick={() => { if (!n.isRead) dispatch(markReadThunk(n.id)) }}
-                        style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '11px 15px', borderBottom: '1px solid var(--border)', background: n.isRead ? 'transparent' : 'rgba(220,38,38,.04)', cursor: n.isRead ? 'default' : 'pointer' }}>
+                      <div key={n.id} onClick={() => { if (!n.isRead && n.type !== 'ORDER_ACTION') dispatch(markReadThunk(n.id)) }}
+                        style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '11px 15px', borderBottom: '1px solid var(--border)', background: n.isRead ? 'transparent' : 'rgba(220,38,38,.04)', cursor: n.isRead || n.type === 'ORDER_ACTION' ? 'default' : 'pointer' }}>
                         <span style={{ fontSize: 18, width: 34, height: 34, background: 'var(--bg3)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          {n.type === 'ORDER' ? '📦' : '🔔'}
+                          {n.type === 'ORDER_ACTION' ? '🛒' : n.type === 'ORDER' ? '📦' : '🔔'}
                         </span>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.4, marginBottom: 2, fontWeight: n.isRead ? 400 : 600 }}>{n.message}</p>
                           <small style={{ fontSize: 11, color: 'var(--text3)' }}>
                             {new Date(n.createdAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                           </small>
+                          {user?.role === 'ADMIN' && n.type === 'ORDER_ACTION' && n.relatedOrderId && !n.isRead && (
+                            <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                              <button onClick={e => { e.stopPropagation(); handleOrderAction(n, 'approve') }}
+                                style={{ fontSize: 11, fontWeight: 700, padding: '4px 12px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 'var(--r)', cursor: 'pointer' }}>
+                                ✓ Onayla
+                              </button>
+                              <button onClick={e => { e.stopPropagation(); handleOrderAction(n, 'reject') }}
+                                style={{ fontSize: 11, fontWeight: 600, padding: '4px 10px', background: 'var(--bg3)', color: 'var(--primary)', border: '1px solid var(--primary)', borderRadius: 'var(--r)', cursor: 'pointer' }}>
+                                ✗ Reddet
+                              </button>
+                            </div>
+                          )}
                         </div>
                         {!n.isRead && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--primary)', flexShrink: 0, marginTop: 5 }} />}
                       </div>
@@ -483,7 +540,10 @@ export default function Header({ showSearch = true }: HeaderProps) {
                               <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid var(--border)', borderRadius: 'var(--r)', overflow: 'hidden' }}>
                                 <button onClick={() => dispatch(updateQuantity({ productId: item.productId, quantity: item.quantity - item.minSellingQuantity }))} style={{ width: 28, height: 28, border: 'none', background: 'var(--bg3)', color: 'var(--text)', fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
                                 <span style={{ minWidth: 32, textAlign: 'center', fontSize: 13, fontWeight: 700 }}>{item.quantity}</span>
-                                <button onClick={() => dispatch(updateQuantity({ productId: item.productId, quantity: item.quantity + item.minSellingQuantity }))} style={{ width: 28, height: 28, border: 'none', background: 'var(--bg3)', color: 'var(--text)', fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                                <button onClick={() => {
+                                  if (item.quantity >= item.availableStock) { toast.error('Stokta yeterli ürün yok'); return }
+                                  dispatch(updateQuantity({ productId: item.productId, quantity: item.quantity + item.minSellingQuantity }))
+                                }} style={{ width: 28, height: 28, border: 'none', background: 'var(--bg3)', color: 'var(--text)', fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                               </div>
                               <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--primary)' }}>₺{(item.basePrice * item.quantity).toFixed(2)}</div>
                             </div>
@@ -708,12 +768,28 @@ export default function Header({ showSearch = true }: HeaderProps) {
                 {checkoutStep === 'confirm' && (
                   <>
                     <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
-                      {/* Ödeme bilgisi */}
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: 'var(--r2)', marginBottom: 18 }}>
-                        <span style={{ fontSize: 22, flexShrink: 0 }}>💵</span>
-                        <div>
-                          <div style={{ fontSize: 14, fontWeight: 800, color: '#92400e', marginBottom: 3 }}>Ödeme Teslimatta Yapılacaktır</div>
-                          <div style={{ fontSize: 12, color: '#78350f', lineHeight: 1.5 }}>Siparişiniz kapıda nakit veya kart ile teslim alındığında ödenecektir.</div>
+                      {/* Ödeme Yöntemi Seçimi */}
+                      <div style={{ marginBottom: 18 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>Ödeme Yöntemi</div>
+                        <div style={{ display: 'flex', gap: 10 }}>
+                          <button onClick={() => setPaymentMethod('COD')} style={{
+                            flex: 1, border: `2px solid ${paymentMethod === 'COD' ? 'var(--primary)' : 'var(--border)'}`,
+                            background: paymentMethod === 'COD' ? 'color-mix(in srgb, var(--primary) 8%, var(--bg2))' : 'var(--bg2)',
+                            borderRadius: 'var(--r)', padding: '12px 10px', cursor: 'pointer', textAlign: 'center', transition: '0.15s',
+                          }}>
+                            <div style={{ fontSize: 22, marginBottom: 4 }}>🚚</div>
+                            <div style={{ fontSize: 12, fontWeight: 800, color: paymentMethod === 'COD' ? 'var(--primary)' : 'var(--text)', marginBottom: 2 }}>Teslimatta Öde</div>
+                            <div style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.4 }}>Kapıda nakit / kart</div>
+                          </button>
+                          <button onClick={() => setPaymentMethod('CREDIT_CARD')} style={{
+                            flex: 1, border: `2px solid ${paymentMethod === 'CREDIT_CARD' ? 'var(--primary)' : 'var(--border)'}`,
+                            background: paymentMethod === 'CREDIT_CARD' ? 'color-mix(in srgb, var(--primary) 8%, var(--bg2))' : 'var(--bg2)',
+                            borderRadius: 'var(--r)', padding: '12px 10px', cursor: 'pointer', textAlign: 'center', transition: '0.15s',
+                          }}>
+                            <div style={{ fontSize: 22, marginBottom: 4 }}>💳</div>
+                            <div style={{ fontSize: 12, fontWeight: 800, color: paymentMethod === 'CREDIT_CARD' ? 'var(--primary)' : 'var(--text)', marginBottom: 2 }}>Kredi Kartı</div>
+                            <div style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.4 }}>iyzico güvencesiyle</div>
+                          </button>
                         </div>
                       </div>
 
@@ -742,11 +818,17 @@ export default function Header({ showSearch = true }: HeaderProps) {
                       </div>
                     </div>
                     <div style={{ borderTop: '1px solid var(--border)', padding: '16px 20px', flexShrink: 0 }}>
-                      <button onClick={handleConfirmOrder} disabled={orderLoading}
+                      <button
+                        onClick={paymentMethod === 'CREDIT_CARD' ? handleCreditCardOrder : handleConfirmOrder}
+                        disabled={orderLoading}
                         style={{ width: '100%', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--r)', padding: '13px 0', fontSize: 15, fontWeight: 800, cursor: orderLoading ? 'not-allowed' : 'pointer', opacity: orderLoading ? 0.7 : 1 }}>
-                        {orderLoading ? 'Sipariş oluşturuluyor...' : 'Siparişi Onayla ✓'}
+                        {orderLoading
+                          ? (paymentMethod === 'CREDIT_CARD' ? 'Ödeme sayfasına yönlendiriliyor...' : 'Sipariş oluşturuluyor...')
+                          : (paymentMethod === 'CREDIT_CARD' ? '💳 Ödemeye Geç' : 'Siparişi Onayla ✓')}
                       </button>
-                      <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text3)', marginTop: 8 }}>Siparişiniz alındığında sizi arayacağız</div>
+                      <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text3)', marginTop: 8 }}>
+                        {paymentMethod === 'CREDIT_CARD' ? 'iyzico güvenli ödeme altyapısıyla' : 'Siparişiniz alındığında sizi arayacağız'}
+                      </div>
                     </div>
                   </>
                 )}

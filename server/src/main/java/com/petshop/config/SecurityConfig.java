@@ -46,6 +46,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/categories/**", "/products/**", "/brands/**", "/public/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/products/*/reviews").permitAll()
                 .requestMatchers(HttpMethod.POST, "/orders/guest").permitAll()
+                .requestMatchers(HttpMethod.POST, "/payment/iyzico/callback").permitAll()
                 .requestMatchers(HttpMethod.POST, "/admin/discounts/validate-coupon").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
                 // Admin only

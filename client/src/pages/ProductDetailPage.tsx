@@ -31,11 +31,101 @@ function Stars({ count, size = 14 }: { count: number; size?: number }) {
   )
 }
 
+const STAR_CSS = `
+@keyframes petStarRing {
+  from, 20% { animation-timing-function: ease-in; opacity: 1; r: 8px; stroke-width: 16px; transform: scale(0); }
+  35% { animation-timing-function: ease-out; opacity: .5; r: 8px; stroke-width: 16px; transform: scale(1); }
+  50%, to { opacity: 0; r: 16px; stroke-width: 0; transform: scale(1); }
+}
+@keyframes petStarFill {
+  from, 40% { animation-timing-function: ease-out; transform: scale(0); }
+  60% { animation-timing-function: ease-in-out; transform: scale(1.2); }
+  80% { transform: scale(.9); }
+  to { transform: scale(1); }
+}
+@keyframes petStarStroke {
+  from { transform: scale(1); }
+  20%, to { transform: scale(0); }
+}
+@keyframes petStarLine {
+  from, 40% { animation-timing-function: ease-out; stroke-dasharray: 1 23; stroke-dashoffset: 1; }
+  60%, to { stroke-dasharray: 12 13; stroke-dashoffset: -13; }
+}
+`
+
+function AnimatedStarRating({ rating, count }: { rating: number; count: number }) {
+  const [play, setPlay] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setPlay(true), 80)
+    return () => clearTimeout(t)
+  }, [])
+
+  const filled = Math.round(rating)
+  const delays = [0, 0.05, 0.1, 0.15, 0.2]
+
+  return (
+    <>
+      <style>{STAR_CSS}</style>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+        <div style={{ display: 'flex', gap: 1 }}>
+          {[1, 2, 3, 4, 5].map(i => {
+            const active = i <= filled
+            const delay = `${delays[i - 1]}s`
+            const anim = (name: string): React.CSSProperties => play && active ? {
+              animationName: name,
+              animationDuration: '1s',
+              animationTimingFunction: 'ease-in-out',
+              animationFillMode: 'forwards',
+              animationDelay: delay,
+            } : {}
+            return (
+              <svg key={i} width="19" height="19" viewBox="0 0 32 32" style={{ overflow: 'visible' }}>
+                <g transform="translate(16,16)">
+                  <circle fill="none" stroke="#f4a825" strokeWidth="16" r="8"
+                    style={{ transform: 'scale(0)', ...anim('petStarRing') }} />
+                </g>
+                <g strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <g transform="translate(16,16) rotate(180)">
+                    <polygon
+                      points="0,15 4.41,6.07 14.27,4.64 7.13,-2.32 8.82,-12.14 0,-7.5 -8.82,-12.14 -7.13,-2.32 -14.27,4.64 -4.41,6.07"
+                      fill="none" stroke={active ? '#f4a825' : '#c7cad1'}
+                      style={play && active ? anim('petStarStroke') : { transform: active ? 'scale(0)' : 'scale(1)' }}
+                    />
+                    <polygon
+                      points="0,15 4.41,6.07 14.27,4.64 7.13,-2.32 8.82,-12.14 0,-7.5 -8.82,-12.14 -7.13,-2.32 -14.27,4.64 -4.41,6.07"
+                      fill={active ? '#f4a825' : 'none'} stroke="none"
+                      style={{ transform: 'scale(0)', ...anim('petStarFill') }}
+                    />
+                  </g>
+                  {active && (
+                    <g transform="translate(16,16)">
+                      {[0, 72, 144, 216, 288].map(rot => (
+                        <polyline key={rot} transform={`rotate(${rot})`} points="0 4,0 16"
+                          stroke="#f4a825"
+                          style={{ strokeDasharray: '12 13', strokeDashoffset: '-13', ...anim('petStarLine') }}
+                        />
+                      ))}
+                    </g>
+                  )}
+                </g>
+              </svg>
+            )
+          })}
+        </div>
+        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{rating.toFixed(1)}</span>
+        <span style={{ color: 'var(--border2)', fontSize: 18 }}>·</span>
+        <span style={{ fontSize: 13, color: 'var(--text2)' }}>{count} yorum</span>
+      </div>
+    </>
+  )
+}
+
 export default function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>()
   const dispatch = useDispatch<AppDispatch>()
   const categories = useSelector((s: RootState) => s.categories.categories)
   const user = useSelector((s: RootState) => s.auth.user)
+  const cartItems = useSelector((s: RootState) => s.cart.items)
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [qty, setQty] = useState(1)
@@ -51,6 +141,11 @@ export default function ProductDetailPage() {
   const [starInput, setStarInput] = useState(0)
   const [commentInput, setCommentInput] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  // Edit/delete review state
+  const [editingReviewId, setEditingReviewId] = useState<number | null>(null)
+  const [editStar, setEditStar] = useState(0)
+  const [editComment, setEditComment] = useState('')
+  const [editSubmitting, setEditSubmitting] = useState(false)
 
   useEffect(() => {
     dispatch(fetchCategoriesThunk(false))
@@ -85,11 +180,50 @@ export default function ProductDetailPage() {
   )
 
   const handleAddToCart = () => {
-    dispatch(addToCart({ productId: product.id, name: product.name, slug: product.slug, brandName: product.brandName, basePrice: Number(product.basePrice), unit: product.unit, minSellingQuantity: product.minSellingQuantity, primaryImageUrl: product.primaryImageUrl, quantity: qty }))
+    const inCart = cartItems.find(i => i.productId === product.id)?.quantity ?? 0
+    if (inCart >= product.availableStock) {
+      toast.error('Stokta yeterli ürün yok')
+      return
+    }
+    dispatch(addToCart({ productId: product.id, name: product.name, slug: product.slug, brandName: product.brandName, basePrice: Number(product.basePrice), unit: product.unit, minSellingQuantity: product.minSellingQuantity, availableStock: product.availableStock, primaryImageUrl: product.primaryImageUrl, quantity: qty }))
     toast.success('Sepete eklendi')
     setAddedToCart(true)
     setTimeout(() => setAddedToCart(false), 1800)
   }
+
+  const handleEditReview = (r: ReviewResponse) => {
+    setEditingReviewId(r.id)
+    setEditStar(r.rating)
+    setEditComment(r.comment ?? '')
+  }
+
+  const handleEditSubmit = async (r: ReviewResponse) => {
+    if (!editStar) { toast.error('Lütfen puan verin'); return }
+    setEditSubmitting(true)
+    try {
+      const updated = await reviewApi.update(slug!, r.id, editStar, editComment)
+      setReviews(prev => prev.map(x => x.id === r.id ? updated : x))
+      setEditingReviewId(null)
+      toast.success('Yorumunuz güncellendi')
+    } catch { toast.error('Güncelleme başarısız') }
+    finally { setEditSubmitting(false) }
+  }
+
+  const handleDeleteReview = async (reviewId: number) => {
+    try {
+      await reviewApi.delete(slug!, reviewId)
+      setReviews(prev => prev.filter(x => x.id !== reviewId))
+      // canReview'u yenile — kullanıcı tekrar yorum yapabilir
+      if (user) reviewApi.canReview(slug!).then(setCanReview).catch(() => {})
+      toast.success('Yorumunuz silindi')
+    } catch { toast.error('Silme başarısız') }
+  }
+
+  // Reviews tab açılınca gerçek listeden güncelle; açılmadan önce product verisini kullan
+  const displayReviewCount = reviewsLoaded ? reviews.length : (product.reviewCount ?? 0)
+  const displayAvgRating = reviewsLoaded && reviews.length > 0
+    ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
+    : (product.averageRating ?? 0)
 
   const currentCat = categories.find(c => c.category_id === product.categoryId)
   const parentCat = currentCat?.parent_id != null
@@ -197,17 +331,18 @@ export default function ProductDetailPage() {
             </div>}
             <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', lineHeight: 1.3, marginBottom: 12 }}>{product.name}</h1>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-              <Stars count={4} size={17} />
-              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>4.5</span>
-              <span style={{ color: 'var(--border2)', fontSize: 18 }}>·</span>
-              <span style={{ fontSize: 13, color: 'var(--text2)' }}>12 yorum</span>
-              <span style={{ color: 'var(--border2)', fontSize: 18 }}>·</span>
+            {displayReviewCount > 0 && displayAvgRating > 0 && (
+              <AnimatedStarRating rating={displayAvgRating} count={displayReviewCount} />
+            )}
+            <div style={{ marginBottom: 14 }}>
               <span style={{ fontSize: 13, color: 'var(--primary)', fontWeight: 600 }}>SKU: {product.sku}</span>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, padding: '5px 11px', borderRadius: 20, background: '#f0fdf4', color: '#16a34a', border: '1px solid rgba(34,197,94,.3)' }}>✓ Stokta Var</span>
+              {product.availableStock > 0
+                ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, padding: '5px 11px', borderRadius: 20, background: '#f0fdf4', color: '#16a34a', border: '1px solid rgba(34,197,94,.3)' }}>✓ Stokta Var</span>
+                : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, padding: '5px 11px', borderRadius: 20, background: '#fef2f2', color: '#dc2626', border: '1px solid rgba(220,38,38,.3)' }}>✕ Stokta Yok</span>
+              }
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, padding: '5px 11px', borderRadius: 20, background: 'var(--primary-bg)', color: 'var(--primary)', border: '1px solid rgba(220,38,38,.3)' }}>Min. {product.minSellingQuantity} adet</span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, padding: '5px 11px', borderRadius: 20, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>🚚 1-3 İş Günü Teslimat</span>
             </div>
@@ -241,20 +376,31 @@ export default function ProductDetailPage() {
               <div style={{ display: 'flex', alignItems: 'center', border: '2px solid var(--border2)', borderRadius: 'var(--r)', overflow: 'hidden' }}>
                 <button onClick={() => setQty(Math.max(product.minSellingQuantity, qty - 1))} style={{ width: 38, height: 38, background: 'var(--primary)', color: '#fff', fontSize: 20, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}>−</button>
                 <div style={{ width: 48, textAlign: 'center', fontSize: 16, fontWeight: 800, color: 'var(--text)', background: 'var(--bg2)', height: 38, lineHeight: '38px', borderLeft: '2px solid var(--border2)', borderRight: '2px solid var(--border2)' }}>{qty}</div>
-                <button onClick={() => setQty(qty + 1)} style={{ width: 38, height: 38, background: 'var(--primary)', color: '#fff', fontSize: 20, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}>+</button>
+                <button onClick={() => {
+                  if (qty >= product.availableStock) { toast.error('Stokta yeterli ürün yok'); return }
+                  setQty(qty + 1)
+                }} style={{ width: 38, height: 38, background: 'var(--primary)', color: '#fff', fontSize: 20, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}>+</button>
               </div>
               <span style={{ fontSize: 12, color: 'var(--text3)' }}>Min. {product.minSellingQuantity} · Stok: {product.availableStock} {product.unit}</span>
             </div>
 
             {/* Action Buttons */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
-              <button onClick={handleAddToCart} style={{
-                width: '100%', background: addedToCart ? '#22c55e' : 'var(--primary)', color: '#fff',
-                fontSize: 15, fontWeight: 700, padding: 14, borderRadius: 'var(--r)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                transition: '0.2s', boxShadow: '0 4px 12px rgba(220,38,38,.35)', border: 'none', cursor: 'pointer',
-              }}>
-                {addedToCart ? '✅ Sepete Eklendi!' : '🛒 Sepete Ekle'}
+              <button
+                onClick={product.availableStock > 0 ? handleAddToCart : undefined}
+                disabled={product.availableStock <= 0}
+                style={{
+                  width: '100%',
+                  background: product.availableStock <= 0 ? '#e5e7eb' : addedToCart ? '#22c55e' : 'var(--primary)',
+                  color: product.availableStock <= 0 ? '#111' : '#fff',
+                  fontSize: 15, fontWeight: 700, padding: 14, borderRadius: 'var(--r)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  transition: '0.2s',
+                  boxShadow: product.availableStock > 0 ? '0 4px 12px rgba(220,38,38,.35)' : 'none',
+                  border: 'none',
+                  cursor: product.availableStock <= 0 ? 'not-allowed' : 'pointer',
+                }}>
+                {product.availableStock <= 0 ? '✕ Stokta Yok' : addedToCart ? '✅ Sepete Eklendi!' : '🛒 Sepete Ekle'}
               </button>
               <a href={`https://wa.me/${CONTACT_PHONE}?text=${encodeURIComponent(`Merhaba, "${product.name}" ürünü hakkında bilgi almak istiyorum.`)}`}
                 target="_blank" rel="noopener noreferrer"
@@ -290,7 +436,7 @@ export default function ProductDetailPage() {
                 borderBottom: activeTab === t ? '2px solid var(--primary)' : '2px solid transparent',
                 marginBottom: -2, transition: '0.18s',
               }}>
-                {t === 'desc' ? 'Açıklama' : t === 'specs' ? 'Özellikler' : <>Yorumlar {reviews.length > 0 && <span style={{ background: 'var(--bg3)', borderRadius: 10, padding: '1px 7px', fontSize: 11, marginLeft: 2 }}>{reviews.length}</span>}</>}
+                {t === 'desc' ? 'Açıklama' : t === 'specs' ? 'Özellikler' : <>Yorumlar {displayReviewCount > 0 && <span style={{ background: 'var(--bg3)', borderRadius: 10, padding: '1px 7px', fontSize: 11, marginLeft: 2 }}>{displayReviewCount}</span>}</>}
               </button>
             ))}
           </div>
@@ -368,11 +514,8 @@ export default function ProductDetailPage() {
                   <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>Bu ürünü satın almış olmanız gerekiyor</div>
                   <div style={{ fontSize: 13, color: 'var(--text3)' }}>Yalnızca sipariş veren müşteriler yorum yapabilir.</div>
                 </div>
-              ) : canReview?.reason === 'already_reviewed' ? (
-                <div style={{ background: '#f0fdf4', border: '1px solid rgba(34,197,94,.3)', borderRadius: 'var(--r2)', padding: '14px 20px', marginBottom: 20 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#16a34a' }}>✓ Bu ürün için yorumunuz alındı.</div>
-                </div>
-              ) : canReview?.canReview ? (
+              ) : canReview?.reason === 'already_reviewed' ? null
+              : canReview?.canReview ? (
                 <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', padding: '20px 24px', marginBottom: 20 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 14 }}>Yorum Yaz</div>
                   <div style={{ marginBottom: 12 }}>
@@ -394,10 +537,9 @@ export default function ProductDetailPage() {
                     if (!starInput) { toast.error('Lütfen puan verin'); return }
                     setSubmitting(true)
                     try {
-                      const newReview = await reviewApi.create(slug!, starInput, commentInput)
-                      setReviews(prev => [newReview, ...prev])
-                      setCanReview({ canReview: false, reason: 'already_reviewed', orderId: null })
+                      await reviewApi.create(slug!, starInput, commentInput)
                       setStarInput(0); setCommentInput('')
+                      setReviewsLoaded(false)   // sunucudan güncel listeyi çek
                       toast.success('Yorumunuz eklendi')
                     } catch { toast.error('Yorum gönderilemedi') }
                     finally { setSubmitting(false) }
@@ -415,22 +557,68 @@ export default function ProductDetailPage() {
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  {reviews.map(r => (
-                    <div key={r.id} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', padding: '18px 20px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div style={{ width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, color: '#fff', flexShrink: 0, background: 'var(--primary)' }}>{r.userName.charAt(0).toUpperCase()}</div>
-                          <div>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{r.userName}</div>
-                            <div style={{ fontSize: 12, color: 'var(--text3)' }}>{new Date(r.createdAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                  {reviews.map(r => {
+                    const isOwn = user != null && r.userId === user.id
+                    const isEditing = editingReviewId === r.id
+                    return (
+                      <div key={r.id} style={{ background: 'var(--bg2)', border: `1px solid ${isOwn ? 'rgba(220,38,38,.25)' : 'var(--border)'}`, borderRadius: 'var(--r2)', padding: '18px 20px' }}>
+                        {/* Kart başlığı */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, color: '#fff', flexShrink: 0, background: 'var(--primary)' }}>{r.userName.charAt(0).toUpperCase()}</div>
+                            <div>
+                              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
+                                {r.userName}
+                                {isOwn && <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--primary)', fontWeight: 600 }}>( Siz )</span>}
+                              </div>
+                              <div style={{ fontSize: 12, color: 'var(--text3)' }}>{new Date(r.createdAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            {!isEditing && <Stars count={r.rating} size={14} />}
+                            {isOwn && !isEditing && (
+                              <>
+                                <button onClick={() => handleEditReview(r)} title="Düzenle"
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, padding: '2px 4px', color: 'var(--text3)', lineHeight: 1 }}>✏️</button>
+                                <button onClick={() => handleDeleteReview(r.id)} title="Sil"
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, padding: '2px 4px', color: 'var(--text3)', lineHeight: 1 }}>🗑️</button>
+                              </>
+                            )}
                           </div>
                         </div>
-                        <Stars count={r.rating} size={14} />
+
+                        {/* Düzenleme formu */}
+                        {isEditing ? (
+                          <div>
+                            <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
+                              {[1,2,3,4,5].map(s => (
+                                <button key={s} type="button" onClick={() => setEditStar(s)}
+                                  style={{ fontSize: 26, background: 'none', border: 'none', cursor: 'pointer', color: s <= editStar ? '#f59e0b' : 'var(--border2)', lineHeight: 1, padding: 0, transition: '0.1s' }}>★</button>
+                              ))}
+                            </div>
+                            <textarea value={editComment} onChange={e => setEditComment(e.target.value)} rows={3}
+                              placeholder="Yorumunuzu düzenleyin..."
+                              style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 'var(--r)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13, resize: 'vertical', boxSizing: 'border-box', marginBottom: 10 }} />
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <button disabled={editSubmitting || editStar === 0} onClick={() => handleEditSubmit(r)}
+                                style={{ padding: '8px 20px', background: editStar ? 'var(--primary)' : 'var(--bg3)', color: editStar ? '#fff' : 'var(--text3)', border: 'none', borderRadius: 'var(--r)', fontSize: 13, fontWeight: 700, cursor: editStar ? 'pointer' : 'not-allowed' }}>
+                                {editSubmitting ? 'Kaydediliyor...' : 'Kaydet'}
+                              </button>
+                              <button onClick={() => setEditingReviewId(null)}
+                                style={{ padding: '8px 16px', background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', fontSize: 13, cursor: 'pointer' }}>
+                                İptal
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            {r.comment && <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.65, margin: 0 }}>{r.comment}</p>}
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: '#16a34a', background: '#f0fdf4', padding: '3px 8px', borderRadius: 4, marginTop: r.comment ? 10 : 0 }}>✓ Onaylı Satın Alma</span>
+                          </>
+                        )}
                       </div>
-                      {r.comment && <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.65, margin: 0 }}>{r.comment}</p>}
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: '#16a34a', background: '#f0fdf4', padding: '3px 8px', borderRadius: 4, marginTop: r.comment ? 10 : 0 }}>✓ Onaylı Satın Alma</span>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>

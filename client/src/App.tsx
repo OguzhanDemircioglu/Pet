@@ -17,12 +17,13 @@ import LoginPage from './pages/LoginPage'
 import ProductListPage from './pages/ProductListPage'
 import ProductDetailPage from './pages/ProductDetailPage'
 import ProfilePage from './pages/ProfilePage'
+import PaymentResultPage from './pages/PaymentResultPage'
 import PhoneRequiredModal from './components/PhoneRequiredModal'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
 
-function PrivateRoute({ children, authLoading, user }: { children: React.ReactNode; authLoading: boolean; user: unknown }) {
-  if (authLoading) return null
+function PrivateRoute({ children, authInitialized, user }: { children: React.ReactNode; authInitialized: boolean; user: unknown }) {
+  if (!authInitialized) return null   // token kontrolü bitmeden yönlendirme yapma
   const isGuest = localStorage.getItem('pt-guest') === 'true'
   if (!user && !isGuest) return <Navigate to="/login" replace />
   return <>{children}</>
@@ -31,7 +32,7 @@ function PrivateRoute({ children, authLoading, user }: { children: React.ReactNo
 function AppInner() {
   const dispatch = useAppDispatch()
   const user = useSelector((s: RootState) => s.auth.user)
-  const authLoading = useSelector((s: RootState) => s.auth.loading)
+  const authInitialized = useSelector((s: RootState) => s.auth.initialized)
 
   useEffect(() => {
     dispatch(loadMeThunk())
@@ -45,18 +46,19 @@ function AppInner() {
     if (user) dispatch(fetchNotificationsThunk())
   }, [user, dispatch])
 
-  if (!authLoading && user && !user.phone) {
+  if (authInitialized && user && !user.phone) {
     return <PhoneRequiredModal />
   }
 
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/"           element={<PrivateRoute authLoading={authLoading} user={user}><HomePage /></PrivateRoute>} />
+        <Route path="/"           element={<PrivateRoute authInitialized={authInitialized} user={user}><HomePage /></PrivateRoute>} />
         <Route path="/login"      element={<LoginPage />} />
-        <Route path="/urunler"    element={<PrivateRoute authLoading={authLoading} user={user}><ProductListPage /></PrivateRoute>} />
-        <Route path="/urun/:slug" element={<PrivateRoute authLoading={authLoading} user={user}><ProductDetailPage /></PrivateRoute>} />
-        <Route path="/profil"     element={<PrivateRoute authLoading={authLoading} user={user}><ProfilePage /></PrivateRoute>} />
+        <Route path="/urunler"    element={<PrivateRoute authInitialized={authInitialized} user={user}><ProductListPage /></PrivateRoute>} />
+        <Route path="/urun/:slug" element={<PrivateRoute authInitialized={authInitialized} user={user}><ProductDetailPage /></PrivateRoute>} />
+        <Route path="/profil"     element={<PrivateRoute authInitialized={authInitialized} user={user}><ProfilePage /></PrivateRoute>} />
+        <Route path="/odeme-sonuc" element={<PaymentResultPage />} />
       </Routes>
       <Toaster position="top-right" />
     </BrowserRouter>

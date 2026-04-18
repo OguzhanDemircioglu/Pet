@@ -2,12 +2,14 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useGoogleLogin } from '@react-oauth/google'
+import { useSelector } from 'react-redux'
 import { useAppDispatch } from '../hooks/useAppDispatch'
 import { loginThunk, registerThunk, verifyEmailThunk, setUser } from '../store/authSlice'
 import { authApi } from '../api/authApi'
 import InfoBar from '../components/InfoBar'
 import { useTheme } from '../context/ThemeContext'
 import { EMAIL_RE, PHONE_RE, NON_DIGIT_RE, WHITESPACE_RE } from '../constants/regex'
+import type { RootState } from '../store'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
 
@@ -110,7 +112,14 @@ export default function LoginPage() {
   const { theme, toggleTheme } = useTheme()
   const isDark = theme === 'dark'
   const dispatch = useAppDispatch()
+  const authUser = useSelector((s: RootState) => s.auth.user)
+  const authInitialized = useSelector((s: RootState) => s.auth.initialized)
   const navigate = useNavigate()
+
+  // Zaten giriş yapmış kullanıcıyı ana sayfaya yönlendir (hook sonrası)
+  useEffect(() => {
+    if (authInitialized && authUser) navigate('/', { replace: true })
+  }, [authInitialized, authUser, navigate])
 
   const [tab, setTab] = useState<'login' | 'register'>('login')
   const [loading, setLoading] = useState(false)

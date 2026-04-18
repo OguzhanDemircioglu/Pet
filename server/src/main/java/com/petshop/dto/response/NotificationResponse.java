@@ -10,7 +10,8 @@ public record NotificationResponse(
         String message,
         String type,
         @JsonProperty("isRead") boolean isRead,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        Long relatedOrderId
 ) {
     public static NotificationResponse from(Notification n) {
         return new NotificationResponse(
@@ -18,7 +19,8 @@ public record NotificationResponse(
                 n.getMessage(),
                 n.getType(),
                 n.isRead(),
-                n.getCreatedAt()
+                n.getCreatedAt(),
+                n.getRelatedOrderId()
         );
     }
 }

@@ -11,6 +11,7 @@ public record OrderResponse(
         Long id,
         String orderNumber,
         String status,
+        String paymentMethod,
         BigDecimal totalAmount,
         String fullName,
         String phone,
@@ -35,6 +36,7 @@ public record OrderResponse(
                 o.getId(),
                 o.getOrderNumber(),
                 o.getStatus() != null ? o.getStatus().name() : null,
+                o.getPaymentMethod() != null ? o.getPaymentMethod().name() : "COD",
                 o.getTotal(),
                 // fullName: guestName veya user adı
                 o.getGuestName() != null ? o.getGuestName()

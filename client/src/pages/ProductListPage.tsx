@@ -211,6 +211,7 @@ export default function ProductListPage() {
 function ProductCard({ p }: { p: CatalogProduct }) {
   const navigate = useNavigate()
   const dispatch = useDispatch<AppDispatch>()
+  const cartItems = useSelector((s: RootState) => s.cart.items)
   const bg = BG_COLORS[p.name.charCodeAt(0) % BG_COLORS.length]
   const emoji = (p.categoryName && EMOJIS[p.categoryName.toLowerCase()]) || '🐾'
 
@@ -236,13 +237,24 @@ function ProductCard({ p }: { p: CatalogProduct }) {
         <div style={{ fontSize: 16, fontWeight: 900, color: 'var(--primary)', marginBottom: 8 }}>₺{p.basePrice.toFixed(2)}</div>
         <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 8 }}>Min. {p.minSellingQuantity} {p.unit}</div>
         <button
-          onClick={e => {
+          disabled={p.availableStock <= 0}
+          onClick={p.availableStock > 0 ? e => {
             e.stopPropagation(); e.preventDefault()
-            dispatch(addToCart({ productId: p.id, name: p.name, slug: p.slug, brandName: p.brandName, basePrice: p.basePrice, unit: p.unit, minSellingQuantity: p.minSellingQuantity, primaryImageUrl: p.primaryImageUrl }))
+            const inCart = cartItems.find(i => i.productId === p.id)?.quantity ?? 0
+            if (inCart >= p.availableStock) { toast.error('Stokta yeterli ürün yok'); return }
+            dispatch(addToCart({ productId: p.id, name: p.name, slug: p.slug, brandName: p.brandName, basePrice: p.basePrice, unit: p.unit, minSellingQuantity: p.minSellingQuantity, availableStock: p.availableStock, primaryImageUrl: p.primaryImageUrl }))
             toast.success('Sepete eklendi')
-          }}
-          style={{ width: '100%', background: 'var(--primary)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '8px 0', borderRadius: 'var(--r)', border: 'none', cursor: 'pointer', transition: '0.2s' }}>
-          Sepete Ekle
+          } : undefined}
+          style={{
+            width: '100%',
+            background: p.availableStock <= 0 ? '#e5e7eb' : 'var(--primary)',
+            color: p.availableStock <= 0 ? '#111' : '#fff',
+            fontSize: 12, fontWeight: 700, padding: '8px 0',
+            borderRadius: 'var(--r)', border: 'none',
+            cursor: p.availableStock <= 0 ? 'not-allowed' : 'pointer',
+            transition: '0.2s',
+          }}>
+          {p.availableStock <= 0 ? 'Stokta Yok' : 'Sepete Ekle'}
         </button>
       </div>
     </div>

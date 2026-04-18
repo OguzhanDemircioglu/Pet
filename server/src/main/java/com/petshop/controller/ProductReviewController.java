@@ -38,4 +38,22 @@ public class ProductReviewController {
             @Valid @RequestBody ReviewRequest req) {
         return ResponseEntity.ok(reviewService.addReview(userId, slug, req));
     }
+
+    @PutMapping("/{reviewId}")
+    public ResponseEntity<ReviewResponse> update(
+            @PathVariable String slug,
+            @PathVariable Long reviewId,
+            @AuthenticationPrincipal Long userId,
+            @Valid @RequestBody ReviewRequest req) {
+        return ResponseEntity.ok(reviewService.updateReview(userId, reviewId, req));
+    }
+
+    @DeleteMapping("/{reviewId}")
+    public ResponseEntity<Void> delete(
+            @PathVariable String slug,
+            @PathVariable Long reviewId,
+            @AuthenticationPrincipal Long userId) {
+        reviewService.deleteReview(userId, reviewId);
+        return ResponseEntity.noContent().build();
+    }
 }

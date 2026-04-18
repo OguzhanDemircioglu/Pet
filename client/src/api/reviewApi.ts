@@ -5,6 +5,7 @@ export interface ReviewResponse {
   rating: number
   comment: string | null
   userName: string
+  userId: number | null
   createdAt: string
 }
 
@@ -23,4 +24,10 @@ export const reviewApi = {
 
   create: (slug: string, rating: number, comment: string) =>
     api.post<ReviewResponse>(`/products/${slug}/reviews`, { rating, comment: comment || null }).then(r => r.data),
+
+  update: (slug: string, id: number, rating: number, comment: string) =>
+    api.put<ReviewResponse>(`/products/${slug}/reviews/${id}`, { rating, comment: comment || null }).then(r => r.data),
+
+  delete: (slug: string, id: number) =>
+    api.delete(`/products/${slug}/reviews/${id}`),
 }

@@ -26,6 +26,7 @@ public record ProductResponse(
         Boolean isFeatured,
         String primaryImageUrl,
         Double averageRating,
+        Integer reviewCount,
         List<ImageDto> images,
         ActiveDiscountDto activeDiscount
 ) {
@@ -37,6 +38,11 @@ public record ProductResponse(
     }
 
     public static ProductResponse fromWithDiscount(Product p, ActiveDiscountDto discount) {
+        return fromWithDetails(p, discount, null, null);
+    }
+
+    public static ProductResponse fromWithDetails(Product p, ActiveDiscountDto discount,
+                                                   Double avgRating, Integer reviewCnt) {
         String primaryImage = p.getImages().stream()
                 .filter(ProductImage::getIsPrimary)
                 .map(ProductImage::getImageUrl)
@@ -58,7 +64,7 @@ public record ProductResponse(
                 p.getBasePrice(), p.getVatRate(), p.getMinSellingQuantity(),
                 p.getAvailableStock(), p.getUnit(),
                 p.getIsActive(), p.getIsFeatured(),
-                primaryImage, null, images, discount
+                primaryImage, avgRating, reviewCnt, images, discount
         );
     }
 }

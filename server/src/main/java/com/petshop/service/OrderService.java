@@ -17,6 +17,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.Sort;
+
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +41,18 @@ public class OrderService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException(OrderMessages.USER_NOT_FOUND.get() + userId));
 
+        // Sipariş kaydedilmeden önce stok kontrolü
+        for (OrderItemRequest itemReq : req.items()) {
+            if (itemReq.productId() == null) continue;
+            Product p = productRepository.findById(itemReq.productId()).orElse(null);
+            if (p == null) continue;
+            if (p.getStockQuantity() < itemReq.quantity()) {
+                throw new com.petshop.exception.BusinessException(
+                        "Yetersiz stok: \"" + itemReq.productName() + "\" — "
+                        + "mevcut: " + p.getStockQuantity() + ", istenen: " + itemReq.quantity());
+            }
+        }
+
         // Sipariş numarası üret
         String orderNumber = generateOrderNumber();
 
@@ -48,6 +62,7 @@ public class OrderService {
                 .orderNumber(orderNumber)
                 .user(user)
                 .status(Order.OrderStatus.PENDING)
+                .paymentMethod(Order.PaymentMethod.COD)
                 .guestName(req.fullName())
                 .guestPhone(req.phone())
                 .shippingCity(req.city())
@@ -83,6 +98,24 @@ public class OrderService {
 
         Order savedOrder = orderRepository.save(order);
         log.info(OrderMessages.LOG_ORDER_CREATED.get(), orderNumber, userId);
+
+        // Stok düş (sipariş alındı)
+        for (OrderItemRequest itemReq : req.items()) {
+            if (itemReq.productId() == null) continue;
+            Product p = productRepository.findById(itemReq.productId()).orElse(null);
+            if (p == null) continue;
+            p.setStockQuantity(p.getStockQuantity() - itemReq.quantity());
+            productRepository.save(p);
+            log.info("Stok düşüldü: ürün #{} ({}) → {} adet, kalan: {}",
+                    p.getId(), p.getName(), itemReq.quantity(), p.getStockQuantity());
+        }
+
+        // Admin bildirimi gönder
+        try {
+            notificationService.createAdminNotificationsForOrder(savedOrder);
+        } catch (Exception e) {
+            log.error("Admin bildirimi gönderilemedi: {}", e.getMessage());
+        }
 
         // Bildirim kaydet
         try {
@@ -125,6 +158,44 @@ public class OrderService {
                 .stream()
                 .map(OrderResponse::from)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrderResponse> getAllOrders() {
+        return orderRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
+                .stream()
+                .map(OrderResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public OrderResponse approveOrder(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Sipariş bulunamadı: " + orderId));
+        // Stok sipariş oluşturulduğunda zaten düşüldü — sadece durum güncelle
+        order.setStatus(Order.OrderStatus.PROCESSING);
+        return OrderResponse.from(orderRepository.save(order));
+    }
+
+    @Transactional
+    public OrderResponse rejectOrder(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Sipariş bulunamadı: " + orderId));
+        if (order.getStatus() == Order.OrderStatus.CANCELLED) {
+            throw new com.petshop.exception.BusinessException("Bu sipariş zaten iptal edilmiş");
+        }
+        // Stok iade et
+        for (OrderItem item : order.getItems()) {
+            if (item.getProduct() == null) continue;
+            Product p = productRepository.findById(item.getProduct().getId()).orElse(null);
+            if (p == null) continue;
+            p.setStockQuantity(p.getStockQuantity() + item.getQuantity());
+            productRepository.save(p);
+            log.info("Stok iade edildi: ürün #{} ({}) → {} adet geri eklendi, yeni: {}",
+                    p.getId(), p.getName(), item.getQuantity(), p.getStockQuantity());
+        }
+        order.setStatus(Order.OrderStatus.CANCELLED);
+        return OrderResponse.from(orderRepository.save(order));
     }
 
     // ------------------------------------------------------------------ helpers
@@ -177,6 +248,7 @@ public class OrderService {
               .append(" → ₺").append(lineTotal).append("\n");
         }
         sb.append("\n💰 <b>Toplam: ₺").append(req.totalAmount()).append("</b>\n");
+        sb.append("💳 Ödeme: 💵 Teslimatta Öde\n");
         if (order.getCreatedAt() != null) {
             sb.append("🕐 ").append(order.getCreatedAt().format(fmt));
         }

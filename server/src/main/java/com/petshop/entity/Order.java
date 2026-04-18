@@ -45,6 +45,13 @@ public class Order {
     @Column(nullable = false, length = 30)
     private OrderStatus status = OrderStatus.PENDING;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", nullable = false, length = 20)
+    private PaymentMethod paymentMethod = PaymentMethod.COD;
+
+    @Column(name = "iyzico_token", length = 200)
+    private String iyzicoToken;
+
     // Teslimat adresi (JSON veya ayrı alanlar)
     @Column(name = "shipping_address", columnDefinition = "TEXT")
     private String shippingAddress;
@@ -93,5 +100,10 @@ public class Order {
         DELIVERED,      // Teslim edildi
         CANCELLED,      // İptal
         REFUNDED        // İade
+    }
+
+    public enum PaymentMethod {
+        COD,            // Teslimatta öde
+        CREDIT_CARD     // Kredi kartı (iyzico)
     }
 }

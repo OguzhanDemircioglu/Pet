@@ -17,4 +17,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     @Query("SELECT o FROM Order o JOIN o.items i WHERE o.user.id = :userId AND i.product.id = :productId")
     List<Order> findByUserIdAndProductId(@Param("userId") Long userId, @Param("productId") Long productId);
+
+    Optional<Order> findByIyzicoToken(String iyzicoToken);
 }

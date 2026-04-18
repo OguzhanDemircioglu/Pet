@@ -49,6 +49,7 @@ export interface Product {
   isFeatured: boolean
   primaryImageUrl: string | null
   averageRating: number | null
+  reviewCount: number | null
   images: ProductImage[]
   activeDiscount: ActiveDiscount | null
 }
@@ -111,6 +112,7 @@ export interface FeaturedProduct {
   brandName: string | null
   basePrice: number
   minSellingQuantity: number
+  availableStock: number
   unit: string
   primaryImageUrl: string | null
   activeDiscount: ActiveDiscount | null

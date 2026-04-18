@@ -9,6 +9,7 @@ public record FeaturedProductDto(
         String brandName,
         BigDecimal basePrice,
         Integer minSellingQuantity,
+        Integer availableStock,
         String unit,
         String primaryImageUrl,
         ActiveDiscountDto activeDiscount
