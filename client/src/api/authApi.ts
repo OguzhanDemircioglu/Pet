@@ -26,6 +26,12 @@ export const authApi = {
   updatePhone: (phone: string) =>
     api.patch<User>('/auth/me/phone', { phone }).then(r => r.data),
 
+  updateProfile: (firstName: string, lastName: string, phone: string) =>
+    api.patch<User>('/auth/me/profile', { firstName, lastName, phone }).then(r => r.data),
+
+  requestEmailChange: (newEmail: string) =>
+    api.post<void>('/auth/me/email/request', { newEmail }),
+
   adminInfo: () =>
     api.get<AdminInfo>('/public/admin-info').then(r => r.data),
 

@@ -43,6 +43,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints
                 .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/register", "/auth/google", "/auth/refresh", "/auth/verify-email", "/auth/resend-verification").permitAll()
+                .requestMatchers(HttpMethod.GET, "/auth/me/email/confirm").permitAll()
                 .requestMatchers(HttpMethod.GET, "/categories/**", "/products/**", "/brands/**", "/public/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/products/*/reviews").permitAll()
                 .requestMatchers(HttpMethod.POST, "/orders/guest").permitAll()

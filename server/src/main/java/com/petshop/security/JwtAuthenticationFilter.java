@@ -1,5 +1,7 @@
 package com.petshop.security;
 
+import com.petshop.repository.UserRepository;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,6 +23,7 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -30,8 +33,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (token != null && jwtTokenProvider.validateToken(token)) {
             try {
-                Long userId = jwtTokenProvider.getUserIdFromToken(token);
-                String role = jwtTokenProvider.getRoleFromToken(token);
+                Claims claims = jwtTokenProvider.parseToken(token);
+                Long userId = Long.parseLong(claims.getSubject());
+                String role = claims.get("role", String.class);
+                Integer tokenVersion = claims.get("tv", Integer.class);
+
+                Integer currentVersion = userRepository.findTokenVersionById(userId).orElse(null);
+                if (currentVersion == null || tokenVersion == null || !tokenVersion.equals(currentVersion)) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
 
                 UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                         userId, null,

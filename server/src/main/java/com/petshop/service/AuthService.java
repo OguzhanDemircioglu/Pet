@@ -2,6 +2,8 @@ package com.petshop.service;
 
 import com.petshop.constant.AuthMessages;
 import com.petshop.constant.SchedulerConstants;
+import com.petshop.entity.PendingEmailChange;
+import com.petshop.repository.PendingEmailChangeRepository;
 import com.petshop.dto.request.GoogleAuthRequest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -43,6 +45,13 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
     private final NotificationOutboxService notificationOutboxService;
+    private final PendingEmailChangeRepository pendingEmailChangeRepository;
+
+    @Value("${app.url}")
+    private String appUrl;
+
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -210,7 +219,8 @@ public class AuthService {
     public UserResponse me(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException(AuthMessages.USER_NOT_FOUND.get(), userId));
-        return UserResponse.from(user);
+        boolean hasPending = pendingEmailChangeRepository.findByUserId(userId).isPresent();
+        return UserResponse.from(user, hasPending);
     }
 
     @Transactional
@@ -222,11 +232,22 @@ public class AuthService {
         return UserResponse.from(user);
     }
 
+    @Transactional
+    public UserResponse updateProfile(Long userId, String firstName, String lastName, String phone) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException(AuthMessages.USER_NOT_FOUND.get(), userId));
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setPhone(phone);
+        userRepository.save(user);
+        return UserResponse.from(user);
+    }
+
     // ---- private helpers ----
 
     private AuthResponse generateAuthResponse(User user) {
         String accessToken = jwtTokenProvider.generateAccessToken(
-                user.getId(), user.getEmail(), user.getRole().name());
+                user.getId(), user.getEmail(), user.getRole().name(), user.getTokenVersion());
 
         String refreshTokenStr = UUID.randomUUID().toString();
         RefreshToken rt = RefreshToken.builder()
@@ -258,5 +279,59 @@ public class AuthService {
             log.error(AuthMessages.LOG_GOOGLE_FETCH_FAIL.get(), e);
             throw new BusinessException(AuthMessages.GOOGLE_AUTH_FAILED.get());
         }
+    }
+
+    @Transactional
+    public void requestEmailChange(Long userId, String newEmail) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException(AuthMessages.USER_NOT_FOUND.get()));
+
+        if (user.getEmail().equalsIgnoreCase(newEmail.trim())) {
+            throw new BusinessException(AuthMessages.EMAIL_CHANGE_SAME.get());
+        }
+        if (userRepository.existsByEmail(newEmail.trim())) {
+            throw new BusinessException(AuthMessages.EMAIL_CHANGE_IN_USE.get());
+        }
+
+        pendingEmailChangeRepository.deleteByUserId(userId);
+
+        String token = UUID.randomUUID().toString();
+        pendingEmailChangeRepository.save(PendingEmailChange.builder()
+                .userId(userId)
+                .newEmail(newEmail.trim())
+                .token(token)
+                .expiresAt(LocalDateTime.now().plusHours(24))
+                .build());
+
+        String confirmUrl = appUrl + "/auth/me/email/confirm?token=" + token;
+        String firstName = user.getFirstName() != null ? user.getFirstName() : user.getEmail();
+        notificationOutboxService.enqueueEmailChangeConfirmation(newEmail.trim(), firstName, confirmUrl);
+    }
+
+    @Transactional
+    public String confirmEmailChange(String token) {
+        PendingEmailChange pending = pendingEmailChangeRepository.findByToken(token)
+                .orElseThrow(() -> new BusinessException(AuthMessages.EMAIL_CHANGE_TOKEN_INVALID.get()));
+
+        if (pending.getExpiresAt().isBefore(LocalDateTime.now())) {
+            pendingEmailChangeRepository.delete(pending);
+            throw new BusinessException(AuthMessages.EMAIL_CHANGE_TOKEN_INVALID.get());
+        }
+
+        User user = userRepository.findById(pending.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException(AuthMessages.USER_NOT_FOUND.get()));
+
+        user.setEmail(pending.getNewEmail());
+        user.setTokenVersion(user.getTokenVersion() + 1);
+        userRepository.save(user);
+        pendingEmailChangeRepository.delete(pending);
+        refreshTokenRepository.deleteAllByUserId(user.getId());
+
+        log.info("E-posta değiştirildi: kullanıcı #{} → {}", user.getId(), user.getEmail());
+        return frontendUrl + "/login?emailChanged=true";
+    }
+
+    public String getFrontendUrl() {
+        return frontendUrl;
     }
 }

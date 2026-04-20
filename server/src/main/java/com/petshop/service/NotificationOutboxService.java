@@ -47,6 +47,13 @@ public class NotificationOutboxService {
         save(toEmail, subject, html, false);  // sadece job ile gönderim
     }
 
+    @Transactional
+    public void enqueueEmailChangeConfirmation(String toEmail, String firstName, String confirmUrl) {
+        String subject = appName + EmailMessages.SUBJECT_EMAIL_CHANGE.get();
+        String html = emailService.buildEmailChangeEmail(firstName, confirmUrl);
+        save(toEmail, subject, html, true);   // commit sonrası anlık gönderim
+    }
+
     // --- scheduled job (1 dakika — retry safety net) ---
 
     @Scheduled(fixedDelay = SchedulerConstants.EMAIL_OUTBOX_DELAY_MS)

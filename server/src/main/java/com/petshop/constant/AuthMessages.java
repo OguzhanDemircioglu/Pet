@@ -17,7 +17,11 @@ public enum AuthMessages {
     GOOGLE_TOKEN_INVALID("Google token geçersiz veya süresi dolmuş."),
     GOOGLE_AUTH_FAILED("Google ile giriş başarısız"),
     LOG_EMAIL_QUEUE_FAIL("Email kuyruğa alınamadı (kayıt etkilenmedi): {}"),
-    LOG_GOOGLE_FETCH_FAIL("Google userinfo fetch failed");
+    LOG_GOOGLE_FETCH_FAIL("Google userinfo fetch failed"),
+    EMAIL_CHANGE_SAME("Yeni e-posta mevcut e-postanızla aynı olamaz."),
+    EMAIL_CHANGE_IN_USE("Bu e-posta adresi başka bir hesap tarafından kullanılıyor."),
+    EMAIL_CHANGE_SENT("Doğrulama e-postası gönderildi. Bağlantı 24 saat geçerlidir."),
+    EMAIL_CHANGE_TOKEN_INVALID("Doğrulama bağlantısı geçersiz veya süresi dolmuş.");
 
     private final String message;
     AuthMessages(String message) { this.message = message; }

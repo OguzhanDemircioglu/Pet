@@ -61,6 +61,7 @@ export interface User {
   lastName: string
   phone: string | null
   role: 'ADMIN' | 'CUSTOMER'
+  pendingEmailChange: boolean
 }
 
 export interface AuthResponse {

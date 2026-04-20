@@ -198,4 +198,60 @@ public class EmailService {
             </html>
             """.formatted(appNamePart1, appNamePart2, firstName, appName, code, appYear, appName, appDomain);
     }
+
+    String buildEmailChangeEmail(String firstName, String confirmUrl) {
+        return """
+            <!DOCTYPE html>
+            <html lang="tr">
+            <head><meta charset="UTF-8"></head>
+            <body style="margin:0;padding:0;background:#f8f9fa;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+              <table width="100%%" cellpadding="0" cellspacing="0" style="background:#f8f9fa;padding:40px 0">
+                <tr><td align="center">
+                  <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08)">
+
+                    <tr>
+                      <td style="background:#1e3a5f;padding:28px 40px;text-align:center">
+                        <span style="font-size:22px;font-weight:700;color:#ffffff">
+                          <span style="color:#dc2626">%s</span><span style="color:#38bdf8">%s</span>
+                        </span>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td style="padding:40px">
+                        <p style="margin:0 0 16px;font-size:16px;color:#1a1a1a">Merhaba <strong>%s</strong>,</p>
+                        <p style="margin:0 0 28px;font-size:15px;color:#64748b;line-height:1.6">
+                          %s hesabınızın e-posta adresini değiştirmek için bir istek aldık.
+                          Aşağıdaki butona tıklayarak yeni e-posta adresinizi onaylayın.
+                          Bu bağlantı <strong>24 saat</strong> geçerlidir.
+                        </p>
+
+                        <div style="text-align:center;margin-bottom:28px">
+                          <a href="%s" style="display:inline-block;background:#dc2626;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px">
+                            E-posta Adresimi Onayla
+                          </a>
+                        </div>
+
+                        <p style="margin:0 0 8px;font-size:13px;color:#94a3b8">
+                          Bu işlemi siz yapmadıysanız bu e-postayı görmezden gelin. E-posta adresiniz değişmeyecektir.
+                        </p>
+                        <p style="margin:0;font-size:12px;color:#cbd5e1;word-break:break-all">
+                          Buton çalışmıyorsa şu bağlantıyı kopyalayın: %s
+                        </p>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td style="background:#f8f9fa;padding:20px 40px;text-align:center;border-top:1px solid #e2e8f0">
+                        <p style="margin:0;font-size:12px;color:#94a3b8">© %s %s · %s</p>
+                      </td>
+                    </tr>
+
+                  </table>
+                </td></tr>
+              </table>
+            </body>
+            </html>
+            """.formatted(appNamePart1, appNamePart2, firstName, appName, confirmUrl, confirmUrl, appYear, appName, appDomain);
+    }
 }

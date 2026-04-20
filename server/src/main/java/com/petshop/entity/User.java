@@ -2,6 +2,7 @@ package com.petshop.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Check;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -13,6 +14,8 @@ import java.util.List;
 @Table(name = "users", schema = "petshop",
        uniqueConstraints = @UniqueConstraint(columnNames = "email"),
        indexes = @Index(name = "idx_user_google", columnList = "google_id"))
+@Check(name = "chk_users_name_no_digits",
+       constraints = "first_name !~ '[0-9]' AND last_name !~ '[0-9]'")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class User {
 
@@ -26,10 +29,10 @@ public class User {
     @Column(name = "password_hash", length = 255)
     private String passwordHash;
 
-    @Column(name = "first_name", length = 100)
+    @Column(name = "first_name", length = 20)
     private String firstName;
 
-    @Column(name = "last_name", length = 100)
+    @Column(name = "last_name", length = 20)
     private String lastName;
 
     @Enumerated(EnumType.STRING)
@@ -47,6 +50,9 @@ public class User {
 
     @Column(name = "email_verified", nullable = false)
     private Boolean emailVerified = false;
+
+    @Column(name = "token_version", nullable = false, columnDefinition = "INTEGER NOT NULL DEFAULT 0")
+    private int tokenVersion = 0;
 
     @Column(name = "verification_code", length = 6)
     private String verificationCode;

@@ -19,9 +19,13 @@ public record RegisterRequest(
         String password,
 
         @NotBlank(message = "Ad zorunludur")
+        @Size(max = 20, message = "Ad en fazla 20 karakter olabilir")
+        @Pattern(regexp = "^[^\\d]+$", message = "Ad rakam içeremez")
         String firstName,
 
         @NotBlank(message = "Soyad zorunludur")
+        @Size(max = 20, message = "Soyad en fazla 20 karakter olabilir")
+        @Pattern(regexp = "^[^\\d]+$", message = "Soyad rakam içeremez")
         String lastName,
 
         @NotBlank(message = "Telefon numarası zorunludur")

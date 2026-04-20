@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import toast from 'react-hot-toast'
 import InfoBar from '../components/InfoBar'
@@ -7,7 +7,7 @@ import Header from '../components/Header'
 import CategoryBar from '../components/CategoryBar'
 import Footer from '../components/Footer'
 import type { RootState, AppDispatch } from '../store'
-import { logout } from '../store/authSlice'
+import { logout, updateUserProfile } from '../store/authSlice'
 import { resetCatalog, fetchCatalogThunk } from '../store/productSlice'
 import { fetchBrandsThunk, resetBrands } from '../store/brandSlice'
 import { fetchAdminCampaignsThunk, resetAdminCampaigns } from '../store/adminCampaignSlice'
@@ -20,7 +20,9 @@ import { markAllReadThunk, markReadThunk } from '../store/notificationSlice'
 import { fetchCategoriesThunk } from '../store/categorySlice'
 import type { CatalogProduct, ProductImage as ProductImageType, Brand, Category, AdminUser, Address, AddressRequest } from '../types'
 import { addressApi } from '../api/addressApi'
+import { authApi } from '../api/authApi'
 import { TURKEY_DISTRICTS } from '../data/turkeyDistricts'
+import { PHONE_RE, NON_DIGIT_RE, WHITESPACE_RE } from '../constants/regex'
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
 type Section = 'orders' | 'info' | 'addresses' | 'notifications' | 'products' | 'brands' | 'campaigns' | 'categories' | 'users' | 'adminorders'
@@ -59,10 +61,18 @@ export default function ProfilePage() {
   const isAdmin = user?.role === 'ADMIN'
 
   const [section, setSection] = useState<Section>(isAdmin ? 'adminorders' : 'orders')
+  const [searchParams, setSearchParams] = useSearchParams()
 
   useEffect(() => {
     if (!user) navigate('/login')
   }, [user, navigate])
+
+  useEffect(() => {
+    if (searchParams.get('emailError')) {
+      toast.error(searchParams.get('emailError') || 'E-posta değiştirilemedi.')
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   const handleLogout = () => {
     dispatch(logout())
@@ -363,31 +373,202 @@ function AdminOrdersSection() {
 }
 
 // ─── Info Section ──────────────────────────────────────────────────────────────
-function InfoSection({ user }: { user: { firstName: string; lastName: string; email: string; phone: string | null } }) {
-  const [form, setForm] = useState({ firstName: user.firstName, lastName: user.lastName, email: user.email, phone: user.phone || '' })
+function InfoSection({ user }: { user: { firstName: string; lastName: string; email: string; phone: string | null; pendingEmailChange: boolean } }) {
+  const dispatch = useDispatch<AppDispatch>()
+  const [form, setForm] = useState({ firstName: user.firstName, lastName: user.lastName, phone: user.phone || '' })
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  const [saving, setSaving] = useState(false)
+  const phoneInputRef = useRef<HTMLInputElement>(null)
+  const [emailChangeOpen, setEmailChangeOpen] = useState(false)
+  const [newEmail, setNewEmail] = useState('')
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState(false)
+
+  const validateName = (value: string, label: string) => {
+    if (!value.trim()) return `${label} zorunludur`
+    if (/\d/.test(value)) return `${label} rakam içeremez`
+    if (value.trim().length > 20) return `${label} en fazla 20 karakter olabilir`
+    return ''
+  }
+
+  const handleFieldChange = (key: keyof typeof form, value: string) => {
+    const sanitized = (key === 'firstName' || key === 'lastName')
+      ? value.replace(/\d/g, '').slice(0, 20)
+      : value
+    setForm(p => ({ ...p, [key]: sanitized }))
+    if (key === 'firstName' || key === 'lastName') {
+      setFormErrors(p => ({ ...p, [key]: validateName(sanitized, key === 'firstName' ? 'Ad' : 'Soyad') }))
+    }
+  }
+
+  const validatePhone = (v: string) => {
+    if (!v) return 'Telefon numarası zorunludur'
+    if (!PHONE_RE.test(v)) return '05XX XXX XX XX formatında girin'
+    return ''
+  }
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value
+    const cursorPos = e.target.selectionStart ?? raw.length
+    const digitsBeforeCursor = raw.slice(0, cursorPos).replace(NON_DIGIT_RE, '').length
+
+    let digits = raw.replace(NON_DIGIT_RE, '').slice(0, 11)
+    if (digits.length >= 1 && digits[0] !== '0') digits = '0' + digits.slice(0, 10)
+    if (digits.length >= 2 && digits[1] !== '5') digits = digits[0] + '5' + digits.slice(2)
+
+    let formatted = digits
+    if (digits.length > 4) formatted = digits.slice(0, 4) + ' ' + digits.slice(4)
+    if (digits.length > 7) formatted = digits.slice(0, 4) + ' ' + digits.slice(4, 7) + ' ' + digits.slice(7)
+    if (digits.length > 9) formatted = digits.slice(0, 4) + ' ' + digits.slice(4, 7) + ' ' + digits.slice(7, 9) + ' ' + digits.slice(9)
+
+    setForm(p => ({ ...p, phone: formatted }))
+    setFormErrors(p => ({ ...p, phone: '' }))
+
+    requestAnimationFrame(() => {
+      if (!phoneInputRef.current) return
+      let digitCount = 0, newCursor = formatted.length
+      for (let i = 0; i < formatted.length; i++) {
+        if (/\d/.test(formatted[i])) {
+          digitCount++
+          if (digitCount === digitsBeforeCursor) { newCursor = i + 1; break }
+        }
+      }
+      phoneInputRef.current.setSelectionRange(newCursor, newCursor)
+    })
+  }
+
+  const handleEmailChange = async () => {
+    if (!newEmail.trim()) return
+    setSending(true)
+    try {
+      await authApi.requestEmailChange(newEmail.trim())
+      setSent(true)
+      setEmailChangeOpen(false)
+      setNewEmail('')
+    } catch (err: any) {
+      toast.error(err.message || 'E-posta değiştirilemedi')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const inputStyle: React.CSSProperties = {
+    height: 40, border: '1.5px solid var(--border)', borderRadius: 'var(--r)',
+    background: 'var(--bg3)', color: 'var(--text)', fontSize: 13.5,
+    padding: '0 12px', outline: 'none', fontFamily: 'inherit',
+  }
 
   return (
     <div>
       <SectionHead title="Bilgilerim" sub="Kişisel bilgilerinizi güncelleyin" />
+      {user.pendingEmailChange && (
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 16px', marginBottom: 16, background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 'var(--r)', fontSize: 13, color: '#92400e', lineHeight: 1.5 }}>
+          <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
+          <span>E-posta değişikliği talebiniz onay bekliyor. Yeni adresinize gönderilen bağlantıya <strong>24 saat</strong> içinde tıklamazsanız talep otomatik iptal edilir.</span>
+        </div>
+      )}
       <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', overflow: 'hidden' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, padding: 20 }}>
-          {[
+          {([
             { label: 'Ad', key: 'firstName' },
             { label: 'Soyad', key: 'lastName' },
-            { label: 'E-posta', key: 'email' },
-            { label: 'Telefon', key: 'phone' },
-          ].map(f => (
+          ] as { label: string; key: keyof typeof form }[]).map(f => (
             <div key={f.key} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>{f.label}</label>
-              <input value={form[f.key as keyof typeof form]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
-                style={{ height: 40, border: '1.5px solid var(--border)', borderRadius: 'var(--r)', background: 'var(--bg3)', color: 'var(--text)', fontSize: 13.5, padding: '0 12px', outline: 'none', fontFamily: 'inherit' }} />
+              <input
+                value={form[f.key]}
+                onChange={e => handleFieldChange(f.key, e.target.value)}
+                maxLength={20}
+                style={{ ...inputStyle, borderColor: formErrors[f.key] ? '#dc2626' : undefined }}
+              />
+              {formErrors[f.key] && <span style={{ fontSize: 11, color: '#dc2626' }}>{formErrors[f.key]}</span>}
             </div>
           ))}
+
+          {/* E-posta — read-only + değiştir butonu */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>E-posta</label>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input value={user.email} readOnly style={{ ...inputStyle, flex: 1, background: 'var(--bg)', color: 'var(--text3)', cursor: 'default' }} />
+              <button onClick={() => { setEmailChangeOpen(v => !v); setSent(false) }}
+                style={{ height: 40, padding: '0 14px', fontSize: 12, fontWeight: 700, background: 'var(--bg3)', color: 'var(--text2)', border: '1.5px solid var(--border)', borderRadius: 'var(--r)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                Değiştir
+              </button>
+            </div>
+          </div>
+
+          {/* Telefon */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>Telefon</label>
+            <input
+              ref={phoneInputRef}
+              value={form.phone}
+              onChange={handlePhoneChange}
+              placeholder="05XX XXX XX XX"
+              inputMode="numeric"
+              style={{ ...inputStyle, borderColor: formErrors.phone ? '#dc2626' : undefined }}
+            />
+            {formErrors.phone && <span style={{ fontSize: 11, color: '#dc2626' }}>{formErrors.phone}</span>}
+          </div>
         </div>
+
+        {/* E-posta değiştirme formu */}
+        {emailChangeOpen && (
+          <div style={{ margin: '0 20px 16px', padding: 16, background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: 'var(--r2)' }}>
+            <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--text2)', lineHeight: 1.5 }}>
+              Yeni e-posta adresinize bir doğrulama bağlantısı gönderilecektir.
+              Bağlantı <strong>24 saat</strong> geçerlidir.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)}
+                placeholder="Yeni e-posta adresi"
+                onKeyDown={e => e.key === 'Enter' && handleEmailChange()}
+                style={{ ...inputStyle, flex: 1 }}
+              />
+              <button onClick={handleEmailChange} disabled={sending || !newEmail.trim()}
+                style={{ height: 40, padding: '0 16px', fontSize: 13, fontWeight: 700, background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--r)', cursor: sending ? 'not-allowed' : 'pointer', opacity: sending ? 0.7 : 1 }}>
+                {sending ? 'Gönderiliyor…' : 'Gönder'}
+              </button>
+              <button onClick={() => { setEmailChangeOpen(false); setNewEmail('') }}
+                style={{ height: 40, padding: '0 14px', fontSize: 13, fontWeight: 600, background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', cursor: 'pointer' }}>
+                İptal
+              </button>
+            </div>
+          </div>
+        )}
+
+        {sent && (
+          <div style={{ margin: '0 20px 16px', padding: '12px 16px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 'var(--r)', fontSize: 13, color: '#166534' }}>
+            ✅ Doğrulama e-postası gönderildi. Gelen kutunuzu kontrol edin — bağlantı 24 saat geçerlidir.
+          </div>
+        )}
+
         <div style={{ padding: '0 20px 20px', display: 'flex', gap: 10 }}>
-          <button onClick={() => toast.success('Bilgiler güncellendi')} style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--r)', padding: '9px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Kaydet</button>
-          <button onClick={() => setForm({ firstName: user.firstName, lastName: user.lastName, email: user.email, phone: user.phone || '' })}
-            style={{ background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '9px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>İptal</button>
+          <button onClick={async () => {
+            const firstNameErr = validateName(form.firstName, 'Ad')
+            const lastNameErr = validateName(form.lastName, 'Soyad')
+            const phoneErr = validatePhone(form.phone)
+            if (firstNameErr || lastNameErr || phoneErr) {
+              setFormErrors({ firstName: firstNameErr, lastName: lastNameErr, phone: phoneErr })
+              return
+            }
+            setSaving(true)
+            try {
+              await authApi.updateProfile(form.firstName.trim(), form.lastName.trim(), form.phone)
+              dispatch(updateUserProfile({ firstName: form.firstName.trim(), lastName: form.lastName.trim(), phone: form.phone }))
+              toast.success('Bilgiler güncellendi')
+            } catch (err: any) {
+              toast.error(err.message || 'Güncelleme başarısız')
+            } finally {
+              setSaving(false)
+            }
+          }} disabled={saving} style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--r)', padding: '9px 20px', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+            {saving ? 'Kaydediliyor…' : 'Kaydet'}
+          </button>
+          <button onClick={() => { setForm({ firstName: user.firstName, lastName: user.lastName, phone: user.phone || '' }); setFormErrors({}) }}
+            disabled={saving}
+            style={{ background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '9px 20px', fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer' }}>İptal</button>
         </div>
       </div>
     </div>

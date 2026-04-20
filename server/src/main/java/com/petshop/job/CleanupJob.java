@@ -1,5 +1,6 @@
 package com.petshop.job;
 
+import com.petshop.repository.PendingEmailChangeRepository;
 import com.petshop.repository.RefreshTokenRepository;
 import com.petshop.repository.RequestLogRepository;
 import com.petshop.repository.UserRepository;
@@ -16,12 +17,20 @@ import java.time.LocalDateTime;
 @Slf4j
 public class CleanupJob {
 
+    private final PendingEmailChangeRepository pendingEmailChangeRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final RequestLogRepository requestLogRepository;
     private final UserRepository userRepository;
 
     // Her gece 03:00'de çalışır
     @Scheduled(cron = "0 0 3 * * *")
+    @Transactional
+    public void cleanupExpiredPendingEmailChanges() {
+        int deleted = pendingEmailChangeRepository.deleteExpiredBefore(LocalDateTime.now());
+        if (deleted > 0) log.info("{} süresi dolmuş e-posta değişiklik isteği silindi", deleted);
+    }
+
+    @Scheduled(cron = "0 5 3 * * *")
     @Transactional
     public void cleanupExpiredTokens() {
         refreshTokenRepository.deleteExpiredAndRevoked(LocalDateTime.now());

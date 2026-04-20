@@ -8,7 +8,8 @@ public record UserResponse(
         String firstName,
         String lastName,
         String phone,
-        String role
+        String role,
+        boolean pendingEmailChange
 ) {
     public static UserResponse from(User user) {
         return new UserResponse(
@@ -17,7 +18,20 @@ public record UserResponse(
                 user.getFirstName(),
                 user.getLastName(),
                 user.getPhone(),
-                user.getRole().name()
+                user.getRole().name(),
+                false
+        );
+    }
+
+    public static UserResponse from(User user, boolean pendingEmailChange) {
+        return new UserResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getPhone(),
+                user.getRole().name(),
+                pendingEmailChange
         );
     }
 }

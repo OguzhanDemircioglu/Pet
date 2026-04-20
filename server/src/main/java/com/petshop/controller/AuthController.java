@@ -8,7 +8,9 @@ import com.petshop.dto.response.DataGenericResponse;
 import com.petshop.dto.response.GenericResponse;
 import com.petshop.dto.response.UserResponse;
 import com.petshop.service.AuthService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -77,5 +79,42 @@ public class AuthController {
         return ResponseEntity.ok(DataGenericResponse.of(authService.updatePhone(userId, req.phone())));
     }
 
+    @PatchMapping("/me/profile")
+    public ResponseEntity<DataGenericResponse<UserResponse>> updateProfile(
+            @AuthenticationPrincipal Long userId,
+            @Valid @RequestBody ProfileUpdateRequest req) {
+        return ResponseEntity.ok(DataGenericResponse.of(
+                authService.updateProfile(userId, req.firstName(), req.lastName(), req.phone())));
+    }
+
+    @PostMapping("/me/email/request")
+    public ResponseEntity<GenericResponse> requestEmailChange(
+            @AuthenticationPrincipal Long userId,
+            @Valid @RequestBody EmailChangeRequest req) {
+        authService.requestEmailChange(userId, req.newEmail());
+        return ResponseEntity.ok(GenericResponse.ok(com.petshop.constant.AuthMessages.EMAIL_CHANGE_SENT.get()));
+    }
+
+    @GetMapping("/me/email/confirm")
+    public void confirmEmailChange(@RequestParam String token, HttpServletResponse response) throws java.io.IOException {
+        try {
+            String redirectUrl = authService.confirmEmailChange(token);
+            response.sendRedirect(redirectUrl);
+        } catch (Exception e) {
+            response.sendRedirect(authService.getFrontendUrl() + "/profil?emailError=" +
+                    java.net.URLEncoder.encode(e.getMessage(), java.nio.charset.StandardCharsets.UTF_8));
+        }
+    }
+
     record PhoneRequest(@NotBlank String phone) {}
+    record EmailChangeRequest(@NotBlank @Email String newEmail) {}
+    record ProfileUpdateRequest(
+        @NotBlank @jakarta.validation.constraints.Size(max = 20)
+        @jakarta.validation.constraints.Pattern(regexp = "^[^\\d]+$", message = "Ad rakam içeremez")
+        String firstName,
+        @NotBlank @jakarta.validation.constraints.Size(max = 20)
+        @jakarta.validation.constraints.Pattern(regexp = "^[^\\d]+$", message = "Soyad rakam içeremez")
+        String lastName,
+        @NotBlank String phone
+    ) {}
 }

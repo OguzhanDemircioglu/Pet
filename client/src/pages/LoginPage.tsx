@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useGoogleLogin } from '@react-oauth/google'
 import { useSelector } from 'react-redux'
 import { useAppDispatch } from '../hooks/useAppDispatch'
-import { loginThunk, registerThunk, verifyEmailThunk, setUser } from '../store/authSlice'
+import { loginThunk, registerThunk, verifyEmailThunk, setUser, logout } from '../store/authSlice'
 import { authApi } from '../api/authApi'
 import InfoBar from '../components/InfoBar'
 import { useTheme } from '../context/ThemeContext'
@@ -116,10 +116,19 @@ export default function LoginPage() {
   const authInitialized = useSelector((s: RootState) => s.auth.initialized)
   const navigate = useNavigate()
 
-  // Zaten giriş yapmış kullanıcıyı ana sayfaya yönlendir (hook sonrası)
+  const [searchParams, setSearchParams] = useSearchParams()
+
   useEffect(() => {
     if (authInitialized && authUser) navigate('/', { replace: true })
   }, [authInitialized, authUser, navigate])
+
+  useEffect(() => {
+    if (searchParams.get('emailChanged') === 'true') {
+      dispatch(logout())
+      toast.success('E-posta adresiniz güncellendi. Lütfen tekrar giriş yapın.')
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, setSearchParams, dispatch])
 
   const [tab, setTab] = useState<'login' | 'register'>('login')
   const [loading, setLoading] = useState(false)
@@ -250,7 +259,11 @@ export default function LoginPage() {
     e.preventDefault()
     const errs: Record<string, string> = {}
     if (!regFirstName.trim()) errs.firstName = 'Ad zorunludur'
+    else if (/\d/.test(regFirstName)) errs.firstName = 'Ad rakam içeremez'
+    else if (regFirstName.trim().length > 20) errs.firstName = 'Ad en fazla 20 karakter olabilir'
     if (!regLastName.trim()) errs.lastName = 'Soyad zorunludur'
+    else if (/\d/.test(regLastName)) errs.lastName = 'Soyad rakam içeremez'
+    else if (regLastName.trim().length > 20) errs.lastName = 'Soyad en fazla 20 karakter olabilir'
     const emailErr = validateEmail(regEmail)
     if (emailErr) errs.email = emailErr
     const phoneErr = validatePhone(regPhone)
@@ -448,10 +461,10 @@ export default function LoginPage() {
                 <form onSubmit={handleRegister}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <Field label="Ad" value={regFirstName}
-                      onChange={v => { setRegFirstName(v); setRegErrors(p => ({ ...p, firstName: '' })) }}
+                      onChange={v => { setRegFirstName(v.replace(/\d/g, '').slice(0, 20)); setRegErrors(p => ({ ...p, firstName: '' })) }}
                       placeholder="Adınız" error={regErrors.firstName} />
                     <Field label="Soyad" value={regLastName}
-                      onChange={v => { setRegLastName(v); setRegErrors(p => ({ ...p, lastName: '' })) }}
+                      onChange={v => { setRegLastName(v.replace(/\d/g, '').slice(0, 20)); setRegErrors(p => ({ ...p, lastName: '' })) }}
                       placeholder="Soyadınız" error={regErrors.lastName} />
                   </div>
                   <Field label="E-posta Adresi" type="email" value={regEmail}
