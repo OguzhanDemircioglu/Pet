@@ -1,5 +1,6 @@
 package com.petshop.controller.admin;
 
+import com.petshop.dto.response.DataGenericResponse;
 import com.petshop.dto.response.OrderResponse;
 import com.petshop.service.OrderService;
 import lombok.RequiredArgsConstructor;
@@ -16,17 +17,17 @@ public class AdminOrderController {
     private final OrderService orderService;
 
     @GetMapping
-    public ResponseEntity<List<OrderResponse>> getAllOrders() {
-        return ResponseEntity.ok(orderService.getAllOrders());
+    public ResponseEntity<DataGenericResponse<List<OrderResponse>>> getAllOrders() {
+        return ResponseEntity.ok(DataGenericResponse.of(orderService.getAllOrders()));
     }
 
     @PatchMapping("/{id}/approve")
-    public ResponseEntity<OrderResponse> approveOrder(@PathVariable Long id) {
-        return ResponseEntity.ok(orderService.approveOrder(id));
+    public ResponseEntity<DataGenericResponse<OrderResponse>> approveOrder(@PathVariable Long id) {
+        return ResponseEntity.ok(DataGenericResponse.of(orderService.approveOrder(id)));
     }
 
     @PatchMapping("/{id}/reject")
-    public ResponseEntity<OrderResponse> rejectOrder(@PathVariable Long id) {
-        return ResponseEntity.ok(orderService.rejectOrder(id));
+    public ResponseEntity<DataGenericResponse<OrderResponse>> rejectOrder(@PathVariable Long id) {
+        return ResponseEntity.ok(DataGenericResponse.of(orderService.rejectOrder(id)));
     }
 }

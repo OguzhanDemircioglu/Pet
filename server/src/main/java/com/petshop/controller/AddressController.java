@@ -2,6 +2,8 @@ package com.petshop.controller;
 
 import com.petshop.dto.request.AddressRequest;
 import com.petshop.dto.response.AddressResponse;
+import com.petshop.dto.response.DataGenericResponse;
+import com.petshop.dto.response.GenericResponse;
 import com.petshop.service.AddressService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,37 +21,37 @@ public class AddressController {
     private final AddressService addressService;
 
     @GetMapping
-    public ResponseEntity<List<AddressResponse>> list(@AuthenticationPrincipal Long userId) {
-        return ResponseEntity.ok(addressService.list(userId));
+    public ResponseEntity<DataGenericResponse<List<AddressResponse>>> list(@AuthenticationPrincipal Long userId) {
+        return ResponseEntity.ok(DataGenericResponse.of(addressService.list(userId)));
     }
 
     @PostMapping
-    public ResponseEntity<AddressResponse> create(
+    public ResponseEntity<DataGenericResponse<AddressResponse>> create(
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody AddressRequest req) {
-        return ResponseEntity.ok(addressService.create(userId, req));
+        return ResponseEntity.ok(DataGenericResponse.of(addressService.create(userId, req)));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<AddressResponse> update(
+    public ResponseEntity<DataGenericResponse<AddressResponse>> update(
             @AuthenticationPrincipal Long userId,
             @PathVariable Long id,
             @Valid @RequestBody AddressRequest req) {
-        return ResponseEntity.ok(addressService.update(userId, id, req));
+        return ResponseEntity.ok(DataGenericResponse.of(addressService.update(userId, id, req)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(
+    public ResponseEntity<GenericResponse> delete(
             @AuthenticationPrincipal Long userId,
             @PathVariable Long id) {
         addressService.delete(userId, id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(GenericResponse.ok());
     }
 
     @PatchMapping("/{id}/default")
-    public ResponseEntity<AddressResponse> setDefault(
+    public ResponseEntity<DataGenericResponse<AddressResponse>> setDefault(
             @AuthenticationPrincipal Long userId,
             @PathVariable Long id) {
-        return ResponseEntity.ok(addressService.setDefault(userId, id));
+        return ResponseEntity.ok(DataGenericResponse.of(addressService.setDefault(userId, id)));
     }
 }

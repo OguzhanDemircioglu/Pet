@@ -1,6 +1,7 @@
 package com.petshop.controller;
 
 import com.petshop.dto.request.OrderRequest;
+import com.petshop.dto.response.DataGenericResponse;
 import com.petshop.dto.response.PaymentInitiateResponse;
 import com.petshop.service.PaymentService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,14 +25,13 @@ public class PaymentController {
      * Sipariş PENDING + CREDIT_CARD olarak kaydedilir, iyzico Checkout Form URL'i döner.
      */
     @PostMapping("/iyzico/initiate")
-    public ResponseEntity<PaymentInitiateResponse> initiate(
+    public ResponseEntity<DataGenericResponse<PaymentInitiateResponse>> initiate(
             @AuthenticationPrincipal Long userId,
             @RequestBody OrderRequest req,
             HttpServletRequest httpReq) {
 
         String clientIp = getClientIp(httpReq);
-        PaymentInitiateResponse response = paymentService.initiate(userId, req, clientIp);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(DataGenericResponse.of(paymentService.initiate(userId, req, clientIp)));
     }
 
     /**

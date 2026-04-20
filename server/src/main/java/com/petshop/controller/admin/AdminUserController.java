@@ -1,5 +1,6 @@
 package com.petshop.controller.admin;
 
+import com.petshop.dto.response.DataGenericResponse;
 import com.petshop.entity.User;
 import com.petshop.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +32,7 @@ public class AdminUserController {
     ) {}
 
     @GetMapping
-    public ResponseEntity<Page<AdminUserView>> listUsers(
+    public ResponseEntity<DataGenericResponse<Page<AdminUserView>>> listUsers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
@@ -46,6 +47,6 @@ public class AdminUserController {
                         u.getRole() != null ? u.getRole().name() : null,
                         u.getCreatedAt()
                 ));
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(DataGenericResponse.of(result));
     }
 }

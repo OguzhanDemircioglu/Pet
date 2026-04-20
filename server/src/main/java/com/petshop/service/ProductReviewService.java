@@ -1,5 +1,6 @@
 package com.petshop.service;
 
+import com.petshop.constant.ReviewMessages;
 import com.petshop.dto.request.ReviewRequest;
 import com.petshop.dto.response.CanReviewResponse;
 import com.petshop.dto.response.ReviewResponse;
@@ -7,7 +8,7 @@ import com.petshop.entity.Order;
 import com.petshop.entity.Product;
 import com.petshop.entity.ProductReview;
 import com.petshop.entity.User;
-import com.petshop.constant.ReviewMessages;
+import com.petshop.exception.BusinessException;
 import com.petshop.exception.ResourceNotFoundException;
 import com.petshop.repository.OrderRepository;
 import com.petshop.repository.ProductRepository;
@@ -51,7 +52,6 @@ public class ProductReviewService {
             return new CanReviewResponse(false, ReviewMessages.STATUS_NOT_ORDERED.get(), null);
         }
 
-        // Check if already reviewed from any of these orders
         for (Order order : orders) {
             boolean alreadyReviewed = reviewRepository
                     .findByOrderIdAndProductId(order.getId(), product.getId())
@@ -67,9 +67,9 @@ public class ProductReviewService {
     @Transactional
     public ReviewResponse updateReview(Long userId, Long reviewId, ReviewRequest req) {
         ProductReview review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new ResourceNotFoundException("Yorum bulunamadı", reviewId));
+                .orElseThrow(() -> new ResourceNotFoundException(ReviewMessages.REVIEW_NOT_FOUND.get() + reviewId));
         if (review.getUser() == null || !review.getUser().getId().equals(userId)) {
-            throw new IllegalStateException("Bu yorumu düzenleme yetkiniz yok");
+            throw new BusinessException(ReviewMessages.REVIEW_EDIT_FORBIDDEN.get());
         }
         review.setRating(req.rating());
         review.setComment(req.comment());
@@ -79,9 +79,9 @@ public class ProductReviewService {
     @Transactional
     public void deleteReview(Long userId, Long reviewId) {
         ProductReview review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new ResourceNotFoundException("Yorum bulunamadı", reviewId));
+                .orElseThrow(() -> new ResourceNotFoundException(ReviewMessages.REVIEW_NOT_FOUND.get() + reviewId));
         if (review.getUser() == null || !review.getUser().getId().equals(userId)) {
-            throw new IllegalStateException("Bu yorumu silme yetkiniz yok");
+            throw new BusinessException(ReviewMessages.REVIEW_DELETE_FORBIDDEN.get());
         }
         reviewRepository.deleteById(reviewId);
     }
@@ -90,7 +90,7 @@ public class ProductReviewService {
     public ReviewResponse addReview(Long userId, String slug, ReviewRequest req) {
         CanReviewResponse check = canReview(userId, slug);
         if (!check.canReview()) {
-            throw new IllegalStateException(check.reason());
+            throw new BusinessException(check.reason());
         }
 
         Product product = productRepository.findBySlug(slug)

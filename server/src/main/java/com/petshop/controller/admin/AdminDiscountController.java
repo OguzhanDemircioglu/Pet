@@ -2,7 +2,9 @@ package com.petshop.controller.admin;
 
 import com.petshop.dto.request.*;
 import com.petshop.dto.response.CouponValidationResponse;
+import com.petshop.dto.response.DataGenericResponse;
 import com.petshop.dto.response.DiscountResponse;
+import com.petshop.dto.response.GenericResponse;
 import com.petshop.service.DiscountService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,51 +24,51 @@ public class AdminDiscountController {
     private final DiscountService discountService;
 
     @GetMapping
-    public ResponseEntity<List<DiscountResponse>> list() {
-        return ResponseEntity.ok(discountService.getAllDiscounts());
+    public ResponseEntity<DataGenericResponse<List<DiscountResponse>>> list() {
+        return ResponseEntity.ok(DataGenericResponse.of(discountService.getAllDiscounts()));
     }
 
     @PostMapping("/category")
-    public ResponseEntity<DiscountResponse> createCategory(@Valid @RequestBody CategoryDiscountRequest req) {
-        return ResponseEntity.ok(discountService.createCategoryDiscount(req));
+    public ResponseEntity<DataGenericResponse<DiscountResponse>> createCategory(@Valid @RequestBody CategoryDiscountRequest req) {
+        return ResponseEntity.ok(DataGenericResponse.of(discountService.createCategoryDiscount(req)));
     }
 
     @PostMapping("/product")
-    public ResponseEntity<DiscountResponse> createProduct(@Valid @RequestBody ProductDiscountRequest req) {
-        return ResponseEntity.ok(discountService.createProductDiscount(req));
+    public ResponseEntity<DataGenericResponse<DiscountResponse>> createProduct(@Valid @RequestBody ProductDiscountRequest req) {
+        return ResponseEntity.ok(DataGenericResponse.of(discountService.createProductDiscount(req)));
     }
 
     @PostMapping("/brand")
-    public ResponseEntity<DiscountResponse> createBrand(@Valid @RequestBody BrandDiscountRequest req) {
-        return ResponseEntity.ok(discountService.createBrandDiscount(req));
+    public ResponseEntity<DataGenericResponse<DiscountResponse>> createBrand(@Valid @RequestBody BrandDiscountRequest req) {
+        return ResponseEntity.ok(DataGenericResponse.of(discountService.createBrandDiscount(req)));
     }
 
     @PostMapping("/general")
-    public ResponseEntity<DiscountResponse> createGeneral(@Valid @RequestBody GeneralDiscountRequest req) {
-        return ResponseEntity.ok(discountService.createGeneralDiscount(req));
+    public ResponseEntity<DataGenericResponse<DiscountResponse>> createGeneral(@Valid @RequestBody GeneralDiscountRequest req) {
+        return ResponseEntity.ok(DataGenericResponse.of(discountService.createGeneralDiscount(req)));
     }
 
     @PutMapping("/{type}/{id}")
-    public ResponseEntity<DiscountResponse> update(@PathVariable String type, @PathVariable Long id,
+    public ResponseEntity<DataGenericResponse<DiscountResponse>> update(@PathVariable String type, @PathVariable Long id,
             @Valid @RequestBody DiscountUpdateRequest req) {
-        return ResponseEntity.ok(discountService.updateDiscount(type, id, req));
+        return ResponseEntity.ok(DataGenericResponse.of(discountService.updateDiscount(type, id, req)));
     }
 
     @DeleteMapping("/{type}/{id}")
-    public ResponseEntity<Void> delete(@PathVariable String type, @PathVariable Long id) {
+    public ResponseEntity<GenericResponse> delete(@PathVariable String type, @PathVariable Long id) {
         discountService.deleteDiscount(type, id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(GenericResponse.ok());
     }
 
     @GetMapping("/active-emojis")
-    public ResponseEntity<Set<String>> activeEmojis() {
-        return ResponseEntity.ok(discountService.getActiveEmojis());
+    public ResponseEntity<DataGenericResponse<Set<String>>> activeEmojis() {
+        return ResponseEntity.ok(DataGenericResponse.of(discountService.getActiveEmojis()));
     }
 
     @PostMapping("/validate-coupon")
-    public ResponseEntity<CouponValidationResponse> validateCoupon(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<DataGenericResponse<CouponValidationResponse>> validateCoupon(@RequestBody Map<String, Object> body) {
         String code = (String) body.get("couponCode");
         BigDecimal amount = new BigDecimal(body.get("orderAmount").toString());
-        return ResponseEntity.ok(discountService.validateCoupon(code, amount));
+        return ResponseEntity.ok(DataGenericResponse.of(discountService.validateCoupon(code, amount)));
     }
 }

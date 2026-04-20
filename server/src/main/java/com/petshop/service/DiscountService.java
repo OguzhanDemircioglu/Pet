@@ -239,7 +239,7 @@ public class DiscountService {
 
     public CouponValidationResponse validateCoupon(String code, BigDecimal orderAmount) {
         return generalDiscountRepo.findByCouponCodeIgnoreCase(code)
-                .filter(d -> d.getIsActive())
+                .filter(GeneralDiscount::getIsActive)
                 .filter(d -> d.getStartDate() == null || d.getStartDate().isBefore(LocalDateTime.now()))
                 .filter(d -> d.getEndDate() == null || d.getEndDate().isAfter(LocalDateTime.now()))
                 .filter(d -> d.getUsageLimit() == null || d.getUsageCount() < d.getUsageLimit())

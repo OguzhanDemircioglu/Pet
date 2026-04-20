@@ -1,8 +1,13 @@
 package com.petshop.controller.admin;
 
+import com.petshop.constant.ProductMessages;
 import com.petshop.dto.request.BrandRequest;
 import com.petshop.dto.response.BrandResponse;
+import com.petshop.dto.response.DataGenericResponse;
+import com.petshop.dto.response.GenericResponse;
 import com.petshop.entity.Brand;
+import com.petshop.exception.BusinessException;
+import com.petshop.exception.ResourceNotFoundException;
 import com.petshop.repository.BrandRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +16,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -24,37 +28,39 @@ public class AdminBrandController {
     private final BrandRepository brandRepository;
 
     @GetMapping
-    public List<BrandResponse> list() {
-        return brandRepository.findAll(Sort.by("name"))
+    public ResponseEntity<DataGenericResponse<List<BrandResponse>>> list() {
+        List<BrandResponse> brands = brandRepository.findAll(Sort.by("name"))
                 .stream().map(BrandResponse::from).toList();
+        return ResponseEntity.ok(DataGenericResponse.of(brands));
     }
 
     @PostMapping
-    public ResponseEntity<BrandResponse> create(@Valid @RequestBody BrandRequest req) {
+    public ResponseEntity<DataGenericResponse<BrandResponse>> create(@Valid @RequestBody BrandRequest req) {
         if (brandRepository.existsByNameIgnoreCase(req.name().trim())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Bu isimde marka zaten var");
+            throw new BusinessException(ProductMessages.BRAND_ALREADY_EXISTS.get());
         }
         Brand brand = Brand.builder()
                 .name(req.name().trim())
                 .isActive(req.isActive() != null ? req.isActive() : true)
                 .build();
-        return ResponseEntity.status(HttpStatus.CREATED).body(BrandResponse.from(brandRepository.save(brand)));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(DataGenericResponse.of(BrandResponse.from(brandRepository.save(brand))));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BrandResponse> update(@PathVariable Long id, @Valid @RequestBody BrandRequest req) {
+    public ResponseEntity<DataGenericResponse<BrandResponse>> update(@PathVariable Long id, @Valid @RequestBody BrandRequest req) {
         Brand brand = brandRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Marka bulunamadı: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(ProductMessages.BRAND_NOT_FOUND.get(), id));
         brand.setName(req.name().trim());
         if (req.isActive() != null) brand.setIsActive(req.isActive());
-        return ResponseEntity.ok(BrandResponse.from(brandRepository.save(brand)));
+        return ResponseEntity.ok(DataGenericResponse.of(BrandResponse.from(brandRepository.save(brand))));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<GenericResponse> delete(@PathVariable Long id) {
         brandRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Marka bulunamadı: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(ProductMessages.BRAND_NOT_FOUND.get(), id));
         brandRepository.deleteById(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(GenericResponse.ok());
     }
 }

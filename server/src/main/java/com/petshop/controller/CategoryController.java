@@ -1,6 +1,7 @@
 package com.petshop.controller;
 
 import com.petshop.dto.response.CategoryFlatResponse;
+import com.petshop.dto.response.DataGenericResponse;
 import com.petshop.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +17,7 @@ public class CategoryController {
     private final CategoryService categoryService;
 
     @GetMapping
-    public ResponseEntity<List<CategoryFlatResponse>> getAll() {
-        return ResponseEntity.ok(categoryService.getAllFlat());
+    public ResponseEntity<DataGenericResponse<List<CategoryFlatResponse>>> getAll() {
+        return ResponseEntity.ok(DataGenericResponse.of(categoryService.getAllFlat()));
     }
 }

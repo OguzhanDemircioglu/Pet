@@ -30,57 +30,56 @@ public class PublicController {
     private final CategoryService categoryService;
 
     @GetMapping("/health")
-    public ResponseEntity<String> health() {
-        return ResponseEntity.ok("OK");
+    public ResponseEntity<DataGenericResponse<String>> health() {
+        return ResponseEntity.ok(DataGenericResponse.of("OK"));
     }
 
     /** Frontend doğrulama geri sayımı için backend sabiti */
     @GetMapping("/config")
-    public ResponseEntity<Map<String, Object>> config() {
-        return ResponseEntity.ok(Map.of(
+    public ResponseEntity<DataGenericResponse<Map<String, Object>>> config() {
+        Map<String, Object> cfg = Map.of(
             "verifyExpiryMinutes", SchedulerConstants.VERIFICATION_CODE_EXPIRY_MINUTES
-        ));
+        );
+        return ResponseEntity.ok(DataGenericResponse.of(cfg));
     }
 
     @GetMapping("/admin-info")
-    public ResponseEntity<AdminInfoResponse> adminInfo() {
+    public ResponseEntity<DataGenericResponse<AdminInfoResponse>> adminInfo() {
         return userRepository.findFirstByRole(User.Role.ADMIN)
-                .map(admin -> ResponseEntity.ok(new AdminInfoResponse(admin.getEmail(), admin.getPhone())))
+                .map(admin -> ResponseEntity.ok(DataGenericResponse.of(
+                        new AdminInfoResponse(admin.getEmail(), admin.getPhone()))))
                 .orElse(ResponseEntity.notFound().build());
     }
 
     /** Carousel: bilgilendirme kampanyaları + indirim kampanyaları */
     @GetMapping("/campaigns")
-    public ResponseEntity<List<CampaignResponse>> campaigns() {
+    public ResponseEntity<DataGenericResponse<List<CampaignResponse>>> campaigns() {
         List<CampaignResponse> slides = new ArrayList<>(campaignService.getActiveCampaigns());
         slides.addAll(discountService.getActiveDiscountsAsSlides());
-        return ResponseEntity.ok(slides);
+        return ResponseEntity.ok(DataGenericResponse.of(slides));
     }
 
     /** Ürün kartlarında indirim badge'i için aktif indirimler */
     @GetMapping("/active-discounts")
-    public ResponseEntity<List<DiscountResponse>> activeDiscounts() {
-        return ResponseEntity.ok(discountService.getActiveDiscounts());
+    public ResponseEntity<DataGenericResponse<List<DiscountResponse>>> activeDiscounts() {
+        return ResponseEntity.ok(DataGenericResponse.of(discountService.getActiveDiscounts()));
     }
 
     /** Tüm aktif ürünler + kategoriler + indirimler + carousel slaytlar — arka plan preload */
     @GetMapping("/catalog")
-    public ResponseEntity<CatalogResponse> catalog() {
+    public ResponseEntity<DataGenericResponse<CatalogResponse>> catalog() {
         List<CampaignResponse> slides = new ArrayList<>(campaignService.getActiveCampaigns());
         slides.addAll(discountService.getActiveDiscountsAsSlides());
-        return ResponseEntity.ok(new CatalogResponse(
+        return ResponseEntity.ok(DataGenericResponse.of(new CatalogResponse(
                 productService.getAllCatalog(),
                 categoryService.getAllFlat(),
                 discountService.getActiveDiscounts(),
-                slides
-        ));
+                slides)));
     }
 
     /** Anasayfa için tek seferde kritik veri: öne çıkan ürünler */
     @GetMapping("/homepage")
-    public ResponseEntity<HomepageResponse> homepage() {
-        return ResponseEntity.ok(new HomepageResponse(
-                productService.getFeatured(8)
-        ));
+    public ResponseEntity<DataGenericResponse<HomepageResponse>> homepage() {
+        return ResponseEntity.ok(DataGenericResponse.of(new HomepageResponse(productService.getFeatured(8))));
     }
 }

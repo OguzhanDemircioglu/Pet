@@ -2,6 +2,8 @@ package com.petshop.controller;
 
 import com.petshop.dto.request.ReviewRequest;
 import com.petshop.dto.response.CanReviewResponse;
+import com.petshop.dto.response.DataGenericResponse;
+import com.petshop.dto.response.GenericResponse;
 import com.petshop.dto.response.ReviewResponse;
 import com.petshop.service.ProductReviewService;
 import jakarta.validation.Valid;
@@ -20,40 +22,40 @@ public class ProductReviewController {
     private final ProductReviewService reviewService;
 
     @GetMapping
-    public ResponseEntity<List<ReviewResponse>> list(@PathVariable String slug) {
-        return ResponseEntity.ok(reviewService.getApprovedReviews(slug));
+    public ResponseEntity<DataGenericResponse<List<ReviewResponse>>> list(@PathVariable String slug) {
+        return ResponseEntity.ok(DataGenericResponse.of(reviewService.getApprovedReviews(slug)));
     }
 
     @GetMapping("/can-review")
-    public ResponseEntity<CanReviewResponse> canReview(
+    public ResponseEntity<DataGenericResponse<CanReviewResponse>> canReview(
             @PathVariable String slug,
             @AuthenticationPrincipal Long userId) {
-        return ResponseEntity.ok(reviewService.canReview(userId, slug));
+        return ResponseEntity.ok(DataGenericResponse.of(reviewService.canReview(userId, slug)));
     }
 
     @PostMapping
-    public ResponseEntity<ReviewResponse> create(
+    public ResponseEntity<DataGenericResponse<ReviewResponse>> create(
             @PathVariable String slug,
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody ReviewRequest req) {
-        return ResponseEntity.ok(reviewService.addReview(userId, slug, req));
+        return ResponseEntity.ok(DataGenericResponse.of(reviewService.addReview(userId, slug, req)));
     }
 
     @PutMapping("/{reviewId}")
-    public ResponseEntity<ReviewResponse> update(
+    public ResponseEntity<DataGenericResponse<ReviewResponse>> update(
             @PathVariable String slug,
             @PathVariable Long reviewId,
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody ReviewRequest req) {
-        return ResponseEntity.ok(reviewService.updateReview(userId, reviewId, req));
+        return ResponseEntity.ok(DataGenericResponse.of(reviewService.updateReview(userId, reviewId, req)));
     }
 
     @DeleteMapping("/{reviewId}")
-    public ResponseEntity<Void> delete(
+    public ResponseEntity<GenericResponse> delete(
             @PathVariable String slug,
             @PathVariable Long reviewId,
             @AuthenticationPrincipal Long userId) {
         reviewService.deleteReview(userId, reviewId);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(GenericResponse.ok());
     }
 }

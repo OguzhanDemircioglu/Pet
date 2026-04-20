@@ -1,8 +1,10 @@
 package com.petshop.controller;
 
 import com.petshop.dto.response.BrandResponse;
+import com.petshop.dto.response.DataGenericResponse;
 import com.petshop.repository.BrandRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,8 +17,9 @@ public class BrandController {
     private final BrandRepository brandRepository;
 
     @GetMapping
-    public List<BrandResponse> listActive() {
-        return brandRepository.findByIsActiveTrueOrderByNameAsc()
+    public ResponseEntity<DataGenericResponse<List<BrandResponse>>> listActive() {
+        List<BrandResponse> brands = brandRepository.findByIsActiveTrueOrderByNameAsc()
                 .stream().map(BrandResponse::from).toList();
+        return ResponseEntity.ok(DataGenericResponse.of(brands));
     }
 }

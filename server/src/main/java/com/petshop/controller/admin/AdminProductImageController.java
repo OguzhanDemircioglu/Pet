@@ -2,6 +2,8 @@ package com.petshop.controller.admin;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+import com.petshop.dto.response.DataGenericResponse;
+import com.petshop.dto.response.GenericResponse;
 import com.petshop.dto.response.ProductResponse;
 import com.petshop.entity.Product;
 import com.petshop.entity.ProductImage;
@@ -31,14 +33,15 @@ public class AdminProductImageController {
     private final Cloudinary cloudinary;
 
     @GetMapping
-    public ResponseEntity<List<ProductResponse.ImageDto>> listImages(@PathVariable Long productId) {
+    public ResponseEntity<DataGenericResponse<List<ProductResponse.ImageDto>>> listImages(@PathVariable Long productId) {
         productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Ürün", productId));
-        return ResponseEntity.ok(toDto(productImageRepository.findByProductIdOrderByDisplayOrderAsc(productId)));
+        return ResponseEntity.ok(DataGenericResponse.of(
+                toDto(productImageRepository.findByProductIdOrderByDisplayOrderAsc(productId))));
     }
 
     @PostMapping
-    public ResponseEntity<ProductResponse.ImageDto> uploadImage(
+    public ResponseEntity<DataGenericResponse<ProductResponse.ImageDto>> uploadImage(
             @PathVariable Long productId,
             @RequestParam("file") MultipartFile file) throws IOException {
 
@@ -66,13 +69,13 @@ public class AdminProductImageController {
                 .build();
 
         ProductImage saved = productImageRepository.save(image);
-        return ResponseEntity.ok(new ProductResponse.ImageDto(
-                saved.getId(), saved.getImageUrl(), saved.getIsPrimary(), saved.getDisplayOrder()));
+        return ResponseEntity.ok(DataGenericResponse.of(
+                new ProductResponse.ImageDto(saved.getId(), saved.getImageUrl(), saved.getIsPrimary(), saved.getDisplayOrder())));
     }
 
     @PutMapping("/{imageId}/primary")
     @Transactional
-    public ResponseEntity<Void> setPrimary(
+    public ResponseEntity<GenericResponse> setPrimary(
             @PathVariable Long productId,
             @PathVariable Long imageId) {
 
@@ -84,12 +87,12 @@ public class AdminProductImageController {
         productImageRepository.clearPrimaryByProductId(productId);
         image.setIsPrimary(true);
         productImageRepository.save(image);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(GenericResponse.ok());
     }
 
     @PutMapping("/reorder")
     @Transactional
-    public ResponseEntity<Void> reorder(
+    public ResponseEntity<GenericResponse> reorder(
             @PathVariable Long productId,
             @RequestBody List<Long> orderedIds) {
 
@@ -106,12 +109,12 @@ public class AdminProductImageController {
                     .ifPresent(img -> img.setDisplayOrder(order));
         }
         productImageRepository.saveAll(images);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(GenericResponse.ok());
     }
 
     @DeleteMapping("/{imageId}")
     @Transactional
-    public ResponseEntity<Void> deleteImage(
+    public ResponseEntity<GenericResponse> deleteImage(
             @PathVariable Long productId,
             @PathVariable Long imageId) throws IOException {
 
@@ -136,7 +139,7 @@ public class AdminProductImageController {
                 productImageRepository.save(remaining.get(0));
             }
         }
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(GenericResponse.ok());
     }
 
     /** Cloudinary URL'den public_id çıkarır.

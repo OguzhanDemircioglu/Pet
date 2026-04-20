@@ -8,6 +8,7 @@ import com.petshop.entity.OrderItem;
 import com.petshop.entity.Product;
 import com.petshop.entity.User;
 import com.petshop.constant.OrderMessages;
+import com.petshop.constant.ProductMessages;
 import com.petshop.exception.ResourceNotFoundException;
 import com.petshop.repository.OrderRepository;
 import com.petshop.repository.ProductRepository;
@@ -48,8 +49,8 @@ public class OrderService {
             if (p == null) continue;
             if (p.getStockQuantity() < itemReq.quantity()) {
                 throw new com.petshop.exception.BusinessException(
-                        "Yetersiz stok: \"" + itemReq.productName() + "\" — "
-                        + "mevcut: " + p.getStockQuantity() + ", istenen: " + itemReq.quantity());
+                        ProductMessages.INSUFFICIENT_STOCK.format(
+                                itemReq.productName(), p.getStockQuantity(), itemReq.quantity()));
             }
         }
 
@@ -171,7 +172,7 @@ public class OrderService {
     @Transactional
     public OrderResponse approveOrder(Long orderId) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Sipariş bulunamadı: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException(OrderMessages.ORDER_NOT_FOUND.get() + orderId));
         // Stok sipariş oluşturulduğunda zaten düşüldü — sadece durum güncelle
         order.setStatus(Order.OrderStatus.PROCESSING);
         return OrderResponse.from(orderRepository.save(order));
@@ -180,9 +181,9 @@ public class OrderService {
     @Transactional
     public OrderResponse rejectOrder(Long orderId) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Sipariş bulunamadı: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException(OrderMessages.ORDER_NOT_FOUND.get() + orderId));
         if (order.getStatus() == Order.OrderStatus.CANCELLED) {
-            throw new com.petshop.exception.BusinessException("Bu sipariş zaten iptal edilmiş");
+            throw new com.petshop.exception.BusinessException(OrderMessages.ORDER_ALREADY_CANCELLED.get());
         }
         // Stok iade et
         for (OrderItem item : order.getItems()) {

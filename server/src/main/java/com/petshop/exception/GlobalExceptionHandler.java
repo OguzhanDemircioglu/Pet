@@ -1,5 +1,9 @@
 package com.petshop.exception;
 
+import com.petshop.constant.AuthMessages;
+import com.petshop.constant.ExceptionMessages;
+import com.petshop.dto.response.GenericResponse;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,47 +16,61 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-import java.time.LocalDateTime;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
-@RestControllerAdvice
 @Slf4j
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach(err -> {
-            String field = ((FieldError) err).getField();
-            errors.put(field, err.getDefaultMessage());
-        });
-        return ResponseEntity.badRequest().body(error(400, "Validation hatası", errors));
+    public ResponseEntity<GenericResponse> handleValidation(MethodArgumentNotValidException ex) {
+        Map<String, String> errors = new LinkedHashMap<>();
+        ex.getBindingResult().getFieldErrors()
+                .forEach((FieldError fe) -> errors.putIfAbsent(fe.getField(), fe.getDefaultMessage()));
+        String firstMessage = errors.values().stream().findFirst()
+                .orElse(ExceptionMessages.VALIDATION_ERROR.get());
+        return ResponseEntity.ok(GenericResponse.error(firstMessage, errors));
     }
 
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleNotFound(ResourceNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error(404, ex.getMessage(), null));
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<GenericResponse> handleConstraintViolation(ConstraintViolationException ex) {
+        Map<String, String> errors = new LinkedHashMap<>();
+        ex.getConstraintViolations()
+                .forEach(cv -> errors.putIfAbsent(cv.getPropertyPath().toString(), cv.getMessage()));
+        String firstMessage = errors.values().stream().findFirst()
+                .orElse(ExceptionMessages.VALIDATION_ERROR.get());
+        return ResponseEntity.ok(GenericResponse.error(firstMessage, errors));
     }
 
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<Map<String, Object>> handleBusiness(BusinessException ex) {
-        return ResponseEntity.badRequest().body(error(400, ex.getMessage(), null));
+    public ResponseEntity<GenericResponse> handleBusiness(BusinessException ex) {
+        log.warn("Business rule violated: {}", ex.getMessage());
+        return ResponseEntity.ok(GenericResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<GenericResponse> handleNotFound(ResourceNotFoundException ex) {
+        log.warn("Resource not found: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(GenericResponse.error(ex.getMessage()));
     }
 
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<Map<String, Object>> handleBadCredentials(BadCredentialsException ex) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error(401, "Email veya şifre hatalı", null));
+    public ResponseEntity<GenericResponse> handleBadCredentials(BadCredentialsException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(GenericResponse.error(AuthMessages.INVALID_CREDENTIALS.get()));
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error(403, "Bu işlem için yetkiniz yok", null));
+    public ResponseEntity<GenericResponse> handleAccessDenied(AccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(GenericResponse.error(ExceptionMessages.ACCESS_DENIED.get()));
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<Void> handleNoResource(NoResourceFoundException ex) {
-        return ResponseEntity.notFound().build();
+    public ResponseEntity<GenericResponse> handleNoResource(NoResourceFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(GenericResponse.error(ExceptionMessages.PAGE_NOT_FOUND.get()));
     }
 
     @ExceptionHandler(AsyncRequestNotUsableException.class)
@@ -61,18 +79,9 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
+    public ResponseEntity<GenericResponse> handleGeneral(Exception ex) {
         log.error("Unhandled exception", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(error(500, "Beklenmeyen bir hata oluştu", null));
-    }
-
-    private Map<String, Object> error(int status, String message, Object details) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("status", status);
-        body.put("message", message);
-        body.put("timestamp", LocalDateTime.now().toString());
-        if (details != null) body.put("details", details);
-        return body;
+                .body(GenericResponse.error(ExceptionMessages.UNEXPECTED_ERROR.get()));
     }
 }
