@@ -54,6 +54,10 @@ const productSlice = createSlice({
       state.catalogLoaded = false
       state.products = []
     },
+    resetFeatured: (state) => {
+      state.featuredLoaded = false
+      state.featured = []
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -69,5 +73,5 @@ const productSlice = createSlice({
   },
 })
 
-export const { setFeatured, setActiveDiscounts, resetCatalog } = productSlice.actions
+export const { setFeatured, setActiveDiscounts, resetCatalog, resetFeatured } = productSlice.actions
 export default productSlice.reducer

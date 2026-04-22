@@ -16,15 +16,16 @@ public record CatalogProductDto(
         String brandName,
         BigDecimal basePrice,
         BigDecimal vatRate,
-        Integer minSellingQuantity,
         Integer availableStock,
         String unit,
         Boolean isActive,
         Boolean isFeatured,
         String primaryImageUrl,
         List<ImageDto> images,
-        ActiveDiscountDto activeDiscount
+        ActiveDiscountDto activeDiscount,
+        List<VariantDto> variants
 ) {
     public record ImageDto(Long id, String imageUrl, Boolean isPrimary, Integer displayOrder) {}
     public record ActiveDiscountDto(String label, String discountType, BigDecimal discountValue) {}
+    public record VariantDto(Long id, String label, BigDecimal price, Integer availableStock, Integer displayOrder, Boolean isActive) {}
 }

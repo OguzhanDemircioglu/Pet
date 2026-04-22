@@ -23,6 +23,16 @@ export interface ProductImage {
   displayOrder: number
 }
 
+export interface ProductVariant {
+  id: number
+  label: string
+  price: number
+  stockQuantity: number
+  availableStock: number
+  displayOrder: number
+  isActive: boolean
+}
+
 export interface ActiveDiscount {
   label: string       // "%20" veya "50 ₺"
   discountType: 'PERCENT' | 'FIXED'
@@ -42,7 +52,6 @@ export interface Product {
   brandName: string | null
   basePrice: number
   vatRate: number
-  minSellingQuantity: number
   availableStock: number
   unit: string
   isActive: boolean
@@ -52,6 +61,7 @@ export interface Product {
   reviewCount: number | null
   images: ProductImage[]
   activeDiscount: ActiveDiscount | null
+  variants: ProductVariant[]
 }
 
 export interface User {
@@ -96,7 +106,6 @@ export interface CatalogProduct {
   brandName: string | null
   basePrice: number
   vatRate: number
-  minSellingQuantity: number
   availableStock: number
   unit: string
   isActive: boolean
@@ -104,6 +113,7 @@ export interface CatalogProduct {
   primaryImageUrl: string | null
   images: ProductImage[]
   activeDiscount: ActiveDiscount | null
+  variants: ProductVariant[]
 }
 
 export interface FeaturedProduct {
@@ -112,11 +122,11 @@ export interface FeaturedProduct {
   slug: string
   brandName: string | null
   basePrice: number
-  minSellingQuantity: number
   availableStock: number
   unit: string
   primaryImageUrl: string | null
   activeDiscount: ActiveDiscount | null
+  variants: ProductVariant[]
 }
 
 export interface AdminUser {

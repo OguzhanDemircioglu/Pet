@@ -57,10 +57,6 @@ public class Product {
     @Column(name = "vat_rate", nullable = false, precision = 5, scale = 2)
     private BigDecimal vatRate = new BigDecimal("20.00");
 
-    // Minimum sipariş miktarı
-    @Column(name = "moq", nullable = false)
-    private Integer minSellingQuantity = 1;
-
     @Column(name = "stock_quantity", nullable = false)
     private Integer stockQuantity = 0;
 
@@ -87,6 +83,11 @@ public class Product {
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<ProductDiscount> discounts = new ArrayList<>();
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    @OrderBy("displayOrder ASC")
+    private List<ProductVariant> variants = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

@@ -32,6 +32,15 @@ public class OrderItem {
     @Column(name = "product_sku", nullable = false, length = 100)
     private String productSku; // snapshot
 
+    /** Seçilen varyant (nullable — varyantsız ürünler için null) */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "variant_id")
+    private ProductVariant variant;
+
+    /** Sipariş anındaki varyant etiketi snapshot: "2 kg", "10 kg" */
+    @Column(name = "variant_label", length = 100)
+    private String variantLabel;
+
     @Column(nullable = false)
     private Integer quantity;
 

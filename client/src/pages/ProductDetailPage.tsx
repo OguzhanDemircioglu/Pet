@@ -7,7 +7,7 @@ import {addToCart} from '../store/cartSlice'
 import {reviewApi, type ReviewResponse, type CanReviewResponse} from '../api/reviewApi'
 import toast from 'react-hot-toast'
 import type {AppDispatch, RootState} from '../store'
-import type {Product} from '../types'
+import type {Product, ProductVariant} from '../types'
 import InfoBar from '../components/InfoBar'
 import Header from '../components/Header'
 import CategoryBar from '../components/CategoryBar'
@@ -133,6 +133,7 @@ export default function ProductDetailPage() {
   const [thumbIdx, setThumbIdx] = useState(0)
   const [activeTab, setActiveTab] = useState<'desc' | 'specs' | 'reviews'>('desc')
   const [addedToCart, setAddedToCart] = useState(false)
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
 
   // Reviews state
   const [reviews, setReviews] = useState<ReviewResponse[]>([])
@@ -160,7 +161,12 @@ export default function ProductDetailPage() {
   useEffect(() => {
     if (!slug) return
     productApi.getBySlug(slug)
-      .then(p => { setProduct(p); setQty(p.minSellingQuantity) })
+      .then(p => {
+        setProduct(p); setQty(1)
+        const actives = (p.variants ?? []).filter(v => v.isActive).sort((a, b) => a.displayOrder - b.displayOrder)
+        // Sadece 2+ varyantta seçim gerekir; tekli varyantta basePrice kullanılır
+        setSelectedVariant(actives.length >= 2 ? actives[0] : null)
+      })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [slug])
@@ -179,13 +185,34 @@ export default function ProductDetailPage() {
     </div>
   )
 
+  const activeVariants = (product?.variants ?? []).filter(v => v.isActive).sort((a, b) => a.displayOrder - b.displayOrder)
+  const hasVariants = activeVariants.length >= 2
+  const effectivePrice = selectedVariant ? Number(selectedVariant.price) : Number(product?.basePrice ?? 0)
+  const effectiveStock = selectedVariant ? selectedVariant.availableStock : (product?.availableStock ?? 0)
+
   const handleAddToCart = () => {
-    const inCart = cartItems.find(i => i.productId === product.id)?.quantity ?? 0
-    if (inCart >= product.availableStock) {
+    if (hasVariants && !selectedVariant) {
+      toast.error('Lütfen bir paket seçin')
+      return
+    }
+    const inCart = cartItems.find(i => i.productId === product.id && i.variantId === (selectedVariant?.id ?? undefined))?.quantity ?? 0
+    if (inCart >= effectiveStock) {
       toast.error('Stokta yeterli ürün yok')
       return
     }
-    dispatch(addToCart({ productId: product.id, name: product.name, slug: product.slug, brandName: product.brandName, basePrice: Number(product.basePrice), unit: product.unit, minSellingQuantity: product.minSellingQuantity, availableStock: product.availableStock, primaryImageUrl: product.primaryImageUrl, quantity: qty }))
+    dispatch(addToCart({
+      productId: product.id,
+      variantId: selectedVariant?.id,
+      variantLabel: selectedVariant?.label,
+      name: product.name,
+      slug: product.slug,
+      brandName: product.brandName,
+      basePrice: effectivePrice,
+      unit: product.unit,
+      availableStock: effectiveStock,
+      primaryImageUrl: product.primaryImageUrl,
+      quantity: qty,
+    }))
     toast.success('Sepete eklendi')
     setAddedToCart(true)
     setTimeout(() => setAddedToCart(false), 1800)
@@ -339,68 +366,116 @@ export default function ProductDetailPage() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
-              {product.availableStock > 0
+              {effectiveStock > 0
                 ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, padding: '5px 11px', borderRadius: 20, background: '#f0fdf4', color: '#16a34a', border: '1px solid rgba(34,197,94,.3)' }}>✓ Stokta Var</span>
                 : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, padding: '5px 11px', borderRadius: 20, background: '#fef2f2', color: '#dc2626', border: '1px solid rgba(220,38,38,.3)' }}>✕ Stokta Yok</span>
               }
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, padding: '5px 11px', borderRadius: 20, background: 'var(--primary-bg)', color: 'var(--primary)', border: '1px solid rgba(220,38,38,.3)' }}>Min. {product.minSellingQuantity} adet</span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, padding: '5px 11px', borderRadius: 20, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>🚚 1-3 İş Günü Teslimat</span>
             </div>
 
+            {/* Variant Selector */}
+            {hasVariants && (
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text2)', marginBottom: 8 }}>
+                  Paket Seçin <span style={{ color: 'var(--primary)' }}>*</span>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {activeVariants.map(v => {
+                    const isSelected = selectedVariant?.id === v.id
+                    const outOfStock = v.availableStock <= 0
+                    return (
+                      <button
+                        key={v.id}
+                        onClick={() => { if (!outOfStock) { setSelectedVariant(isSelected ? null : v); setQty(1) } }}
+                        disabled={outOfStock}
+                        style={{
+                          padding: '8px 16px',
+                          borderRadius: 'var(--r)',
+                          border: `2px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
+                          background: isSelected ? 'var(--primary-bg)' : 'var(--bg2)',
+                          color: outOfStock ? 'var(--text3)' : isSelected ? 'var(--primary)' : 'var(--text)',
+                          fontSize: 13, fontWeight: 700,
+                          cursor: outOfStock ? 'not-allowed' : 'pointer',
+                          opacity: outOfStock ? 0.5 : 1,
+                          transition: '0.15s',
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                        }}
+                      >
+                        <span>{v.label}</span>
+                        <span style={{ fontSize: 12, fontWeight: 800, color: isSelected ? 'var(--primary)' : 'var(--text2)' }}>
+                          ₺{Number(v.price).toFixed(2)}
+                        </span>
+                        {outOfStock && <span style={{ fontSize: 10, color: 'var(--text3)' }}>Tükendi</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Price Block */}
             <div style={{ marginBottom: 18 }}>
-              {product.activeDiscount ? (() => {
+              {!hasVariants && product.activeDiscount ? (() => {
                 const disc = product.activeDiscount!
-                const base = Number(product.basePrice)
                 const newPrice = disc.discountType === 'PERCENT'
-                  ? base * (1 - disc.discountValue / 100)
-                  : base - disc.discountValue
+                  ? effectivePrice * (1 - disc.discountValue / 100)
+                  : effectivePrice - disc.discountValue
                 return (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                     <div style={{ fontSize: 32, fontWeight: 900, color: 'var(--primary)' }}>₺{newPrice.toFixed(2)}</div>
-                    <div style={{ fontSize: 18, color: 'var(--text3)', textDecoration: 'line-through' }}>₺{base.toFixed(2)}</div>
+                    <div style={{ fontSize: 18, color: 'var(--text3)', textDecoration: 'line-through' }}>₺{effectivePrice.toFixed(2)}</div>
                     <span style={{ background: 'var(--primary)', color: '#fff', fontSize: 12, fontWeight: 800, padding: '4px 10px', borderRadius: 20 }}>
                       {disc.label} İndirim
                     </span>
                   </div>
                 )
               })() : (
-                <div style={{ fontSize: 32, fontWeight: 900, color: 'var(--primary)' }}>₺{Number(product.basePrice).toFixed(2)}</div>
+                hasVariants && selectedVariant
+                  ? <div style={{ fontSize: 32, fontWeight: 900, color: 'var(--primary)' }}>₺{effectivePrice.toFixed(2)}</div>
+                  : !hasVariants
+                    ? <div style={{ fontSize: 32, fontWeight: 900, color: 'var(--primary)' }}>₺{effectivePrice.toFixed(2)}</div>
+                    : <div style={{ fontSize: 15, color: 'var(--text3)', fontStyle: 'italic' }}>Paket seçin</div>
               )}
-              <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>/ {product.unit} · KDV dahil</div>
+              {(selectedVariant || !hasVariants) && (
+                <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>/ {selectedVariant?.label ?? product.unit} · KDV dahil</div>
+              )}
             </div>
 
             {/* Qty Selector */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
               <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>Adet:</span>
               <div style={{ display: 'flex', alignItems: 'center', border: '2px solid var(--border2)', borderRadius: 'var(--r)', overflow: 'hidden' }}>
-                <button onClick={() => setQty(Math.max(product.minSellingQuantity, qty - 1))} style={{ width: 38, height: 38, background: 'var(--primary)', color: '#fff', fontSize: 20, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}>−</button>
+                <button onClick={() => setQty(Math.max(1, qty - 1))} style={{ width: 38, height: 38, background: 'var(--primary)', color: '#fff', fontSize: 20, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}>−</button>
                 <div style={{ width: 48, textAlign: 'center', fontSize: 16, fontWeight: 800, color: 'var(--text)', background: 'var(--bg2)', height: 38, lineHeight: '38px', borderLeft: '2px solid var(--border2)', borderRight: '2px solid var(--border2)' }}>{qty}</div>
                 <button onClick={() => {
-                  if (qty >= product.availableStock) { toast.error('Stokta yeterli ürün yok'); return }
+                  if (qty >= effectiveStock) { toast.error('Stokta yeterli ürün yok'); return }
                   setQty(qty + 1)
                 }} style={{ width: 38, height: 38, background: 'var(--primary)', color: '#fff', fontSize: 20, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}>+</button>
               </div>
-              <span style={{ fontSize: 12, color: 'var(--text3)' }}>Min. {product.minSellingQuantity} · Stok: {product.availableStock} {product.unit}</span>
+              {effectiveStock > 0 && effectiveStock < 10 && (
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#d97706', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 20, padding: '2px 10px' }}>
+                  ⚠️ Son {effectiveStock} stok!
+                </span>
+              )}
             </div>
 
             {/* Action Buttons */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
               <button
-                onClick={product.availableStock > 0 ? handleAddToCart : undefined}
-                disabled={product.availableStock <= 0}
+                onClick={effectiveStock > 0 ? handleAddToCart : undefined}
+                disabled={effectiveStock <= 0}
                 style={{
                   width: '100%',
-                  background: product.availableStock <= 0 ? '#e5e7eb' : addedToCart ? '#22c55e' : 'var(--primary)',
-                  color: product.availableStock <= 0 ? '#111' : '#fff',
+                  background: effectiveStock <= 0 ? '#e5e7eb' : addedToCart ? '#22c55e' : 'var(--primary)',
+                  color: effectiveStock <= 0 ? '#111' : '#fff',
                   fontSize: 15, fontWeight: 700, padding: 14, borderRadius: 'var(--r)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                   transition: '0.2s',
-                  boxShadow: product.availableStock > 0 ? '0 4px 12px rgba(220,38,38,.35)' : 'none',
+                  boxShadow: effectiveStock > 0 ? '0 4px 12px rgba(220,38,38,.35)' : 'none',
                   border: 'none',
-                  cursor: product.availableStock <= 0 ? 'not-allowed' : 'pointer',
+                  cursor: effectiveStock <= 0 ? 'not-allowed' : 'pointer',
                 }}>
-                {product.availableStock <= 0 ? '✕ Stokta Yok' : addedToCart ? '✅ Sepete Eklendi!' : '🛒 Sepete Ekle'}
+                {effectiveStock <= 0 ? '✕ Stokta Yok' : addedToCart ? '✅ Sepete Eklendi!' : '🛒 Sepete Ekle'}
               </button>
               <a href={`https://wa.me/${CONTACT_PHONE}?text=${encodeURIComponent(`Merhaba, "${product.name}" ürünü hakkında bilgi almak istiyorum.`)}`}
                 target="_blank" rel="noopener noreferrer"
@@ -449,7 +524,7 @@ export default function ProductDetailPage() {
                 🏆 {import.meta.env.VITE_BRAND_PART1}{import.meta.env.VITE_BRAND_PART2}, en kaliteli pet ürünlerini toptan fiyatlarla sunan güvenilir platformunuzdur.
               </div>
               <p style={{ fontSize: 15, color: 'var(--text2)', lineHeight: 1.75, marginBottom: 14 }}>
-                <strong style={{ color: 'var(--text)' }}>Toptan alım avantajı:</strong> Bu ürün minimum {product.minSellingQuantity} adet ile özel toptan fiyatlarıyla sunulmaktadır. Pet shop, veteriner klinikleri ve işletmeler için ideal toptan çözüm.
+                <strong style={{ color: 'var(--text)' }}>Toptan alım avantajı:</strong> Bu ürün özel toptan fiyatlarıyla sunulmaktadır. Pet shop, veteriner klinikleri ve işletmeler için ideal toptan çözüm.
               </p>
             </div>
           )}
@@ -461,7 +536,6 @@ export default function ProductDetailPage() {
                 { key: 'Marka', val: product.brandName },
                 { key: 'SKU', val: product.sku },
                 { key: 'Birim', val: product.unit },
-                { key: 'Min. Sipariş', val: `${product.minSellingQuantity} adet` },
                 { key: 'Stok', val: `${product.availableStock} adet` },
               ].map(s => (
                 <div key={s.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '12px 16px' }}>

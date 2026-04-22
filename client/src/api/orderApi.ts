@@ -2,6 +2,7 @@ import api from './axios'
 
 export interface OrderItemRequest {
   productId: number
+  variantId?: number | null
   productName: string
   quantity: number
   unitPrice: number

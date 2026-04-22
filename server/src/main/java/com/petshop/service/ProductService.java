@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,15 +32,16 @@ public class ProductService {
     private final BrandRepository brandRepository;
     private final CategoryRepository categoryRepository;
     private final ProductReviewRepository productReviewRepository;
+    private final ProductVariantRepository productVariantRepository;
 
     // ─── Public listing ───────────────────────────────────────────────────────
 
     public Page<ProductResponse> listByCategory(Long categoryId, Pageable pageable) {
-        return enrichPageWithImages(productRepository.findByCategoryPaged(categoryId, pageable), pageable);
+        return enrichPage(productRepository.findByCategoryPaged(categoryId, pageable), pageable);
     }
 
     public Page<ProductResponse> search(String query, Pageable pageable) {
-        return enrichPageWithImages(productRepository.searchPaged(query, pageable), pageable);
+        return enrichPage(productRepository.searchPaged(query, pageable), pageable);
     }
 
     public ProductResponse getBySlug(String slug) {
@@ -48,6 +50,7 @@ public class ProductService {
         Map<Long, ProductResponse.ActiveDiscountDto> dm = buildDiscountMap();
         Double avg = productReviewRepository.findAverageRatingByProductId(p.getId());
         int cnt = (int) productReviewRepository.countByProductId(p.getId());
+        // variants lazy-loaded within the open transaction
         return ProductResponse.fromWithDetails(p, dm.get(p.getId()), avg, cnt > 0 ? cnt : null);
     }
 
@@ -62,68 +65,22 @@ public class ProductService {
 
     public List<FeaturedProductDto> getFeatured(int limit) {
         List<Product> products = productRepository.findFeaturedWithImages(PageRequest.of(0, limit));
+        if (products.isEmpty()) return List.of();
         Map<Long, ProductResponse.ActiveDiscountDto> dm = buildDiscountMap();
-        return products.stream().map(p -> toFeaturedDto(p, dm.get(p.getId()))).toList();
+        Map<Long, List<ProductVariant>> variantMap = buildVariantMap(products.stream().map(Product::getId).toList());
+        return products.stream().map(p -> toFeaturedDto(p, dm.get(p.getId()), variantMap.getOrDefault(p.getId(), List.of()))).toList();
     }
 
     public List<CatalogProductDto> getAllCatalog() {
         List<Product> all = productRepository.findAllActiveWithImages();
+        if (all.isEmpty()) return List.of();
         Map<Long, ProductResponse.ActiveDiscountDto> dm = buildDiscountMap();
-        return all.stream().map(p -> toCatalogDto(p, dm.get(p.getId()))).toList();
-    }
-
-    private CatalogProductDto toCatalogDto(Product p, ProductResponse.ActiveDiscountDto disc) {
-        String primaryImage = p.getImages().stream()
-                .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
-                .map(ProductImage::getImageUrl)
-                .findFirst()
-                .orElse(p.getImages().isEmpty() ? null : p.getImages().get(0).getImageUrl());
-
-        List<CatalogProductDto.ImageDto> images = p.getImages().stream()
-                .map(i -> new CatalogProductDto.ImageDto(i.getId(), i.getImageUrl(), i.getIsPrimary(), i.getDisplayOrder()))
-                .toList();
-
-        CatalogProductDto.ActiveDiscountDto discDto = disc == null ? null :
-                new CatalogProductDto.ActiveDiscountDto(
-                        disc.label(), disc.discountType(), disc.discountValue());
-
-        return new CatalogProductDto(
-                p.getId(), p.getName(), p.getSlug(),
-                p.getSku(),
-                p.getShortDescription(),
-                p.getCategory() != null ? p.getCategory().getId() : null,
-                p.getCategory() != null ? p.getCategory().getName() : null,
-                p.getCategory() != null ? p.getCategory().getSlug() : null,
-                p.getBrand() != null ? p.getBrand().getId() : null,
-                p.getBrand() != null ? p.getBrand().getName() : null,
-                p.getBasePrice(), p.getVatRate(), p.getMinSellingQuantity(),
-                p.getAvailableStock(), p.getUnit(),
-                p.getIsActive(), p.getIsFeatured(),
-                primaryImage, images, discDto
-        );
-    }
-
-    private FeaturedProductDto toFeaturedDto(Product p, ProductResponse.ActiveDiscountDto disc) {
-        String primaryImage = p.getImages().stream()
-                .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
-                .map(ProductImage::getImageUrl)
-                .findFirst()
-                .orElse(p.getImages().isEmpty() ? null : p.getImages().get(0).getImageUrl());
-
-        FeaturedProductDto.ActiveDiscountDto discDto = disc == null ? null :
-                new FeaturedProductDto.ActiveDiscountDto(
-                        disc.label(), disc.discountType(), disc.discountValue());
-
-        return new FeaturedProductDto(
-                p.getId(), p.getName(), p.getSlug(),
-                p.getBrand() != null ? p.getBrand().getName() : null,
-                p.getBasePrice(), p.getMinSellingQuantity(), p.getAvailableStock(),
-                p.getUnit(), primaryImage, discDto
-        );
+        Map<Long, List<ProductVariant>> variantMap = buildVariantMap(all.stream().map(Product::getId).toList());
+        return all.stream().map(p -> toCatalogDto(p, dm.get(p.getId()), variantMap.getOrDefault(p.getId(), List.of()))).toList();
     }
 
     public Page<ProductResponse> listAll(Pageable pageable) {
-        return enrichPageWithImages(productRepository.findAll(pageable), pageable);
+        return enrichPage(productRepository.findAll(pageable), pageable);
     }
 
     // ─── Admin CRUD ───────────────────────────────────────────────────────────
@@ -149,7 +106,6 @@ public class ProductService {
                 .brand(brand)
                 .basePrice(req.basePrice())
                 .vatRate(req.vatRate() != null ? req.vatRate() : new BigDecimal("20.00"))
-                .minSellingQuantity(req.minSellingQuantity() != null ? req.minSellingQuantity() : 1)
                 .stockQuantity(req.stockQuantity() != null ? req.stockQuantity() : 0)
                 .unit(req.unit() != null ? req.unit() : ProductMessages.DEFAULT_UNIT.get())
                 .shortDescription(req.shortDescription())
@@ -172,7 +128,6 @@ public class ProductService {
         product.setBasePrice(req.basePrice());
 
         if (req.vatRate() != null) product.setVatRate(req.vatRate());
-        if (req.minSellingQuantity() != null) product.setMinSellingQuantity(req.minSellingQuantity());
         if (req.stockQuantity() != null) product.setStockQuantity(req.stockQuantity());
         if (req.unit() != null) product.setUnit(req.unit());
         if (req.shortDescription() != null) product.setShortDescription(req.shortDescription());
@@ -201,20 +156,100 @@ public class ProductService {
         productRepository.deleteById(id);
     }
 
-    // ─── Discount helpers ─────────────────────────────────────────────────────
+    // ─── DTO builders ─────────────────────────────────────────────────────────
 
-    private Page<ProductResponse> enrichPageWithImages(Page<Product> page, Pageable pageable) {
+    private CatalogProductDto toCatalogDto(Product p, ProductResponse.ActiveDiscountDto disc,
+                                            List<ProductVariant> variants) {
+        String primaryImage = p.getImages().stream()
+                .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
+                .map(ProductImage::getImageUrl)
+                .findFirst()
+                .orElse(p.getImages().isEmpty() ? null : p.getImages().get(0).getImageUrl());
+
+        List<CatalogProductDto.ImageDto> images = p.getImages().stream()
+                .map(i -> new CatalogProductDto.ImageDto(i.getId(), i.getImageUrl(), i.getIsPrimary(), i.getDisplayOrder()))
+                .toList();
+
+        CatalogProductDto.ActiveDiscountDto discDto = disc == null ? null :
+                new CatalogProductDto.ActiveDiscountDto(disc.label(), disc.discountType(), disc.discountValue());
+
+        List<CatalogProductDto.VariantDto> variantDtos = variants.stream()
+                .filter(v -> Boolean.TRUE.equals(v.getIsActive()))
+                .map(v -> new CatalogProductDto.VariantDto(v.getId(), v.getLabel(), v.getPrice(), v.getAvailableStock(), v.getDisplayOrder(), v.getIsActive()))
+                .toList();
+
+        return new CatalogProductDto(
+                p.getId(), p.getName(), p.getSlug(),
+                p.getSku(),
+                p.getShortDescription(),
+                p.getCategory() != null ? p.getCategory().getId() : null,
+                p.getCategory() != null ? p.getCategory().getName() : null,
+                p.getCategory() != null ? p.getCategory().getSlug() : null,
+                p.getBrand() != null ? p.getBrand().getId() : null,
+                p.getBrand() != null ? p.getBrand().getName() : null,
+                p.getBasePrice(), p.getVatRate(),
+                p.getAvailableStock(), p.getUnit(),
+                p.getIsActive(), p.getIsFeatured(),
+                primaryImage, images, discDto, variantDtos
+        );
+    }
+
+    private FeaturedProductDto toFeaturedDto(Product p, ProductResponse.ActiveDiscountDto disc,
+                                              List<ProductVariant> variants) {
+        String primaryImage = p.getImages().stream()
+                .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
+                .map(ProductImage::getImageUrl)
+                .findFirst()
+                .orElse(p.getImages().isEmpty() ? null : p.getImages().get(0).getImageUrl());
+
+        FeaturedProductDto.ActiveDiscountDto discDto = disc == null ? null :
+                new FeaturedProductDto.ActiveDiscountDto(disc.label(), disc.discountType(), disc.discountValue());
+
+        List<FeaturedProductDto.VariantDto> variantDtos = variants.stream()
+                .filter(v -> Boolean.TRUE.equals(v.getIsActive()))
+                .map(v -> new FeaturedProductDto.VariantDto(v.getId(), v.getLabel(), v.getPrice(), v.getAvailableStock(), v.getDisplayOrder(), v.getIsActive()))
+                .toList();
+
+        return new FeaturedProductDto(
+                p.getId(), p.getName(), p.getSlug(),
+                p.getBrand() != null ? p.getBrand().getName() : null,
+                p.getBasePrice(), p.getAvailableStock(),
+                p.getUnit(), primaryImage, discDto, variantDtos
+        );
+    }
+
+    // ─── Enrichment ───────────────────────────────────────────────────────────
+
+    private Page<ProductResponse> enrichPage(Page<Product> page, Pageable pageable) {
         if (page.isEmpty()) return Page.empty(pageable);
         List<Long> ids = page.getContent().stream().map(Product::getId).toList();
+
         Map<Long, Product> withImages = productRepository.findByIdsWithImages(ids)
-                .stream().collect(java.util.stream.Collectors.toMap(Product::getId, p -> p));
+                .stream().collect(Collectors.toMap(Product::getId, p -> p));
+        Map<Long, List<ProductVariant>> variantMap = buildVariantMap(ids);
         Map<Long, ProductResponse.ActiveDiscountDto> dm = buildDiscountMap();
+
         List<ProductResponse> enriched = ids.stream()
-                .map(id -> withImages.getOrDefault(id, page.getContent().stream().filter(p -> p.getId().equals(id)).findFirst().orElseThrow()))
-                .map(p -> ProductResponse.fromWithDiscount(p, dm.get(p.getId())))
+                .map(id -> {
+                    Product p = withImages.getOrDefault(id,
+                            page.getContent().stream().filter(pr -> pr.getId().equals(id)).findFirst().orElseThrow());
+                    List<ProductVariant> variants = variantMap.getOrDefault(id, List.of());
+                    p.getVariants().clear();
+                    p.getVariants().addAll(variants);
+                    return ProductResponse.fromWithDiscount(p, dm.get(p.getId()));
+                })
                 .toList();
         return new PageImpl<>(enriched, pageable, page.getTotalElements());
     }
+
+    /** Batch-load active variants for given product IDs — avoids N+1. */
+    private Map<Long, List<ProductVariant>> buildVariantMap(List<Long> productIds) {
+        if (productIds.isEmpty()) return Map.of();
+        return productVariantRepository.findActiveByProductIds(productIds)
+                .stream().collect(Collectors.groupingBy(v -> v.getProduct().getId()));
+    }
+
+    // ─── Discount helpers ─────────────────────────────────────────────────────
 
     /**
      * Tüm aktif indirimleri 3 sabit SQL ile yükler (N+1 yok).
@@ -257,5 +292,4 @@ public class ProductService {
     private ProductResponse.ActiveDiscountDto better(ProductResponse.ActiveDiscountDto a, ProductResponse.ActiveDiscountDto b) {
         return a.discountValue().compareTo(b.discountValue()) >= 0 ? a : b;
     }
-
 }

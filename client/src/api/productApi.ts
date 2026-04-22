@@ -1,5 +1,5 @@
 import api, { BASE_URL } from './axios'
-import type { Product, CatalogProduct, ProductImage, Brand, Category, Page, AdminUser } from '../types'
+import type { Product, CatalogProduct, ProductImage, ProductVariant, Brand, Category, Page, AdminUser } from '../types'
 import type { DiscountResponse, CampaignResponse } from './campaignApi'
 
 export interface CatalogResponse {
@@ -19,7 +19,6 @@ export interface ProductForm {
   brandId: number
   basePrice: number
   vatRate: number
-  minSellingQuantity: number
   stockQuantity: number
   unit: string
   shortDescription: string
@@ -104,6 +103,28 @@ export const productImageApi = {
 
   delete: (productId: number, imageId: number) =>
     api.delete(`/admin/products/${productId}/images/${imageId}`),
+}
+
+export interface VariantForm {
+  label: string
+  price: number
+  stockQuantity: number
+  displayOrder: number
+  isActive: boolean
+}
+
+export const variantApi = {
+  list: (productId: number) =>
+    api.get<ProductVariant[]>(`/admin/products/${productId}/variants`).then(r => r.data),
+
+  create: (productId: number, data: VariantForm) =>
+    api.post<ProductVariant>(`/admin/products/${productId}/variants`, data).then(r => r.data),
+
+  update: (productId: number, variantId: number, data: VariantForm) =>
+    api.put<ProductVariant>(`/admin/products/${productId}/variants/${variantId}`, data).then(r => r.data),
+
+  delete: (productId: number, variantId: number) =>
+    api.delete(`/admin/products/${productId}/variants/${variantId}`),
 }
 
 export const userApi = {

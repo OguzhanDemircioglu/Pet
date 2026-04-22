@@ -214,6 +214,13 @@ function ProductCard({ p }: { p: CatalogProduct }) {
   const cartItems = useSelector((s: RootState) => s.cart.items)
   const bg = BG_COLORS[p.name.charCodeAt(0) % BG_COLORS.length]
   const emoji = (p.categoryName && EMOJIS[p.categoryName.toLowerCase()]) || '🐾'
+  const activeVariants = (p.variants ?? []).filter(v => v.isActive).sort((a, b) => a.displayOrder - b.displayOrder)
+  const hasVariants = activeVariants.length >= 2
+  const [selectedId, setSelectedId] = useState<number | null>(hasVariants ? activeVariants[0].id : null)
+  const selectedVariant = hasVariants ? (activeVariants.find(v => v.id === selectedId) ?? activeVariants[0]) : null
+
+  const effectivePrice = selectedVariant ? selectedVariant.price : p.basePrice
+  const effectiveStock = selectedVariant ? selectedVariant.availableStock : p.availableStock
 
   return (
     <div
@@ -234,27 +241,65 @@ function ProductCard({ p }: { p: CatalogProduct }) {
       <div style={{ padding: 13, flex: 1, display: 'flex', flexDirection: 'column' }}>
         <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 }}>{p.brandName}</div>
         <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', lineHeight: 1.4, marginBottom: 7, flex: 1 }}>{p.name}</div>
-        <div style={{ fontSize: 16, fontWeight: 900, color: 'var(--primary)', marginBottom: 8 }}>₺{p.basePrice.toFixed(2)}</div>
-        <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 8 }}>Min. {p.minSellingQuantity} {p.unit}</div>
+
+        <div style={{ fontSize: 16, fontWeight: 900, color: 'var(--primary)', marginBottom: 6 }}>₺{effectivePrice.toFixed(2)}</div>
+
+        {/* Variant listesi — sadece 2+ varyant varsa göster */}
+        {hasVariants && (
+          <div onClick={e => e.stopPropagation()} style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 8, paddingTop: 7, borderTop: '1px solid var(--border)' }}>
+            {activeVariants.map(v => {
+              const isSel = selectedVariant?.id === v.id
+              const outOfStock = v.availableStock <= 0
+              return (
+                <button
+                  key={v.id}
+                  onClick={e => { e.stopPropagation(); if (!outOfStock) setSelectedId(v.id) }}
+                  disabled={outOfStock}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '6px 10px', borderRadius: 7,
+                    border: isSel ? '1.5px solid var(--primary)' : '1.5px solid var(--border)',
+                    background: isSel ? 'var(--primary-bg)' : 'var(--bg)',
+                    cursor: outOfStock ? 'not-allowed' : 'pointer',
+                    opacity: outOfStock ? 0.5 : 1,
+                    transition: '0.15s',
+                  }}
+                >
+                  <span style={{ fontSize: 11, fontWeight: 700, color: isSel ? 'var(--primary)' : 'var(--text2)' }}>
+                    {v.label}{outOfStock && ' · Tükendi'}
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 900, color: isSel ? 'var(--primary)' : 'var(--text)' }}>
+                    ₺{v.price.toFixed(2)}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        )}
         <button
-          disabled={p.availableStock <= 0}
-          onClick={p.availableStock > 0 ? e => {
+          disabled={effectiveStock <= 0}
+          onClick={effectiveStock > 0 ? e => {
             e.stopPropagation(); e.preventDefault()
-            const inCart = cartItems.find(i => i.productId === p.id)?.quantity ?? 0
-            if (inCart >= p.availableStock) { toast.error('Stokta yeterli ürün yok'); return }
-            dispatch(addToCart({ productId: p.id, name: p.name, slug: p.slug, brandName: p.brandName, basePrice: p.basePrice, unit: p.unit, minSellingQuantity: p.minSellingQuantity, availableStock: p.availableStock, primaryImageUrl: p.primaryImageUrl }))
+            const inCart = cartItems.find(i => i.productId === p.id && (i.variantId ?? undefined) === (selectedVariant?.id ?? undefined))?.quantity ?? 0
+            if (inCart >= effectiveStock) { toast.error('Stokta yeterli ürün yok'); return }
+            dispatch(addToCart({
+              productId: p.id, name: p.name, slug: p.slug, brandName: p.brandName,
+              basePrice: effectivePrice, unit: p.unit,
+              availableStock: effectiveStock, primaryImageUrl: p.primaryImageUrl,
+              ...(selectedVariant ? { variantId: selectedVariant.id, variantLabel: selectedVariant.label } : {}),
+            }))
             toast.success('Sepete eklendi')
           } : undefined}
           style={{
             width: '100%',
-            background: p.availableStock <= 0 ? '#e5e7eb' : 'var(--primary)',
-            color: p.availableStock <= 0 ? '#111' : '#fff',
+            background: effectiveStock <= 0 ? '#e5e7eb' : 'var(--primary)',
+            color: effectiveStock <= 0 ? '#111' : '#fff',
             fontSize: 12, fontWeight: 700, padding: '8px 0',
             borderRadius: 'var(--r)', border: 'none',
-            cursor: p.availableStock <= 0 ? 'not-allowed' : 'pointer',
+            cursor: effectiveStock <= 0 ? 'not-allowed' : 'pointer',
             transition: '0.2s',
           }}>
-          {p.availableStock <= 0 ? 'Stokta Yok' : 'Sepete Ekle'}
+          {effectiveStock <= 0 ? 'Stokta Yok' : 'Sepete Ekle'}
         </button>
       </div>
     </div>

@@ -57,6 +57,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT p FROM Product p LEFT JOIN FETCH p.images WHERE p.id IN :ids")
     List<Product> findByIdsWithImages(@Param("ids") List<Long> ids);
 
+    // Batch variants fetch by IDs (used after findByIdsWithImages to avoid MultipleBagFetchException)
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.variants WHERE p.id IN :ids")
+    List<Product> findByIdsWithVariants(@Param("ids") List<Long> ids);
+
     // ─── Discount map helpers (eliminates N+1 in buildDiscountMap) ────────────
 
     @Query("""

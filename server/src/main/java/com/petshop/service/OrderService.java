@@ -10,8 +10,10 @@ import com.petshop.entity.User;
 import com.petshop.constant.OrderMessages;
 import com.petshop.constant.ProductMessages;
 import com.petshop.exception.ResourceNotFoundException;
+import com.petshop.entity.ProductVariant;
 import com.petshop.repository.OrderRepository;
 import com.petshop.repository.ProductRepository;
+import com.petshop.repository.ProductVariantRepository;
 import com.petshop.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +35,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+    private final ProductVariantRepository productVariantRepository;
     private final NotificationService notificationService;
     private final NotificationOutboxService notificationOutboxService;
     private final TelegramOutboxService telegramOutboxService;
@@ -45,12 +48,22 @@ public class OrderService {
         // Sipariş kaydedilmeden önce stok kontrolü
         for (OrderItemRequest itemReq : req.items()) {
             if (itemReq.productId() == null) continue;
-            Product p = productRepository.findById(itemReq.productId()).orElse(null);
-            if (p == null) continue;
-            if (p.getStockQuantity() < itemReq.quantity()) {
-                throw new com.petshop.exception.BusinessException(
-                        ProductMessages.INSUFFICIENT_STOCK.format(
-                                itemReq.productName(), p.getStockQuantity(), itemReq.quantity()));
+            if (itemReq.variantId() != null) {
+                ProductVariant v = productVariantRepository.findById(itemReq.variantId()).orElse(null);
+                if (v != null && v.getAvailableStock() < itemReq.quantity()) {
+                    throw new com.petshop.exception.BusinessException(
+                            ProductMessages.INSUFFICIENT_STOCK.format(
+                                    itemReq.productName() + " (" + v.getLabel() + ")",
+                                    v.getAvailableStock(), itemReq.quantity()));
+                }
+            } else {
+                Product p = productRepository.findById(itemReq.productId()).orElse(null);
+                if (p == null) continue;
+                if (p.getStockQuantity() < itemReq.quantity()) {
+                    throw new com.petshop.exception.BusinessException(
+                            ProductMessages.INSUFFICIENT_STOCK.format(
+                                    itemReq.productName(), p.getStockQuantity(), itemReq.quantity()));
+                }
             }
         }
 
@@ -78,10 +91,16 @@ public class OrderService {
 
         // Items'ları dönüştür ve order'a bağla
         for (OrderItemRequest itemReq : req.items()) {
-            // Ürünü bul (referans için), bulunamazsa sadece id ile devam et
             Product product = null;
             if (itemReq.productId() != null) {
                 product = productRepository.findById(itemReq.productId()).orElse(null);
+            }
+
+            ProductVariant variant = null;
+            String variantLabel = null;
+            if (itemReq.variantId() != null) {
+                variant = productVariantRepository.findById(itemReq.variantId()).orElse(null);
+                if (variant != null) variantLabel = variant.getLabel();
             }
 
             OrderItem item = OrderItem.builder()
@@ -89,6 +108,8 @@ public class OrderService {
                     .product(product)
                     .productName(itemReq.productName())
                     .productSku(product != null && product.getSku() != null ? product.getSku() : "")
+                    .variant(variant)
+                    .variantLabel(variantLabel)
                     .quantity(itemReq.quantity())
                     .unitPrice(itemReq.unitPrice())
                     .vatRate(java.math.BigDecimal.ZERO)
@@ -102,13 +123,21 @@ public class OrderService {
 
         // Stok düş (sipariş alındı)
         for (OrderItemRequest itemReq : req.items()) {
-            if (itemReq.productId() == null) continue;
-            Product p = productRepository.findById(itemReq.productId()).orElse(null);
-            if (p == null) continue;
-            p.setStockQuantity(p.getStockQuantity() - itemReq.quantity());
-            productRepository.save(p);
-            log.info("Stok düşüldü: ürün #{} ({}) → {} adet, kalan: {}",
-                    p.getId(), p.getName(), itemReq.quantity(), p.getStockQuantity());
+            if (itemReq.variantId() != null) {
+                ProductVariant v = productVariantRepository.findById(itemReq.variantId()).orElse(null);
+                if (v == null) continue;
+                v.setStockQuantity(v.getStockQuantity() - itemReq.quantity());
+                productVariantRepository.save(v);
+                log.info("Varyant stok düşüldü: varyant #{} ({}) → {} adet, kalan: {}",
+                        v.getId(), v.getLabel(), itemReq.quantity(), v.getStockQuantity());
+            } else if (itemReq.productId() != null) {
+                Product p = productRepository.findById(itemReq.productId()).orElse(null);
+                if (p == null) continue;
+                p.setStockQuantity(p.getStockQuantity() - itemReq.quantity());
+                productRepository.save(p);
+                log.info("Stok düşüldü: ürün #{} ({}) → {} adet, kalan: {}",
+                        p.getId(), p.getName(), itemReq.quantity(), p.getStockQuantity());
+            }
         }
 
         // Admin bildirimi gönder
@@ -187,13 +216,21 @@ public class OrderService {
         }
         // Stok iade et
         for (OrderItem item : order.getItems()) {
-            if (item.getProduct() == null) continue;
-            Product p = productRepository.findById(item.getProduct().getId()).orElse(null);
-            if (p == null) continue;
-            p.setStockQuantity(p.getStockQuantity() + item.getQuantity());
-            productRepository.save(p);
-            log.info("Stok iade edildi: ürün #{} ({}) → {} adet geri eklendi, yeni: {}",
-                    p.getId(), p.getName(), item.getQuantity(), p.getStockQuantity());
+            if (item.getVariant() != null) {
+                ProductVariant v = productVariantRepository.findById(item.getVariant().getId()).orElse(null);
+                if (v == null) continue;
+                v.setStockQuantity(v.getStockQuantity() + item.getQuantity());
+                productVariantRepository.save(v);
+                log.info("Varyant stok iade edildi: varyant #{} ({}) → {} adet, yeni: {}",
+                        v.getId(), v.getLabel(), item.getQuantity(), v.getStockQuantity());
+            } else if (item.getProduct() != null) {
+                Product p = productRepository.findById(item.getProduct().getId()).orElse(null);
+                if (p == null) continue;
+                p.setStockQuantity(p.getStockQuantity() + item.getQuantity());
+                productRepository.save(p);
+                log.info("Stok iade edildi: ürün #{} ({}) → {} adet geri eklendi, yeni: {}",
+                        p.getId(), p.getName(), item.getQuantity(), p.getStockQuantity());
+            }
         }
         order.setStatus(Order.OrderStatus.CANCELLED);
         return OrderResponse.from(orderRepository.save(order));

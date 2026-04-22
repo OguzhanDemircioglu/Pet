@@ -2,6 +2,7 @@ package com.petshop.dto.response;
 
 import com.petshop.entity.Product;
 import com.petshop.entity.ProductImage;
+import com.petshop.entity.ProductVariant;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -19,7 +20,6 @@ public record ProductResponse(
         String brandName,
         BigDecimal basePrice,
         BigDecimal vatRate,
-        Integer minSellingQuantity,
         Integer availableStock,
         String unit,
         Boolean isActive,
@@ -28,10 +28,12 @@ public record ProductResponse(
         Double averageRating,
         Integer reviewCount,
         List<ImageDto> images,
-        ActiveDiscountDto activeDiscount
+        ActiveDiscountDto activeDiscount,
+        List<VariantDto> variants
 ) {
     public record ImageDto(Long id, String imageUrl, Boolean isPrimary, Integer displayOrder) {}
     public record ActiveDiscountDto(String label, String discountType, BigDecimal discountValue, String name) {}
+    public record VariantDto(Long id, String label, BigDecimal price, Integer availableStock, Boolean isActive, Integer displayOrder) {}
 
     public static ProductResponse from(Product p) {
         return fromWithDiscount(p, null);
@@ -53,6 +55,11 @@ public record ProductResponse(
                 .map(i -> new ImageDto(i.getId(), i.getImageUrl(), i.getIsPrimary(), i.getDisplayOrder()))
                 .toList();
 
+        List<VariantDto> variants = p.getVariants().stream()
+                .filter(v -> Boolean.TRUE.equals(v.getIsActive()))
+                .map(v -> new VariantDto(v.getId(), v.getLabel(), v.getPrice(), v.getAvailableStock(), v.getIsActive(), v.getDisplayOrder()))
+                .toList();
+
         return new ProductResponse(
                 p.getId(), p.getName(), p.getSlug(), p.getSku(),
                 p.getShortDescription(),
@@ -61,10 +68,10 @@ public record ProductResponse(
                 p.getCategory() != null ? p.getCategory().getId() : null,
                 p.getBrand() != null ? p.getBrand().getId() : null,
                 p.getBrand() != null ? p.getBrand().getName() : null,
-                p.getBasePrice(), p.getVatRate(), p.getMinSellingQuantity(),
+                p.getBasePrice(), p.getVatRate(),
                 p.getAvailableStock(), p.getUnit(),
                 p.getIsActive(), p.getIsFeatured(),
-                primaryImage, avgRating, reviewCnt, images, discount
+                primaryImage, avgRating, reviewCnt, images, discount, variants
         );
     }
 }

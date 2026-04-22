@@ -291,6 +291,7 @@ export default function Header({ showSearch = true }: HeaderProps) {
         totalAmount: cartTotal,
         items: cartItems.map(i => ({
           productId: i.productId,
+          variantId: i.variantId ?? null,
           productName: i.name,
           quantity: i.quantity,
           unitPrice: i.basePrice,
@@ -318,6 +319,7 @@ export default function Header({ showSearch = true }: HeaderProps) {
         totalAmount: cartTotal,
         items: cartItems.map(i => ({
           productId: i.productId,
+          variantId: i.variantId ?? null,
           productName: i.name,
           quantity: i.quantity,
           unitPrice: i.basePrice,
@@ -529,27 +531,34 @@ export default function Header({ showSearch = true }: HeaderProps) {
                           <div style={{ fontSize: 13 }}>Ürün eklemek için alışverişe başlayın</div>
                         </div>
                       ) : cartItems.map(item => (
-                        <div key={item.productId} style={{ display: 'flex', gap: 12, padding: '14px 20px', borderBottom: '1px solid var(--border)', alignItems: 'flex-start' }}>
+                        <div key={`${item.productId}-${item.variantId ?? 0}`} style={{ display: 'flex', gap: 12, padding: '14px 20px', borderBottom: '1px solid var(--border)', alignItems: 'flex-start' }}>
                           <div style={{ width: 60, height: 60, borderRadius: 8, border: '1px solid var(--border)', overflow: 'hidden', flexShrink: 0, background: 'var(--bg3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
                             {item.primaryImageUrl ? <img src={imgUrl(item.primaryImageUrl)} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '📦'}
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', marginBottom: 2 }}>{item.brandName}</div>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.35, marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>{item.name}</div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.35, marginBottom: item.variantLabel ? 4 : 6, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>{item.name}</div>
+                            {item.variantLabel && (
+                              <div style={{ marginBottom: 6 }}>
+                                <span style={{ fontSize: 11, fontWeight: 700, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 8px', color: 'var(--text2)' }}>
+                                  ⚖️ {item.variantLabel}
+                                </span>
+                              </div>
+                            )}
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
                               <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid var(--border)', borderRadius: 'var(--r)', overflow: 'hidden' }}>
-                                <button onClick={() => dispatch(updateQuantity({ productId: item.productId, quantity: item.quantity - item.minSellingQuantity }))} style={{ width: 28, height: 28, border: 'none', background: 'var(--bg3)', color: 'var(--text)', fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                                <button onClick={() => dispatch(updateQuantity({ productId: item.productId, variantId: item.variantId, quantity: item.quantity - 1 }))} style={{ width: 28, height: 28, border: 'none', background: 'var(--bg3)', color: 'var(--text)', fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
                                 <span style={{ minWidth: 32, textAlign: 'center', fontSize: 13, fontWeight: 700 }}>{item.quantity}</span>
                                 <button onClick={() => {
                                   if (item.quantity >= item.availableStock) { toast.error('Stokta yeterli ürün yok'); return }
-                                  dispatch(updateQuantity({ productId: item.productId, quantity: item.quantity + item.minSellingQuantity }))
+                                  dispatch(updateQuantity({ productId: item.productId, variantId: item.variantId, quantity: item.quantity + 1 }))
                                 }} style={{ width: 28, height: 28, border: 'none', background: 'var(--bg3)', color: 'var(--text)', fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                               </div>
                               <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--primary)' }}>₺{(item.basePrice * item.quantity).toFixed(2)}</div>
                             </div>
-                            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3 }}>₺{item.basePrice.toFixed(2)} / {item.unit} · Min. {item.minSellingQuantity} {item.unit}</div>
+                            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3 }}>₺{item.basePrice.toFixed(2)} / {item.variantLabel ?? item.unit}</div>
                           </div>
-                          <button onClick={() => dispatch(removeFromCart(item.productId))} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 16, padding: 2, flexShrink: 0, lineHeight: 1 }}>×</button>
+                          <button onClick={() => dispatch(removeFromCart({ productId: item.productId, variantId: item.variantId }))} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 16, padding: 2, flexShrink: 0, lineHeight: 1 }}>×</button>
                         </div>
                       ))}
                     </div>

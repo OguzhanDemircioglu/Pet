@@ -26,7 +26,9 @@ public record OrderResponse(
                 o.getItems().stream()
                         .map(item -> new OrderItemResponse(
                                 item.getProduct() != null ? item.getProduct().getId() : null,
+                                item.getVariant() != null ? item.getVariant().getId() : null,
                                 item.getProductName(),
+                                item.getVariantLabel(),
                                 item.getQuantity(),
                                 item.getUnitPrice()
                         ))

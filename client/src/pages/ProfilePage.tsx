@@ -8,17 +8,17 @@ import CategoryBar from '../components/CategoryBar'
 import Footer from '../components/Footer'
 import type { RootState, AppDispatch } from '../store'
 import { logout, updateUserProfile } from '../store/authSlice'
-import { resetCatalog, fetchCatalogThunk } from '../store/productSlice'
+import { resetCatalog, resetFeatured, fetchCatalogThunk } from '../store/productSlice'
 import { fetchBrandsThunk, resetBrands } from '../store/brandSlice'
 import { fetchAdminCampaignsThunk, resetAdminCampaigns } from '../store/adminCampaignSlice'
-import { resetCampaigns, FREE_SHIPPING_TITLE } from '../store/campaignSlice'
-import { productApi, brandApi, categoryApi, userApi, productImageApi, imgUrl, type ProductForm } from '../api/productApi'
+import { resetCampaigns, fetchHomepageThunk, FREE_SHIPPING_TITLE } from '../store/campaignSlice'
+import { productApi, brandApi, categoryApi, userApi, productImageApi, variantApi, imgUrl, type ProductForm, type VariantForm } from '../api/productApi'
 import { campaignApi, discountApi, type CampaignResponse, type CampaignRequest, type DiscountResponse } from '../api/campaignApi'
 import { fetchOrdersThunk } from '../store/orderSlice'
 import { adminOrderApi, type OrderResponse as AdminOrderResponse } from '../api/orderApi'
 import { markAllReadThunk, markReadThunk } from '../store/notificationSlice'
 import { fetchCategoriesThunk } from '../store/categorySlice'
-import type { CatalogProduct, ProductImage as ProductImageType, Brand, Category, AdminUser, Address, AddressRequest } from '../types'
+import type { CatalogProduct, ProductImage as ProductImageType, ProductVariant, Brand, Category, AdminUser, Address, AddressRequest } from '../types'
 import { addressApi } from '../api/addressApi'
 import { authApi } from '../api/authApi'
 import { TURKEY_DISTRICTS } from '../data/turkeyDistricts'
@@ -46,7 +46,7 @@ const UNITS = ['adet', 'kg', 'lt', 'kutu', 'paket', 'çift']
 
 const EMPTY_FORM: ProductForm = {
   name: '', sku: '', categoryId: 0, brandId: 0,
-  basePrice: 0, vatRate: 20, minSellingQuantity: 1, stockQuantity: 0,
+  basePrice: 0, vatRate: 20, stockQuantity: 0,
   unit: 'adet', shortDescription: '', isActive: true, isFeatured: false,
 }
 
@@ -139,7 +139,7 @@ export default function ProfilePage() {
           {section === 'addresses' && <AddressesSection />}
           {section === 'notifications' && <NotificationsSection />}
           {section === 'adminorders' && isAdmin && <AdminOrdersSection />}
-          {section === 'products' && isAdmin && <AdminProductsSection products={allProducts} onRefresh={() => { dispatch(resetCatalog()); dispatch(fetchCatalogThunk()) }} categories={categories} categoriesLoading={categoriesLoading} />}
+          {section === 'products' && isAdmin && <AdminProductsSection products={allProducts} onRefresh={() => { dispatch(resetCatalog()); dispatch(resetFeatured()); dispatch(resetCampaigns()); dispatch(fetchCatalogThunk()); dispatch(fetchHomepageThunk()) }} categories={categories} categoriesLoading={categoriesLoading} />}
           {section === 'brands' && isAdmin && <AdminBrandsSection />}
           {section === 'categories' && isAdmin && <AdminCategoriesSection categories={categories} onRefresh={() => dispatch(fetchCategoriesThunk(true))} />}
           {section === 'campaigns' && isAdmin && <AdminCampaignsSection />}
@@ -872,7 +872,7 @@ function AdminProductsSection({ products, onRefresh, categories, categoriesLoadi
 
   const [search, setSearch] = useState('')
   const [modal, setModal] = useState<null | 'add' | 'edit'>(null)
-  const [step, setStep] = useState<'details' | 'images'>('details')
+  const [step, setStep] = useState<'details' | 'images' | 'variants'>('details')
   const [editing, setEditing] = useState<CatalogProduct | null>(null)
   const [savedProductId, setSavedProductId] = useState<number | null>(null)
   const [deleteId, setDeleteId] = useState<number | null>(null)
@@ -886,6 +886,17 @@ function AdminProductsSection({ products, onRefresh, categories, categoriesLoadi
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
   const draggingIdx = useRef<number | null>(null)
 
+  // Variant state
+  const EMPTY_VARIANT: VariantForm = { label: '', price: 0, stockQuantity: 0, displayOrder: 0, isActive: true }
+  const [variants, setVariants] = useState<ProductVariant[]>([])
+  const [variantModal, setVariantModal] = useState<null | 'add' | 'edit' | 'editBase'>(null)
+  const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(null)
+  const [variantForm, setVariantForm] = useState<VariantForm>({ ...EMPTY_VARIANT })
+  const [variantAmount, setVariantAmount] = useState<number | ''>(0)
+  const [variantSaving, setVariantSaving] = useState(false)
+  const [variantSubmitted, setVariantSubmitted] = useState(false)
+  const [deleteVariantId, setDeleteVariantId] = useState<number | null>(null)
+
   const rootCats = useMemo(() => categories.filter(c => c.parent_id === null), [categories])
   const childCats = useMemo(() => categories.filter(c => c.parent_id === parentCatId), [categories, parentCatId])
   const hasChildren = childCats.length > 0
@@ -898,20 +909,21 @@ function AdminProductsSection({ products, onRefresh, categories, categoriesLoadi
 
   const openAdd = () => {
     setForm({ ...EMPTY_FORM }); setParentCatId(0); setSubmitted(false); setImgSubmitted(false)
-    setEditing(null); setSavedProductId(null); setProductImages([]); setStep('details'); setModal('add')
+    setEditing(null); setSavedProductId(null); setProductImages([]); setVariants([]); setStep('details'); setModal('add')
   }
   const openEdit = (p: CatalogProduct) => {
     const pid = findParentForEdit(p.categoryId ?? 0, categories)
     setParentCatId(pid > 0 ? pid : (p.categoryId ?? 0))
     setForm({
       name: p.name, sku: p.sku, categoryId: p.categoryId ?? 0, brandId: p.brandId ?? 0,
-      basePrice: p.basePrice, vatRate: p.vatRate, minSellingQuantity: p.minSellingQuantity, stockQuantity: p.availableStock,
+      basePrice: p.basePrice, vatRate: p.vatRate, stockQuantity: p.availableStock,
       unit: p.unit, shortDescription: p.shortDescription || '', isActive: p.isActive, isFeatured: p.isFeatured,
     })
     setSubmitted(false); setImgSubmitted(false); setEditing(p); setSavedProductId(p.id)
-    setProductImages(p.images ?? []); setStep('details'); setModal('edit')
+    setProductImages(p.images ?? []); setVariants(p.variants ?? []); setStep('details'); setModal('edit')
   }
 
+  const cancelModal = () => setModal(null)
   const closeModal = () => { setModal(null); onRefresh() }
 
   const handleSave = async () => {
@@ -942,7 +954,91 @@ function AdminProductsSection({ products, onRefresh, categories, categoriesLoadi
   const handleFinish = () => {
     setImgSubmitted(true)
     if (productImages.length === 0) { toast.error('En az 1 resim yüklenmeli'); return }
-    closeModal()
+    setStep('variants')
+  }
+
+  const loadVariants = async (productId: number) => {
+    try {
+      const data = await variantApi.list(productId)
+      setVariants(data)
+    } catch { /* ignore */ }
+  }
+
+  const openVariantAdd = () => {
+    setVariantAmount('')
+    setVariantForm({ ...EMPTY_VARIANT, label: '' })
+    setEditingVariant(null); setVariantSubmitted(false); setVariantModal('add')
+  }
+  const openVariantEdit = (v: ProductVariant) => {
+    const parsed = parseFloat(v.label)
+    setVariantAmount(isNaN(parsed) ? '' : parsed)
+    setVariantForm({ label: v.label, price: v.price, stockQuantity: v.stockQuantity, displayOrder: v.displayOrder, isActive: v.isActive })
+    setEditingVariant(v); setVariantSubmitted(false); setVariantModal('edit')
+  }
+  const openBaseVariantEdit = () => {
+    setVariantAmount(1)
+    setVariantForm({ label: `1 ${form.unit}`, price: form.basePrice, stockQuantity: form.stockQuantity, displayOrder: 0, isActive: true })
+    setEditingVariant(null); setVariantSubmitted(false); setVariantModal('editBase')
+  }
+  const closeVariantModal = () => setVariantModal(null)
+
+  const handleVariantSave = async () => {
+    setVariantSubmitted(true)
+    if (!variantForm.label.trim()) { toast.error('Etiket zorunlu (örn: 2 kg)'); return }
+    if (!variantForm.price || variantForm.price <= 0) { toast.error('Fiyat 0\'dan büyük olmalı'); return }
+    if (!savedProductId) return
+    setVariantSaving(true)
+    try {
+      if (variantModal === 'editBase') {
+        const updatedForm = { ...form, basePrice: variantForm.price, stockQuantity: variantForm.stockQuantity }
+        await productApi.adminUpdate(savedProductId, updatedForm)
+        setForm(updatedForm)
+        toast.success('Temel bilgiler güncellendi')
+      } else if (variantModal === 'add') {
+        if (variants.length === 0) {
+          // Sanal ilk varyantı DB'ye yaz, ardından yeni varyantı ekle
+          const first = await variantApi.create(savedProductId, {
+            label: `1 ${form.unit}`,
+            price: form.basePrice,
+            stockQuantity: form.stockQuantity,
+            displayOrder: 1,
+            isActive: true,
+          })
+          const second = await variantApi.create(savedProductId, { ...variantForm, displayOrder: Number(variantAmount) || variants.length + 1 })
+          const sorted = [first, second].sort((a, b) => a.displayOrder - b.displayOrder)
+          setVariants(sorted)
+          toast.success('Varyantlar eklendi')
+        } else {
+          const created = await variantApi.create(savedProductId, { ...variantForm, displayOrder: Number(variantAmount) || variants.length + 1 })
+          setVariants(prev => [...prev, created].sort((a, b) => a.displayOrder - b.displayOrder))
+          toast.success('Varyant eklendi')
+        }
+      } else if (variantModal === 'edit' && editingVariant) {
+        const updated = await variantApi.update(savedProductId, editingVariant.id, { ...variantForm, displayOrder: Number(variantAmount) || editingVariant.displayOrder })
+        setVariants(prev => prev.map(v => v.id === updated.id ? updated : v).sort((a, b) => a.displayOrder - b.displayOrder))
+        toast.success('Varyant güncellendi')
+      }
+      closeVariantModal()
+    } catch { toast.error('Bir hata oluştu') }
+    finally { setVariantSaving(false) }
+  }
+
+  const handleVariantDelete = async (variantId: number) => {
+    if (!savedProductId) return
+    try {
+      if (variants.length === 2) {
+        // İki varyant varken birini sil → ikisini de sil (ürün varyantsız hale döner)
+        await variantApi.delete(savedProductId, variants[0].id)
+        await variantApi.delete(savedProductId, variants[1].id)
+        setVariants([])
+        toast.success('Varyantlar silindi')
+      } else {
+        await variantApi.delete(savedProductId, variantId)
+        setVariants(prev => prev.filter(v => v.id !== variantId))
+        toast.success('Varyant silindi')
+      }
+    } catch { toast.error('Silinemedi') }
+    setDeleteVariantId(null)
   }
 
   const handleUpload = async (files: FileList | null) => {
@@ -1081,9 +1177,10 @@ function AdminProductsSection({ products, onRefresh, categories, categoriesLoadi
                 <div style={{ display: 'flex', gap: 4 }}>
                   <button onClick={() => setStep('details')} style={{ fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 20, border: 'none', cursor: 'pointer', background: step === 'details' ? 'var(--primary)' : 'var(--bg3)', color: step === 'details' ? '#fff' : 'var(--text3)' }}>1 · Detaylar</button>
                   <button onClick={() => { if (savedProductId) setStep('images') }} style={{ fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 20, border: 'none', cursor: savedProductId ? 'pointer' : 'not-allowed', background: step === 'images' ? 'var(--primary)' : 'var(--bg3)', color: step === 'images' ? '#fff' : savedProductId ? 'var(--text2)' : 'var(--text3)', opacity: savedProductId ? 1 : 0.5 }}>2 · Resimler {savedProductId && productImages.length > 0 ? `(${productImages.length})` : ''}</button>
+                  <button onClick={() => { if (savedProductId) { setStep('variants'); loadVariants(savedProductId) } }} style={{ fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 20, border: 'none', cursor: savedProductId ? 'pointer' : 'not-allowed', background: step === 'variants' ? 'var(--primary)' : 'var(--bg3)', color: step === 'variants' ? '#fff' : savedProductId ? 'var(--text2)' : 'var(--text3)', opacity: savedProductId ? 1 : 0.5 }}>3 · Varyantlar {variants.length > 0 ? `(${variants.length})` : ''}</button>
                 </div>
               </div>
-              <button onClick={closeModal} style={{ background: 'none', border: 'none', fontSize: 22, color: 'var(--text3)', cursor: 'pointer', lineHeight: 1 }}>×</button>
+              <button onClick={cancelModal} style={{ background: 'none', border: 'none', fontSize: 22, color: 'var(--text3)', cursor: 'pointer', lineHeight: 1 }}>×</button>
             </div>
 
             {/* Step 1: Details */}
@@ -1126,9 +1223,6 @@ function AdminProductsSection({ products, onRefresh, categories, categoriesLoadi
                     <FormField label="KDV Oranı (%)">
                       <input type="number" value={form.vatRate} onChange={e => setForm(p => ({ ...p, vatRate: Number(e.target.value) }))} style={inputStyle} min={0} max={100} />
                     </FormField>
-                    <FormField label="Min. Sipariş Adedi">
-                      <input type="number" value={form.minSellingQuantity} onChange={e => setForm(p => ({ ...p, minSellingQuantity: Number(e.target.value) }))} style={inputStyle} min={1} />
-                    </FormField>
                     <FormField label="Stok Miktarı">
                       <input type="number" value={form.stockQuantity} onChange={e => setForm(p => ({ ...p, stockQuantity: Number(e.target.value) }))} style={inputStyle} min={0} />
                     </FormField>
@@ -1155,7 +1249,7 @@ function AdminProductsSection({ products, onRefresh, categories, categoriesLoadi
                   </div>
                 </div>
                 <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                  <button onClick={closeModal} style={{ padding: '9px 20px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>İptal</button>
+                  <button onClick={cancelModal} style={{ padding: '9px 20px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>İptal</button>
                   <button onClick={handleSave} disabled={saving} style={{ padding: '9px 22px', borderRadius: 'var(--r)', border: 'none', background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
                     {saving ? 'Kaydediliyor...' : 'Kaydet ve Devam →'}
                   </button>
@@ -1240,10 +1334,140 @@ function AdminProductsSection({ products, onRefresh, categories, categoriesLoadi
                 </div>
                 <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, justifyContent: 'space-between' }}>
                   <button onClick={() => setStep('details')} style={{ padding: '9px 20px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>← Detaylar</button>
-                  <button onClick={handleFinish} style={{ padding: '9px 22px', borderRadius: 'var(--r)', border: 'none', background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Tamamla</button>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={closeModal} style={{ padding: '9px 20px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Tamamla</button>
+                    <button onClick={handleFinish} style={{ padding: '9px 22px', borderRadius: 'var(--r)', border: 'none', background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>3 · Varyantlar →</button>
+                  </div>
                 </div>
               </>
             )}
+
+            {/* Step 3: Variants */}
+            {step === 'variants' && savedProductId && (
+              <>
+                <div style={{ padding: 24 }}>
+                  <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 3 }}>Ürün Varyantları</div>
+                      <div style={{ fontSize: 12, color: 'var(--text3)' }}>Her varyantın kendi fiyatı ve stoğu vardır · Opsiyonel</div>
+                    </div>
+                    <button onClick={openVariantAdd} style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'var(--primary)', color: '#fff', borderRadius: 'var(--r)', padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', border: 'none' }}>
+                      + Varyant Ekle
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {/* Sanal ilk varyant (variants.length === 0 iken gösterilir) */}
+                    {variants.length === 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--bg3)', border: '1.5px dashed var(--border)', borderRadius: 'var(--r)', padding: '12px 16px', opacity: 0.85 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{form.unit}</span>
+                            <span style={{ fontSize: 10, fontWeight: 700, background: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd', borderRadius: 10, padding: '2px 7px' }}>Varsayılan</span>
+                          </div>
+                          <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>
+                            ₺{Number(form.basePrice).toFixed(2)} · Stok: {form.stockQuantity}
+                          </div>
+                        </div>
+                        <button onClick={openBaseVariantEdit} style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 10px', cursor: 'pointer' }}>Düzenle</button>
+                      </div>
+                    )}
+
+                    {/* Gerçek varyantlar */}
+                    {variants.map((v, idx) => (
+                      <div key={v.id} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--bg3)', border: `1px solid ${idx === 0 ? 'var(--border)' : 'var(--border)'}`, borderRadius: 'var(--r)', padding: '12px 16px' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{v.label}</span>
+                            {idx === 0 && <span style={{ fontSize: 10, fontWeight: 700, background: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd', borderRadius: 10, padding: '2px 7px' }}>İlk</span>}
+                            {!v.isActive && <span style={{ fontSize: 10, fontWeight: 700, background: 'var(--bg2)', color: 'var(--text3)', border: '1px solid var(--border)', borderRadius: 10, padding: '2px 7px' }}>Pasif</span>}
+                          </div>
+                          <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>
+                            ₺{Number(v.price).toFixed(2)} · Stok: {v.availableStock}
+                          </div>
+                        </div>
+                        {deleteVariantId === v.id ? (
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                            <span style={{ fontSize: 12, color: 'var(--text2)' }}>{variants.length === 2 ? 'İkisi de silinecek!' : 'Emin misin?'}</span>
+                            <button onClick={() => handleVariantDelete(v.id)} style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: 'var(--primary)', border: 'none', borderRadius: 5, padding: '3px 9px', cursor: 'pointer' }}>Evet</button>
+                            <button onClick={() => setDeleteVariantId(null)} style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 5, padding: '3px 9px', cursor: 'pointer' }}>Hayır</button>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button onClick={() => openVariantEdit(v)} style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 10px', cursor: 'pointer' }}>Düzenle</button>
+                            {idx !== 0 && (
+                              <button onClick={() => setDeleteVariantId(v.id)} style={{ fontSize: 12, color: 'var(--primary)', background: 'var(--primary-bg)', border: '1px solid rgba(220,38,38,.2)', borderRadius: 5, padding: '4px 10px', cursor: 'pointer' }}>Sil</button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {variants.length === 0 && (
+                      <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--text3)', padding: '8px 0' }}>
+                        Varyant eklersen müşteriler paket seçebilir (2 kg, 10 kg vb.)
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, justifyContent: 'space-between' }}>
+                  <button onClick={() => setStep('images')} style={{ padding: '9px 20px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>← Resimler</button>
+                  <button onClick={closeModal} style={{ padding: '9px 22px', borderRadius: 'var(--r)', border: 'none', background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Tamamla</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Variant Add/Edit Modal */}
+      {variantModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: 'var(--bg2)', borderRadius: 'var(--r2)', width: '100%', maxWidth: 420, boxShadow: '0 20px 60px rgba(0,0,0,.35)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>{variantModal === 'add' ? 'Varyant Ekle' : variantModal === 'editBase' ? 'Varsayılan Paketi Düzenle' : 'Varyantı Düzenle'}</h3>
+              <button onClick={closeVariantModal} style={{ background: 'none', border: 'none', fontSize: 22, color: 'var(--text3)', cursor: 'pointer', lineHeight: 1 }}>×</button>
+            </div>
+            <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <FormField label={variantModal === 'editBase' ? `Paket Adedi (${form.unit}) *` : `Paket Adedi *`} hint="Kaç adet/kg içeren paket? (stok değil)">
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input
+                    type="number"
+                    value={variantAmount}
+                    onChange={e => {
+                      const val = e.target.value === '' ? '' : Number(e.target.value)
+                      setVariantAmount(val)
+                      setVariantForm(f => ({ ...f, label: val !== '' && val > 0 ? `${val} ${form.unit}` : '' }))
+                    }}
+                    min={0.01} step={0.01}
+                    placeholder={`ör: 5`}
+                    style={{ ...inputStyle, flex: 1, borderColor: variantSubmitted && !variantForm.label.trim() ? 'var(--primary)' : undefined }}
+                  />
+                  <div style={{ minWidth: 80, padding: '0 12px', height: 38, display: 'flex', alignItems: 'center', background: 'var(--bg3)', border: '1.5px solid var(--border)', borderRadius: 'var(--r)', fontSize: 13, fontWeight: 700, color: variantForm.label ? 'var(--primary)' : 'var(--text3)' }}>
+                    {variantForm.label || `— ${form.unit}`}
+                  </div>
+                </div>
+              </FormField>
+              <FormField label="Fiyat (₺) *">
+                <input type="number" value={variantForm.price} onChange={e => setVariantForm(f => ({ ...f, price: Number(e.target.value) }))}
+                  min={0.01} step={0.01}
+                  style={{ ...inputStyle, borderColor: variantSubmitted && variantForm.price <= 0 ? 'var(--primary)' : undefined }} />
+              </FormField>
+              <FormField label="Stok Miktarı">
+                <input type="number" value={variantForm.stockQuantity} onChange={e => setVariantForm(f => ({ ...f, stockQuantity: Number(e.target.value) }))}
+                  min={0} style={inputStyle} />
+              </FormField>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input type="checkbox" checked={variantForm.isActive} onChange={e => setVariantForm(f => ({ ...f, isActive: e.target.checked }))} />
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>Aktif</span>
+              </label>
+            </div>
+            <div style={{ padding: '14px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button onClick={closeVariantModal} style={{ padding: '9px 20px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>İptal</button>
+              <button onClick={handleVariantSave} disabled={variantSaving} style={{ padding: '9px 22px', borderRadius: 'var(--r)', border: 'none', background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: variantSaving ? 'not-allowed' : 'pointer', opacity: variantSaving ? 0.7 : 1 }}>
+                {variantSaving ? 'Kaydediliyor...' : 'Kaydet'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -2155,10 +2379,10 @@ const inputStyle: React.CSSProperties = {
   outline: 'none', fontFamily: 'inherit',
 }
 
-function FormField({ label, children, span2 }: { label: string; children: React.ReactNode; span2?: boolean }) {
+function FormField({ label, children, span2, hint }: { label: string; children: React.ReactNode; span2?: boolean; hint?: string }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, gridColumn: span2 ? '1 / -1' : undefined }}>
-      {label && <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>{label}</label>}
+      {label && <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>{label}{hint && <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text3)', marginLeft: 6 }}>— {hint}</span>}</label>}
       {children}
     </div>
   )
