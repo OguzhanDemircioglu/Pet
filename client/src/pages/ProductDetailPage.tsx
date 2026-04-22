@@ -4,7 +4,7 @@ import {useDispatch, useSelector} from 'react-redux'
 import {imgUrl, productApi} from '../api/productApi'
 import {fetchCategoriesThunk} from '../store/categorySlice'
 import {addToCart} from '../store/cartSlice'
-import {reviewApi, type ReviewResponse, type CanReviewResponse} from '../api/reviewApi'
+import {type CanReviewResponse, reviewApi, type ReviewResponse} from '../api/reviewApi'
 import toast from 'react-hot-toast'
 import type {AppDispatch, RootState} from '../store'
 import type {Product, ProductVariant} from '../types'
@@ -12,7 +12,8 @@ import InfoBar from '../components/InfoBar'
 import Header from '../components/Header'
 import CategoryBar from '../components/CategoryBar'
 import Footer from '../components/Footer'
-import { CONTACT_PHONE } from '../constants/app'
+import {CONTACT_PHONE} from '../constants/app'
+import {useIsMobile} from '../hooks/useIsMobile'
 
 const THUMB_BG = [
   'linear-gradient(135deg,#fce7f3,#fdf2f8)',
@@ -134,6 +135,7 @@ export default function ProductDetailPage() {
   const [activeTab, setActiveTab] = useState<'desc' | 'specs' | 'reviews'>('desc')
   const [addedToCart, setAddedToCart] = useState(false)
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
+  const isMobile = useIsMobile()
 
   // Reviews state
   const [reviews, setReviews] = useState<ReviewResponse[]>([])
@@ -273,7 +275,7 @@ export default function ProductDetailPage() {
       <Header />
       <CategoryBar />
 
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? '0 12px' : '0 20px' }}>
 
         {/* Breadcrumb */}
         <nav style={{ padding: '16px 0 10px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -291,7 +293,7 @@ export default function ProductDetailPage() {
         </nav>
 
         {/* Product Section */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 36, padding: '8px 0 36px', alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 20 : 36, padding: '8px 0 36px', alignItems: 'start' }}>
 
           {/* LEFT: Gallery */}
           <div>
@@ -299,9 +301,9 @@ export default function ProductDetailPage() {
               background: hasRealImages ? 'var(--bg2)' : mainBg,
               borderRadius: 'var(--r2)',
               border: '1px solid var(--border)',
-              height: 380,
+              height: isMobile ? 280 : 380,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 110, marginBottom: 12, position: 'relative', overflow: 'hidden', cursor: 'zoom-in',
+              fontSize: isMobile ? 80 : 110, marginBottom: 12, position: 'relative', overflow: 'hidden', cursor: 'zoom-in',
             }}>
               {activeImg
                 ? <img src={imgUrl(activeImg.imageUrl)} alt={product.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', padding: 16 }} />

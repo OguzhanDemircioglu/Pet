@@ -1,28 +1,54 @@
-import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useSelector, useDispatch } from 'react-redux'
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
+import {useNavigate, useSearchParams} from 'react-router-dom'
+import {useDispatch, useSelector} from 'react-redux'
 import toast from 'react-hot-toast'
 import InfoBar from '../components/InfoBar'
 import Header from '../components/Header'
 import CategoryBar from '../components/CategoryBar'
 import Footer from '../components/Footer'
-import type { RootState, AppDispatch } from '../store'
-import { logout, updateUserProfile } from '../store/authSlice'
-import { resetCatalog, resetFeatured, fetchCatalogThunk } from '../store/productSlice'
-import { fetchBrandsThunk, resetBrands } from '../store/brandSlice'
-import { fetchAdminCampaignsThunk, resetAdminCampaigns } from '../store/adminCampaignSlice'
-import { resetCampaigns, fetchHomepageThunk, FREE_SHIPPING_TITLE } from '../store/campaignSlice'
-import { productApi, brandApi, categoryApi, userApi, productImageApi, variantApi, imgUrl, type ProductForm, type VariantForm } from '../api/productApi'
-import { campaignApi, discountApi, type CampaignResponse, type CampaignRequest, type DiscountResponse } from '../api/campaignApi'
-import { fetchOrdersThunk } from '../store/orderSlice'
-import { adminOrderApi, type OrderResponse as AdminOrderResponse } from '../api/orderApi'
-import { markAllReadThunk, markReadThunk } from '../store/notificationSlice'
-import { fetchCategoriesThunk } from '../store/categorySlice'
-import type { CatalogProduct, ProductImage as ProductImageType, ProductVariant, Brand, Category, AdminUser, Address, AddressRequest } from '../types'
-import { addressApi } from '../api/addressApi'
-import { authApi } from '../api/authApi'
-import { TURKEY_DISTRICTS } from '../data/turkeyDistricts'
-import { PHONE_RE, NON_DIGIT_RE, WHITESPACE_RE } from '../constants/regex'
+import {useIsMobile} from '../hooks/useIsMobile'
+import type {AppDispatch, RootState} from '../store'
+import {logout, updateUserProfile} from '../store/authSlice'
+import {fetchCatalogThunk, resetCatalog, resetFeatured} from '../store/productSlice'
+import {fetchBrandsThunk, resetBrands} from '../store/brandSlice'
+import {fetchAdminCampaignsThunk, resetAdminCampaigns} from '../store/adminCampaignSlice'
+import {fetchHomepageThunk, FREE_SHIPPING_TITLE, resetCampaigns} from '../store/campaignSlice'
+import {
+  brandApi,
+  categoryApi,
+  imgUrl,
+  productApi,
+  type ProductForm,
+  productImageApi,
+  userApi,
+  variantApi,
+  type VariantForm
+} from '../api/productApi'
+import {
+  campaignApi,
+  type CampaignRequest,
+  type CampaignResponse,
+  discountApi,
+  type DiscountResponse
+} from '../api/campaignApi'
+import {fetchOrdersThunk} from '../store/orderSlice'
+import {adminOrderApi, type OrderResponse as AdminOrderResponse} from '../api/orderApi'
+import {markAllReadThunk, markReadThunk} from '../store/notificationSlice'
+import {fetchCategoriesThunk} from '../store/categorySlice'
+import type {
+  Address,
+  AddressRequest,
+  AdminUser,
+  Brand,
+  CatalogProduct,
+  Category,
+  ProductImage as ProductImageType,
+  ProductVariant
+} from '../types'
+import {addressApi} from '../api/addressApi'
+import {authApi} from '../api/authApi'
+import {TURKEY_DISTRICTS} from '../data/turkeyDistricts'
+import {NON_DIGIT_RE, PHONE_RE} from '../constants/regex'
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
 type Section = 'orders' | 'info' | 'addresses' | 'notifications' | 'products' | 'brands' | 'campaigns' | 'categories' | 'users' | 'adminorders'
@@ -59,8 +85,9 @@ export default function ProfilePage() {
   const categories = useSelector((s: RootState) => s.categories.categories)
   const categoriesLoading = useSelector((s: RootState) => s.categories.loading)
   const isAdmin = user?.role === 'ADMIN'
+  const isMobile = useIsMobile()
 
-  const [section, setSection] = useState<Section>(isAdmin ? 'adminorders' : 'orders')
+  const [section, setSection] = useState<Section>(isAdmin ? 'adminorders' : 'info')
   const [searchParams, setSearchParams] = useSearchParams()
 
   useEffect(() => {
@@ -89,15 +116,17 @@ export default function ProfilePage() {
       <Header />
       <CategoryBar />
 
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '28px 24px', display: 'grid', gridTemplateColumns: '248px 1fr', gap: 24, alignItems: 'start' }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: isMobile ? '16px 12px' : '28px 24px', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '248px 1fr', gap: isMobile ? 14 : 24, alignItems: 'start' }}>
 
         {/* ── Sidebar ── */}
-        <aside style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', overflow: 'hidden', position: 'sticky', top: 120 }}>
+        <aside style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', overflow: 'hidden', position: isMobile ? 'static' : 'sticky', top: 120, minWidth: 0 }}>
           {/* Avatar */}
-          <div style={{ padding: '24px 20px', textAlign: 'center', borderBottom: '1px solid var(--border)' }}>
-            <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg,var(--primary),#f87171)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, fontWeight: 800, color: '#fff', margin: '0 auto 12px', boxShadow: '0 0 0 3px rgba(220,38,38,.2)' }}>{initials}</div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 3 }}>{user.firstName} {user.lastName}</div>
-            <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 8 }}>{user.email}</div>
+          <div style={{ padding: isMobile ? '14px 14px' : '24px 20px', textAlign: 'center', borderBottom: '1px solid var(--border)', display: isMobile ? 'flex' : 'block', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: isMobile ? 46 : 72, height: isMobile ? 46 : 72, borderRadius: '50%', background: 'linear-gradient(135deg,var(--primary),#f87171)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isMobile ? 17 : 26, fontWeight: 800, color: '#fff', margin: isMobile ? 0 : '0 auto 12px', boxShadow: '0 0 0 3px rgba(220,38,38,.2)', flexShrink: 0 }}>{initials}</div>
+            <div style={{ flex: isMobile ? 1 : undefined, minWidth: 0, textAlign: isMobile ? 'left' : 'center' }}>
+              <div style={{ fontSize: isMobile ? 14 : 16, fontWeight: 800, color: 'var(--text)', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.firstName} {user.lastName}</div>
+              <div style={{ fontSize: isMobile ? 11 : 12, color: 'var(--text3)', marginBottom: isMobile ? 0 : 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</div>
+            </div>
             {isAdmin && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'var(--primary-bg)', color: 'var(--primary)', border: '1px solid rgba(220,38,38,.2)', borderRadius: 20, padding: '3px 10px', fontSize: 11, fontWeight: 700 }}>
                 🛡️ Admin
@@ -106,34 +135,43 @@ export default function ProfilePage() {
           </div>
 
           {/* Nav */}
-          <nav style={{ padding: '8px 0' }}>
+          <nav style={isMobile ? {
+            display: 'flex', flexDirection: 'row', flexWrap: 'nowrap',
+            overflowX: 'auto', WebkitOverflowScrolling: 'touch',
+            padding: '6px 8px', gap: 4,
+          } : { padding: '8px 0' }}>
             {NAV_CUSTOMER.map(n => (
-              <NavItem key={n.id} item={n} active={section === n.id} onClick={() => setSection(n.id)} />
+              <NavItem key={n.id} item={n} active={section === n.id} onClick={() => setSection(n.id)} isMobile={isMobile} />
             ))}
 
             {isAdmin && (
               <>
-                <div style={{ height: 1, background: 'var(--border)', margin: '6px 0' }} />
-                <div style={{ padding: '6px 20px 2px', fontSize: 10, fontWeight: 800, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 1 }}>Admin</div>
+                {!isMobile && <div style={{ height: 1, background: 'var(--border)', margin: '6px 0' }} />}
+                {!isMobile && <div style={{ padding: '6px 20px 2px', fontSize: 10, fontWeight: 800, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 1 }}>Admin</div>}
                 {NAV_ADMIN.map(n => (
-                  <NavItem key={n.id} item={n} active={section === n.id} onClick={() => setSection(n.id)} />
+                  <NavItem key={n.id} item={n} active={section === n.id} onClick={() => setSection(n.id)} isMobile={isMobile} />
                 ))}
               </>
             )}
 
-            <div style={{ height: 1, background: 'var(--border)', margin: '6px 0' }} />
-            <button onClick={handleLogout} style={{
+            {!isMobile && <div style={{ height: 1, background: 'var(--border)', margin: '6px 0' }} />}
+            <button onClick={handleLogout} style={isMobile ? {
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '8px 14px', fontSize: 12.5, fontWeight: 600, color: 'var(--primary)',
+              background: 'var(--primary-bg)', border: '1px solid rgba(220,38,38,.2)', borderRadius: 'var(--r)',
+              cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap',
+            } : {
               width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10,
               padding: '11px 20px', fontSize: 13.5, fontWeight: 500, color: 'var(--primary)',
               background: 'none', border: 'none', cursor: 'pointer', borderLeft: '3px solid transparent',
             }}>
-              <span>🚪</span> Çıkış Yap
+              <span>🚪</span> Çıkış
             </button>
           </nav>
         </aside>
 
         {/* ── Main Content ── */}
-        <div>
+        <div style={{ minWidth: 0 }}>
           {section === 'orders' && <OrdersSection />}
           {section === 'info' && <InfoSection user={user} />}
           {section === 'addresses' && <AddressesSection />}
@@ -153,7 +191,22 @@ export default function ProfilePage() {
 }
 
 // ─── Sidebar Nav Item ──────────────────────────────────────────────────────────
-function NavItem({ item, active, onClick }: { item: { id: string; label: string; icon: string }; active: boolean; onClick: () => void }) {
+function NavItem({ item, active, onClick, isMobile }: { item: { id: string; label: string; icon: string }; active: boolean; onClick: () => void; isMobile?: boolean }) {
+  if (isMobile) {
+    return (
+      <button onClick={onClick} style={{
+        display: 'flex', alignItems: 'center', gap: 6,
+        padding: '8px 14px', fontSize: 12.5, fontWeight: active ? 700 : 500,
+        color: active ? '#fff' : 'var(--text2)',
+        background: active ? 'var(--primary)' : 'var(--bg3)',
+        border: '1px solid ' + (active ? 'var(--primary)' : 'var(--border)'),
+        borderRadius: 'var(--r)', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap',
+      }}>
+        <span style={{ fontSize: 14 }}>{item.icon}</span>
+        {item.label}
+      </button>
+    )
+  }
   return (
     <button onClick={onClick} style={{
       width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10,
@@ -172,8 +225,8 @@ function NavItem({ item, active, onClick }: { item: { id: string; label: string;
 // ─── Section Header ────────────────────────────────────────────────────────────
 function SectionHead({ title, sub, action }: { title: string; sub?: string; action?: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
-      <div>
+    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20, gap: 12, flexWrap: 'wrap' }}>
+      <div style={{ minWidth: 0 }}>
         <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.3 }}>{title}</h2>
         {sub && <p style={{ fontSize: 13, color: 'var(--text3)', marginTop: 3 }}>{sub}</p>}
       </div>
@@ -375,6 +428,7 @@ function AdminOrdersSection() {
 // ─── Info Section ──────────────────────────────────────────────────────────────
 function InfoSection({ user }: { user: { firstName: string; lastName: string; email: string; phone: string | null; pendingEmailChange: boolean } }) {
   const dispatch = useDispatch<AppDispatch>()
+  const isMobile = useIsMobile()
   const [form, setForm] = useState({ firstName: user.firstName, lastName: user.lastName, phone: user.phone || '' })
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
@@ -468,7 +522,7 @@ function InfoSection({ user }: { user: { firstName: string; lastName: string; em
         </div>
       )}
       <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', overflow: 'hidden' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, padding: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 12 : 16, padding: isMobile ? 14 : 20 }}>
           {([
             { label: 'Ad', key: 'firstName' },
             { label: 'Soyad', key: 'lastName' },
@@ -519,12 +573,12 @@ function InfoSection({ user }: { user: { firstName: string; lastName: string; em
               Yeni e-posta adresinize bir doğrulama bağlantısı gönderilecektir.
               Bağlantı <strong>24 saat</strong> geçerlidir.
             </p>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <input
                 type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)}
                 placeholder="Yeni e-posta adresi"
                 onKeyDown={e => e.key === 'Enter' && handleEmailChange()}
-                style={{ ...inputStyle, flex: 1 }}
+                style={{ ...inputStyle, flex: 1, minWidth: 0, width: isMobile ? '100%' : undefined }}
               />
               <button onClick={handleEmailChange} disabled={sending || !newEmail.trim()}
                 style={{ height: 40, padding: '0 16px', fontSize: 13, fontWeight: 700, background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--r)', cursor: sending ? 'not-allowed' : 'pointer', opacity: sending ? 0.7 : 1 }}>
@@ -1106,8 +1160,8 @@ function AdminProductsSection({ products, onRefresh, categories, categoriesLoadi
       </div>
 
       {/* Table */}
-      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
           <thead>
             <tr style={{ background: 'var(--bg3)', borderBottom: '1px solid var(--border)' }}>
               {['Ürün', 'Kategori', 'Marka', 'Fiyat', 'Stok', 'Durum', ''].map(h => (
@@ -1646,8 +1700,8 @@ function AdminCampaignsSection() {
       {loading ? (
         <div style={{ padding: 40, textAlign: 'center', color: 'var(--text3)' }}>Yükleniyor...</div>
       ) : tab === 'info' ? (
-        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
             <thead>
               <tr style={{ background: 'var(--bg3)', borderBottom: '1px solid var(--border)' }}>
                 {['Önizleme', 'Badge', 'Başlık', 'Açıklama', 'Durum', ''].map(h => (
@@ -1715,8 +1769,8 @@ function AdminCampaignsSection() {
           </table>
         </div>
       ) : (
-        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
             <thead>
               <tr style={{ background: 'var(--bg3)', borderBottom: '1px solid var(--border)' }}>
                 {['Tip', 'Adı', 'Hedef', 'İndirim', 'Durum', ''].map(h => (
@@ -1961,8 +2015,8 @@ function AdminBrandsSection() {
         <button onClick={openAdd} style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--r)', padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>+ Yeni Marka</button>
       } />
 
-      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
           <thead>
             <tr style={{ background: 'var(--bg3)', borderBottom: '1px solid var(--border)' }}>
               {['Marka Adı', 'Durum', ''].map(h => (
@@ -2144,8 +2198,8 @@ function AdminCategoriesSection({ categories, onRefresh }: { categories: Categor
         <button onClick={openAdd} style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--r)', padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>+ Yeni Kategori</button>
       } />
 
-      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
           <thead>
             <tr style={{ background: 'var(--bg3)', borderBottom: '1px solid var(--border)' }}>
               {['#', 'Kategori Adı', 'Tür', 'Alt Kategori', 'Ürün', ''].map(h => (
@@ -2331,8 +2385,8 @@ function AdminUsersSection() {
           style={{ width: '100%', height: 40, border: '1.5px solid var(--border)', borderRadius: 'var(--r)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 13.5, padding: '0 14px', outline: 'none', fontFamily: 'inherit' }} />
       </div>
 
-      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
           <thead>
             <tr style={{ background: 'var(--bg3)', borderBottom: '1px solid var(--border)' }}>
               {['Ad Soyad', 'E-posta', 'Telefon', 'Rol', 'Kayıt Tarihi'].map(h => (

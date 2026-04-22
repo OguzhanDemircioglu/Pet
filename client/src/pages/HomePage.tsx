@@ -11,6 +11,7 @@ import { fetchHomepageThunk } from '../store/campaignSlice'
 import { addToCart } from '../store/cartSlice'
 import { imgUrl } from '../api/productApi'
 import toast from 'react-hot-toast'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 const WHY_CARDS = [
   { icon: '🏷️', title: 'Toptan Fiyat Garantisi', desc: 'Tüm ürünlerde en düşük toptan fiyat garantisi. Fiyat farkı varsa iade ederiz.' },
@@ -153,6 +154,7 @@ export default function HomePage() {
   const products = useSelector((s: RootState) => s.products.featured)
   const loading = useSelector((s: RootState) => !s.campaigns.loaded || s.campaigns.loading)
   const slides = useSelector((s: RootState) => s.campaigns.slides)
+  const isMobile = useIsMobile()
 
   useEffect(() => {
     dispatch(fetchHomepageThunk())
@@ -177,14 +179,14 @@ export default function HomePage() {
       <CategoryBar />
 
       {/* Campaign Carousel */}
-      {slides.length > 0 && <div style={{ maxWidth: 1280, margin: '0 auto', padding: '16px 24px 0' }}>
-      <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 14 }}>
-        <div style={{ display: 'flex', transition: 'transform 0.45s cubic-bezier(.4,0,.2,1)', transform: `translateX(-${slideIdx * 100}%)` }}>
+      {slides.length > 0 && <div style={{ maxWidth: 1280, margin: '0 auto', padding: isMobile ? '12px 12px 0' : '16px 24px 0' }}>
+      <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 14, width: '100%' }}>
+        <div style={{ display: 'flex', width: '100%', transition: 'transform 0.45s cubic-bezier(.4,0,.2,1)', transform: `translateX(-${slideIdx * 100}%)` }}>
           {slides.map((s, i) => (
             <div key={i} style={{
-              minWidth: '100%', height: 320,
+              flex: '0 0 100%', width: '100%', minWidth: 0, height: isMobile ? 200 : 320,
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '0 80px', position: 'relative', overflow: 'hidden', flexShrink: 0,
+              padding: isMobile ? '0 20px' : '0 80px', position: 'relative', overflow: 'hidden', boxSizing: 'border-box',
               background: s.bg,
             }}>
               <div style={{ position: 'absolute', inset: 0, opacity: 0.07, backgroundImage: 'radial-gradient(circle at 20% 50%,white 1px,transparent 1px),radial-gradient(circle at 80% 20%,white 1px,transparent 1px)', backgroundSize: '40px 40px' }} />
@@ -195,7 +197,7 @@ export default function HomePage() {
                   <p style={{ fontSize: 15, color: 'rgba(255,255,255,.85)', lineHeight: 1.55, marginBottom: 22 }}>{s.sub}</p>
                 )}
               </div>
-              <div style={{ position: 'relative', zIndex: 1, fontSize: 110, lineHeight: 1, filter: 'drop-shadow(0 8px 24px rgba(0,0,0,.2))', flexShrink: 0, userSelect: 'none' }}>{s.emoji}</div>
+              <div style={{ position: 'relative', zIndex: 1, fontSize: isMobile ? 64 : 110, lineHeight: 1, filter: 'drop-shadow(0 8px 24px rgba(0,0,0,.2))', flexShrink: 0, userSelect: 'none' }}>{s.emoji}</div>
               {s.sticker && (
                 <div style={{ position: 'absolute', top: 20, right: 80, background: '#fbbf24', color: '#000', fontSize: 13, fontWeight: 900, padding: '6px 14px', borderRadius: 20, boxShadow: '0 4px 12px rgba(0,0,0,.2)', zIndex: 2, transform: 'rotate(3deg)' }}>{s.sticker}</div>
               )}
@@ -215,24 +217,24 @@ export default function HomePage() {
       </div>}
 
       {/* Page Content */}
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 24px' }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: isMobile ? '0 12px' : '0 24px' }}>
 
         {/* Featured Products */}
-        <div style={{ padding: '44px 0 0' }}>
+        <div style={{ padding: isMobile ? '28px 0 0' : '44px 0 0' }}>
           <SectionHead title="Öne Çıkan Ürünler" link="/urunler" />
           {loading ? (
             <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text3)' }}>Yükleniyor...</div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: isMobile ? 10 : 16 }}>
               {products.map(p => <ProductCard key={p.id} p={p} />)}
             </div>
           )}
         </div>
 
         {/* Why Section */}
-        <div style={{ padding: '48px 0 52px' }}>
+        <div style={{ padding: isMobile ? '32px 0 36px' : '48px 0 52px' }}>
           <SectionHead title={`Neden ${import.meta.env.VITE_BRAND_PART1}${import.meta.env.VITE_BRAND_PART2}?`} />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 18 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: isMobile ? 10 : 18 }}>
             {WHY_CARDS.map(w => (
               <div key={w.title} className="why-card" style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', padding: '26px 20px', textAlign: 'center', transition: '0.2s' }}>
                 <span style={{ fontSize: 40, display: 'block', marginBottom: 12 }}>{w.icon}</span>

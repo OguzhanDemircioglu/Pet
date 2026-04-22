@@ -24,7 +24,7 @@ export default function CategoryBar() {
       : []
 
   return (
-    <div style={{
+    <div className="mobile-hidden" style={{
       background: 'var(--secondary)',
       position: 'sticky',
       top: 68,

@@ -1,20 +1,22 @@
-import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { useTheme } from '../context/ThemeContext'
-import { useSelector, useDispatch } from 'react-redux'
-import { useGoogleLogin } from '@react-oauth/google'
+import {useEffect, useRef, useState} from 'react'
+import {Link, useNavigate} from 'react-router-dom'
+import {useTheme} from '../context/ThemeContext'
+import {useDispatch, useSelector} from 'react-redux'
+import {useGoogleLogin} from '@react-oauth/google'
 import toast from 'react-hot-toast'
-import type { RootState, AppDispatch } from '../store'
-import { toggleCart, closeCart, removeFromCart, updateQuantity, clearCart } from '../store/cartSlice'
-import { orderApi, adminOrderApi } from '../api/orderApi'
-import { markReadThunk, markAllReadThunk } from '../store/notificationSlice'
-import { setUser, updateUserPhone } from '../store/authSlice'
-import { imgUrl } from '../api/productApi'
-import { authApi } from '../api/authApi'
-import { addressApi } from '../api/addressApi'
-import { TURKEY_DISTRICTS } from '../data/turkeyDistricts'
-import type { Address } from '../types'
-import { PHONE_RE, NON_DIGIT_RE } from '../constants/regex'
+import type {AppDispatch, RootState} from '../store'
+import {clearCart, closeCart, removeFromCart, toggleCart, updateQuantity} from '../store/cartSlice'
+import {adminOrderApi, orderApi} from '../api/orderApi'
+import {markAllReadThunk, markReadThunk} from '../store/notificationSlice'
+import {setUser, updateUserPhone} from '../store/authSlice'
+import {imgUrl} from '../api/productApi'
+import {authApi} from '../api/authApi'
+import {addressApi} from '../api/addressApi'
+import {TURKEY_DISTRICTS} from '../data/turkeyDistricts'
+import type {Address} from '../types'
+import {NON_DIGIT_RE, PHONE_RE} from '../constants/regex'
+import {useIsMobile} from '../hooks/useIsMobile'
+import MobileMenu from './MobileMenu'
 
 type CheckoutStep = 'cart' | 'login' | 'phone' | 'address' | 'confirm'
 
@@ -113,6 +115,8 @@ export default function Header({ showSearch = true }: HeaderProps) {
   const [savedAddresses, setSavedAddresses] = useState<Address[]>([])
   const [selectedSavedId, setSelectedSavedId] = useState<number | null>(null)
   const [showManualForm, setShowManualForm] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const isMobile = useIsMobile()
 
   const notifRef = useRef<HTMLDivElement>(null)
   const cartRef = useRef<HTMLDivElement>(null)
@@ -365,24 +369,37 @@ export default function Header({ showSearch = true }: HeaderProps) {
 
   return (
     <header style={{ background: isDark ? '#1a2333' : 'var(--bg2)', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 200, boxShadow: '0 2px 8px rgba(0,0,0,.07)' }}>
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 24px', height: 68, display: 'flex', alignItems: 'center', gap: 0 }}>
+      <MobileMenu open={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: isMobile ? '0 12px' : '0 24px', height: isMobile ? 58 : 68, display: 'flex', alignItems: 'center', gap: 0 }}>
+
+        {/* Hamburger (mobile only) */}
+        {isMobile && (
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            aria-label="Menü"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px 10px 8px 0', display: 'flex', alignItems: 'center', color: 'var(--text)', fontSize: 24, lineHeight: 1 }}>
+            ☰
+          </button>
+        )}
 
         {/* Logo + Theme */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginRight: 20 }}>
-          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            <img src="/logo.svg" alt="Logo" style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0 }} />
-            <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.5, whiteSpace: 'nowrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginRight: isMobile ? 8 : 20 }}>
+          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 9 }}>
+            <img src="/logo.svg" alt="Logo" style={{ width: isMobile ? 36 : 44, height: isMobile ? 36 : 44, objectFit: 'contain', flexShrink: 0 }} />
+            <div style={{ fontSize: isMobile ? 17 : 22, fontWeight: 900, letterSpacing: -0.5, whiteSpace: 'nowrap' }}>
               <span style={{ color: 'var(--primary)' }}>{import.meta.env.VITE_BRAND_PART1}</span>
               <span style={{ color: 'var(--accent)' }}>{import.meta.env.VITE_BRAND_PART2}</span>
             </div>
           </Link>
-          <button onClick={toggleTheme} title="Tema değiştir" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: 6, display: 'flex', alignItems: 'center', marginLeft: 4, fontSize: 24, lineHeight: 1 }}>
-            {isDark ? '🌙' : '☀️'}
-          </button>
+          {!isMobile && (
+            <button onClick={toggleTheme} title="Tema değiştir" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: 6, display: 'flex', alignItems: 'center', marginLeft: 4, fontSize: 24, lineHeight: 1 }}>
+              {isDark ? '🌙' : '☀️'}
+            </button>
+          )}
         </div>
 
         {/* Search */}
-        {showSearch && (
+        {showSearch && !isMobile && (
           <form onSubmit={handleSearch} style={{ flex: 1, minWidth: 0, position: 'relative', margin: '0 16px' }}>
             <input type="text" value={searchVal} onChange={e => setSearchVal(e.target.value)}
               placeholder="Ürün, kategori veya marka ara..." autoComplete="off"
@@ -394,7 +411,7 @@ export default function Header({ showSearch = true }: HeaderProps) {
         )}
 
         {/* Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, marginLeft: showSearch ? 8 : 'auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, marginLeft: 'auto' }}>
 
           {/* Notifications */}
           {user && (
@@ -455,19 +472,19 @@ export default function Header({ showSearch = true }: HeaderProps) {
             </div>
           )}
 
-          {/* Login / Profile */}
-          {user ? (
+          {/* Login / Profile — mobilde gizle, hamburger menüden erişilir */}
+          {!isMobile && (user ? (
             <Link to="/profil" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13.5, fontWeight: 700, color: 'var(--primary)', padding: '0 10px', height: 42, borderRadius: 'var(--r)', transition: '0.2s' }}>👤 <span>{user.firstName}</span></Link>
           ) : (
             <Link to="/login" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13.5, fontWeight: 600, color: 'var(--text2)', padding: '0 10px', height: 42, borderRadius: 'var(--r)', transition: '0.2s' }}>👤 <span>Üye Girişi</span></Link>
-          )}
+          ))}
 
           {/* Cart Button */}
           <div ref={cartRef} style={{ position: 'relative' }}>
             <button onClick={() => dispatch(toggleCart())}
-              style={{ position: 'relative', background: cartOpen ? 'var(--primary)' : 'none', height: 42, borderRadius: 'var(--r)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: cartOpen ? '#fff' : 'var(--text)', padding: '0 12px', gap: 6, border: '2px solid var(--border)', cursor: 'pointer', transition: '0.2s' }}>
+              style={{ position: 'relative', background: cartOpen ? 'var(--primary)' : 'none', height: 42, borderRadius: 'var(--r)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: cartOpen ? '#fff' : 'var(--text)', padding: isMobile ? '0 10px' : '0 12px', gap: 6, border: '2px solid var(--border)', cursor: 'pointer', transition: '0.2s' }}>
               <span style={{ fontSize: 18 }}>🛒</span>
-              <span style={{ fontSize: 13.5, fontWeight: 700 }}>₺{cartTotal.toFixed(2)}</span>
+              {!isMobile && <span style={{ fontSize: 13.5, fontWeight: 700 }}>₺{cartTotal.toFixed(2)}</span>}
               {cartCount > 0 && (
                 <span style={{ position: 'absolute', top: -6, right: -6, background: 'var(--primary)', color: '#fff', fontSize: 10, fontWeight: 800, minWidth: 18, height: 18, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>{cartCount}</span>
               )}
@@ -475,7 +492,7 @@ export default function Header({ showSearch = true }: HeaderProps) {
 
             {/* ── Checkout Drawer ── */}
             {cartOpen && (
-              <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 440, background: 'var(--bg2)', borderLeft: '1px solid var(--border)', boxShadow: '-8px 0 40px rgba(0,0,0,.18)', zIndex: 800, display: 'flex', flexDirection: 'column', animation: 'slideInRight 0.22s ease' }}>
+              <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: isMobile ? '100%' : 440, maxWidth: '100vw', background: 'var(--bg2)', borderLeft: '1px solid var(--border)', boxShadow: '-8px 0 40px rgba(0,0,0,.18)', zIndex: 800, display: 'flex', flexDirection: 'column', animation: 'slideInRight 0.22s ease' }}>
 
                 {/* Header */}
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
@@ -558,7 +575,37 @@ export default function Header({ showSearch = true }: HeaderProps) {
                             </div>
                             <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3 }}>₺{item.basePrice.toFixed(2)} / {item.variantLabel ?? item.unit}</div>
                           </div>
-                          <button onClick={() => dispatch(removeFromCart({ productId: item.productId, variantId: item.variantId }))} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 16, padding: 2, flexShrink: 0, lineHeight: 1 }}>×</button>
+                          <button
+                            onClick={() => dispatch(removeFromCart({ productId: item.productId, variantId: item.variantId }))}
+                            title="Ürünü sepetten sil"
+                            aria-label="Ürünü sepetten sil"
+                            className="cart-remove-btn"
+                            style={{
+                              alignSelf: 'flex-start',
+                              height: 44,
+                              width: 38,
+                              flexShrink: 0,
+                              background: 'rgba(220,38,38,.10)',
+                              border: '1px solid rgba(220,38,38,.25)',
+                              borderRadius: 8,
+                              color: 'var(--primary)',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: 2,
+                              padding: 0,
+                              transition: 'background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.1s',
+                            }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                              <path d="M10 11v6" />
+                              <path d="M14 11v6" />
+                              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                            </svg>
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -847,9 +894,25 @@ export default function Header({ showSearch = true }: HeaderProps) {
         </div>
       </div>
 
+      {/* Mobile search row */}
+      {isMobile && showSearch && (
+        <div style={{ padding: '8px 12px 10px', borderTop: '1px solid var(--border)' }}>
+          <form onSubmit={handleSearch} style={{ position: 'relative' }}>
+            <input type="text" value={searchVal} onChange={e => setSearchVal(e.target.value)}
+              placeholder="Ürün ara..." autoComplete="off"
+              style={{ width: '100%', height: 40, border: '1.5px solid var(--border)', borderRadius: 'var(--r)', background: isDark ? '#1f2937' : 'var(--bg3)', color: 'var(--text)', fontSize: 14, padding: '0 44px 0 14px', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+            <button type="submit" style={{ position: 'absolute', right: 0, top: 0, width: 42, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--primary)', borderRadius: '0 var(--r) var(--r) 0', color: '#fff', border: 'none', cursor: 'pointer' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+            </button>
+          </form>
+        </div>
+      )}
+
       <style>{`
         @keyframes dropIn { from { opacity:0; transform:translateY(-6px) } to { opacity:1; transform:translateY(0) } }
         @keyframes slideInRight { from { opacity:0; transform:translateX(40px) } to { opacity:1; transform:translateX(0) } }
+        .cart-remove-btn:hover { background: var(--primary) !important; color: #fff !important; border-color: var(--primary) !important; box-shadow: 0 3px 10px rgba(220,38,38,.35); transform: translateY(-1px); }
+        .cart-remove-btn:active { transform: translateY(0); }
       `}</style>
     </header>
   )

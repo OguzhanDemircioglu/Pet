@@ -1,16 +1,17 @@
-import { useEffect, useMemo, useState, useRef } from 'react'
-import { useSearchParams, useNavigate, Link } from 'react-router-dom'
-import { useSelector, useDispatch } from 'react-redux'
-import type { Product, CatalogProduct } from '../types'
-import type { RootState, AppDispatch } from '../store'
-import { fetchCategoriesThunk } from '../store/categorySlice'
-import { addToCart } from '../store/cartSlice'
-import { productApi, imgUrl } from '../api/productApi'
+import {useEffect, useMemo, useRef, useState} from 'react'
+import {Link, useNavigate, useSearchParams} from 'react-router-dom'
+import {useDispatch, useSelector} from 'react-redux'
+import type {CatalogProduct, Product} from '../types'
+import type {AppDispatch, RootState} from '../store'
+import {fetchCategoriesThunk} from '../store/categorySlice'
+import {addToCart} from '../store/cartSlice'
+import {imgUrl, productApi} from '../api/productApi'
 import toast from 'react-hot-toast'
 import InfoBar from '../components/InfoBar'
 import Header from '../components/Header'
 import CategoryBar from '../components/CategoryBar'
 import Footer from '../components/Footer'
+import {useIsMobile} from '../hooks/useIsMobile'
 
 const BG_COLORS = [
   'linear-gradient(135deg,#fce7f3,#fdf2f8)',
@@ -38,6 +39,7 @@ export default function ProductListPage() {
   const [catProducts, setCatProducts] = useState<(Product | CatalogProduct)[]>([])
   const [loading, setLoading] = useState(false)
   const [noStock, setNoStock] = useState(false)
+  const isMobile = useIsMobile()
 
   useEffect(() => {
     dispatch(fetchCategoriesThunk(false))
@@ -126,7 +128,7 @@ export default function ProductListPage() {
       <Header />
       <CategoryBar />
 
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 24px' }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: isMobile ? '0 12px' : '0 24px' }}>
 
         {/* Breadcrumb */}
         <nav style={{ padding: '16px 0 10px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -154,7 +156,7 @@ export default function ProductListPage() {
         </nav>
 
         {/* Header row */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, gap: 10, flexWrap: 'wrap' }}>
           <div>
             <h1 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>
               {currentCat?.emoji ? `${currentCat.emoji} ` : ''}{pageTitle}
@@ -191,7 +193,7 @@ export default function ProductListPage() {
             <div style={{ fontSize: 14, color: 'var(--text2)' }}>Farklı bir arama deneyin veya filtreleri temizleyin.</div>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 16, paddingBottom: 40 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(5,1fr)', gap: isMobile ? 10 : 16, paddingBottom: 40 }}>
             {products.map(p => (
               <ProductCard key={p.id} p={p as CatalogProduct} />
             ))}
