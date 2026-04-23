@@ -9,6 +9,7 @@ import com.petshop.entity.ProductVariant;
 import com.petshop.exception.ResourceNotFoundException;
 import com.petshop.repository.ProductRepository;
 import com.petshop.repository.ProductVariantRepository;
+import com.petshop.service.StockNotificationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,6 +25,7 @@ public class AdminProductVariantController {
 
     private final ProductVariantRepository variantRepository;
     private final ProductRepository productRepository;
+    private final StockNotificationService stockNotificationService;
 
     @GetMapping
     public DataGenericResponse<List<ProductVariantResponse>> list(@PathVariable Long productId) {
@@ -57,12 +59,17 @@ public class AdminProductVariantController {
             @Valid @RequestBody ProductVariantRequest req) {
         ProductVariant variant = variantRepository.findByIdAndProductId(variantId, productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Varyant bulunamadı", variantId));
+        int previousAvailable = variant.getAvailableStock();
         variant.setLabel(req.label());
         variant.setPrice(req.price());
         if (req.stockQuantity() != null) variant.setStockQuantity(req.stockQuantity());
         if (req.displayOrder() != null) variant.setDisplayOrder(req.displayOrder());
         if (req.isActive() != null) variant.setIsActive(req.isActive());
-        return DataGenericResponse.of(ProductVariantResponse.from(variantRepository.save(variant)));
+        ProductVariant saved = variantRepository.save(variant);
+        if (previousAvailable <= 0 && saved.getAvailableStock() > 0 && Boolean.TRUE.equals(saved.getIsActive())) {
+            stockNotificationService.notifyVariantRestocked(saved.getId());
+        }
+        return DataGenericResponse.of(ProductVariantResponse.from(saved));
     }
 
     @DeleteMapping("/{variantId}")

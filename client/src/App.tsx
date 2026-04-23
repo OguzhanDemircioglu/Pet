@@ -9,6 +9,7 @@ import { loadMeThunk } from './store/authSlice'
 import { fetchNotificationsThunk } from './store/notificationSlice'
 import { fetchHomepageThunk } from './store/campaignSlice'
 import { fetchCatalogThunk } from './store/productSlice'
+import { fetchSiteSettingsThunk } from './store/siteSettingsSlice'
 import { useAppDispatch } from './hooks/useAppDispatch'
 import { ThemeProvider } from './context/ThemeContext'
 import type { RootState } from './store'
@@ -18,6 +19,10 @@ import ProductListPage from './pages/ProductListPage'
 import ProductDetailPage from './pages/ProductDetailPage'
 import ProfilePage from './pages/ProfilePage'
 import PaymentResultPage from './pages/PaymentResultPage'
+import AboutPage from './pages/AboutPage'
+import ContactPage from './pages/ContactPage'
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
+import FAQPage from './pages/FAQPage'
 import PhoneRequiredModal from './components/PhoneRequiredModal'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
@@ -36,6 +41,7 @@ function AppInner() {
 
   useEffect(() => {
     dispatch(loadMeThunk())
+    dispatch(fetchSiteSettingsThunk())
     dispatch(fetchHomepageThunk())  // phase 1: kritik path
     // phase 2: catalog arka planda, homepage isteği bittikten sonra başlasın
     const t = setTimeout(() => dispatch(fetchCatalogThunk()), 2000)
@@ -59,6 +65,10 @@ function AppInner() {
         <Route path="/urun/:slug" element={<PrivateRoute authInitialized={authInitialized} user={user}><ProductDetailPage /></PrivateRoute>} />
         <Route path="/profil"     element={<PrivateRoute authInitialized={authInitialized} user={user}><ProfilePage /></PrivateRoute>} />
         <Route path="/odeme-sonuc" element={<PaymentResultPage />} />
+        <Route path="/hakkimizda"         element={<AboutPage />} />
+        <Route path="/iletisim"           element={<ContactPage />} />
+        <Route path="/gizlilik-politikasi" element={<PrivacyPolicyPage />} />
+        <Route path="/sss"                element={<FAQPage />} />
       </Routes>
       <Toaster position="top-right" />
     </BrowserRouter>

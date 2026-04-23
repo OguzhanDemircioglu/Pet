@@ -1,6 +1,33 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useSiteSettings } from '../hooks/useSiteSettings'
+
+interface FooterLink {
+  label: string
+  to?: string
+  anchor?: string   // aynı sayfadaki id; HomePage'de scroll, başka sayfada /{#id} navigate
+}
+
+const LINKS: FooterLink[] = [
+  { label: 'Hakkımızda', to: '/hakkimizda' },
+  { label: 'SSS', to: '/sss' },
+  { label: 'İletişim', to: '/iletisim' },
+  { label: 'Gizlilik Politikası', to: '/gizlilik-politikasi' },
+]
 
 export default function Footer() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const settings = useSiteSettings()
+
+  const onAnchor = (e: React.MouseEvent, anchor: string) => {
+    e.preventDefault()
+    if (location.pathname === '/') {
+      document.getElementById(anchor)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    } else {
+      navigate(`/#${anchor}`)
+    }
+  }
+
   return (
     <footer style={{
       background: 'var(--bg2)',
@@ -16,13 +43,21 @@ export default function Footer() {
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
             <img src="/logo.svg" alt="Logo" style={{ width: 32, height: 32, objectFit: 'contain' }} />
             <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.5 }}>
-              <span style={{ color: 'var(--primary)' }}>{import.meta.env.VITE_BRAND_PART1}</span>
-              <span style={{ color: 'var(--accent)' }}>{import.meta.env.VITE_BRAND_PART2}</span>
+              <span style={{ color: 'var(--primary)' }}>{settings.brandPart1}</span>
+              <span style={{ color: 'var(--accent)' }}>{settings.brandPart2}</span>
             </div>
           </Link>
           <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap' }}>
-            {['Hakkımızda', 'Nasıl Çalışır', 'Bayilik', 'Kampanyalar', 'Blog', 'İletişim', 'Gizlilik Politikası'].map(l => (
-              <a key={l} href="#" style={{ fontSize: 13, color: 'var(--text2)', transition: '0.2s' }}>{l}</a>
+            {LINKS.map(l => l.anchor ? (
+              <a key={l.label} href={`#${l.anchor}`} onClick={e => onAnchor(e, l.anchor!)}
+                 style={{ fontSize: 13, color: 'var(--text2)', transition: '0.2s', cursor: 'pointer' }}>
+                {l.label}
+              </a>
+            ) : (
+              <Link key={l.label} to={l.to!}
+                 style={{ fontSize: 13, color: 'var(--text2)', transition: '0.2s', textDecoration: 'none' }}>
+                {l.label}
+              </Link>
             ))}
           </div>
         </div>
@@ -32,7 +67,7 @@ export default function Footer() {
           flexWrap: 'wrap', gap: 8,
         }}>
           <div style={{ fontSize: 12, color: 'var(--text3)' }}>
-            © 2024 {import.meta.env.VITE_BRAND_PART1}{import.meta.env.VITE_BRAND_PART2}. Tüm hakları saklıdır. Türkiye'nin toptan pet ürünleri platformu.
+            © {new Date().getFullYear()} {settings.brandPart1}{settings.brandPart2}. Tüm hakları saklıdır. Türkiye'nin toptan pet ürünleri platformu.
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             {['iyzico', 'PayTR', 'SSL Güvenli'].map(b => (

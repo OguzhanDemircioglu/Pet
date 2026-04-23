@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import { campaignApi, type CampaignResponse } from '../api/campaignApi'
-import { setFeatured, fetchCatalogThunk } from './productSlice'
+import { productApi } from '../api/productApi'
+import { setFeatured, setBestSellers, setNewArrivals, setDeals, fetchCatalogThunk } from './productSlice'
 import type { RootState } from './index'
 import { HEX_COLOR_RE } from '../constants/regex'
 
@@ -50,8 +51,16 @@ const initialState: CampaignState = {
 export const fetchHomepageThunk = createAsyncThunk(
   'campaigns/fetchHomepage',
   async (_, { dispatch }) => {
-    const data = await campaignApi.getHomepage()
+    const [data, bestSellers, newArrivals, deals] = await Promise.all([
+      campaignApi.getHomepage(),
+      productApi.bestSellers().catch(() => []),
+      productApi.newArrivals().catch(() => []),
+      productApi.deals().catch(() => []),
+    ])
     dispatch(setFeatured(data.featured))
+    dispatch(setBestSellers(bestSellers))
+    dispatch(setNewArrivals(newArrivals))
+    dispatch(setDeals(deals))
     return data
   },
   {

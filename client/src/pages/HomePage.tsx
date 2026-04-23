@@ -12,6 +12,7 @@ import { addToCart } from '../store/cartSlice'
 import { imgUrl } from '../api/productApi'
 import toast from 'react-hot-toast'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { useSiteSettings } from '../hooks/useSiteSettings'
 
 const WHY_CARDS = [
   { icon: '🏷️', title: 'Toptan Fiyat Garantisi', desc: 'Tüm ürünlerde en düşük toptan fiyat garantisi. Fiyat farkı varsa iade ederiz.' },
@@ -151,7 +152,25 @@ export default function HomePage() {
   const [slideIdx, setSlideIdx] = useState(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const dispatch = useDispatch<AppDispatch>()
-  const products = useSelector((s: RootState) => s.products.featured)
+  const productsRaw = useSelector((s: RootState) => s.products.featured)
+  const bestSellersRaw = useSelector((s: RootState) => s.products.bestSellers)
+  const newArrivalsRaw = useSelector((s: RootState) => s.products.newArrivals)
+  const dealsRaw = useSelector((s: RootState) => s.products.deals)
+  const siteSettings = useSiteSettings()
+
+  // Stokta olmayan ürünler en sona (varyantlı ürünlerde en az bir varyantta stok varsa "stokta" sayılır)
+  const hasStock = (p: FeaturedProduct) => {
+    const actives = (p.variants ?? []).filter(v => v.isActive)
+    if (actives.length >= 2) return actives.some(v => v.availableStock > 0)
+    return p.availableStock > 0
+  }
+  const sortByStock = (list: FeaturedProduct[]) =>
+    [...list].sort((a, b) => Number(hasStock(b)) - Number(hasStock(a)))
+
+  const products = sortByStock(productsRaw)
+  const bestSellers = sortByStock(bestSellersRaw)
+  const newArrivals = sortByStock(newArrivalsRaw)
+  const deals = sortByStock(dealsRaw)
   const loading = useSelector((s: RootState) => !s.campaigns.loaded || s.campaigns.loading)
   const slides = useSelector((s: RootState) => s.campaigns.slides)
   const isMobile = useIsMobile()
@@ -159,6 +178,16 @@ export default function HomePage() {
   useEffect(() => {
     dispatch(fetchHomepageThunk())
   }, [dispatch])
+
+  // /#kampanyalar ile gelinirse carousel'e scroll et
+  useEffect(() => {
+    if (window.location.hash) {
+      const id = window.location.hash.slice(1)
+      setTimeout(() => {
+        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 120)
+    }
+  }, [])
 
   useEffect(() => {
     if (slides.length < 2) return
@@ -179,7 +208,7 @@ export default function HomePage() {
       <CategoryBar />
 
       {/* Campaign Carousel */}
-      {slides.length > 0 && <div style={{ maxWidth: 1280, margin: '0 auto', padding: isMobile ? '12px 12px 0' : '16px 24px 0' }}>
+      {slides.length > 0 && <div id="kampanyalar" style={{ maxWidth: 1280, margin: '0 auto', padding: isMobile ? '12px 12px 0' : '16px 24px 0', scrollMarginTop: 80 }}>
       <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 14, width: '100%' }}>
         <div style={{ display: 'flex', width: '100%', transition: 'transform 0.45s cubic-bezier(.4,0,.2,1)', transform: `translateX(-${slideIdx * 100}%)` }}>
           {slides.map((s, i) => (
@@ -219,6 +248,16 @@ export default function HomePage() {
       {/* Page Content */}
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: isMobile ? '0 12px' : '0 24px' }}>
 
+        {/* Fırsat Ürünleri — indirimde olan ürünler */}
+        {deals.length >= 1 && (
+          <div style={{ padding: isMobile ? '28px 0 0' : '44px 0 0' }}>
+            <SectionHead title="🔥 Fırsat Ürünleri" link="/urunler" />
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: isMobile ? 10 : 16 }}>
+              {deals.map(p => <ProductCard key={p.id} p={p} />)}
+            </div>
+          </div>
+        )}
+
         {/* Featured Products */}
         <div style={{ padding: isMobile ? '28px 0 0' : '44px 0 0' }}>
           <SectionHead title="Öne Çıkan Ürünler" link="/urunler" />
@@ -231,9 +270,29 @@ export default function HomePage() {
           )}
         </div>
 
+        {/* Best Sellers */}
+        {bestSellers.length >= 2 && (
+          <div style={{ padding: isMobile ? '28px 0 0' : '44px 0 0' }}>
+            <SectionHead title="En Çok Satan Ürünler" link="/urunler" />
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: isMobile ? 10 : 16 }}>
+              {bestSellers.map(p => <ProductCard key={p.id} p={p} />)}
+            </div>
+          </div>
+        )}
+
+        {/* New Arrivals */}
+        {newArrivals.length >= 2 && (
+          <div style={{ padding: isMobile ? '28px 0 0' : '44px 0 0' }}>
+            <SectionHead title="Yeni Eklenen Ürünler" link="/urunler" />
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: isMobile ? 10 : 16 }}>
+              {newArrivals.map(p => <ProductCard key={p.id} p={p} />)}
+            </div>
+          </div>
+        )}
+
         {/* Why Section */}
         <div style={{ padding: isMobile ? '32px 0 36px' : '48px 0 52px' }}>
-          <SectionHead title={`Neden ${import.meta.env.VITE_BRAND_PART1}${import.meta.env.VITE_BRAND_PART2}?`} />
+          <SectionHead title={`Neden ${siteSettings.brandPart1}${siteSettings.brandPart2}?`} />
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: isMobile ? 10 : 18 }}>
             {WHY_CARDS.map(w => (
               <div key={w.title} className="why-card" style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', padding: '26px 20px', textAlign: 'center', transition: '0.2s' }}>

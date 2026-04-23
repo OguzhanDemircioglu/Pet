@@ -12,8 +12,8 @@ import InfoBar from '../components/InfoBar'
 import Header from '../components/Header'
 import CategoryBar from '../components/CategoryBar'
 import Footer from '../components/Footer'
-import {CONTACT_PHONE} from '../constants/app'
 import {useIsMobile} from '../hooks/useIsMobile'
+import {useSiteSettings} from '../hooks/useSiteSettings'
 
 const THUMB_BG = [
   'linear-gradient(135deg,#fce7f3,#fdf2f8)',
@@ -136,6 +136,14 @@ export default function ProductDetailPage() {
   const [addedToCart, setAddedToCart] = useState(false)
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
   const isMobile = useIsMobile()
+  const siteSettings = useSiteSettings()
+  const CONTACT_PHONE = siteSettings.contactPhone
+
+  // Stok bildirimi
+  const [notifyEmail, setNotifyEmail] = useState('')
+  const [notifySaving, setNotifySaving] = useState(false)
+  const [notifySubmitted, setNotifySubmitted] = useState(false)
+  const [notifyOpen, setNotifyOpen] = useState(false)
 
   // Reviews state
   const [reviews, setReviews] = useState<ReviewResponse[]>([])
@@ -160,6 +168,17 @@ export default function ProductDetailPage() {
     if (user) reviewApi.canReview(slug).then(setCanReview).catch(() => {})
   }, [activeTab, slug, reviewsLoaded, user])
 
+  // Seçim değiştiğinde stok bildirim durumunu localStorage'dan oku (tekrar API çağırmadan)
+  useEffect(() => {
+    if (!product) return
+    const vid = selectedVariant?.id ?? 0
+    const key = `stock-notify-${product.id}-${vid}`
+    const already = localStorage.getItem(key) === '1'
+    setNotifySubmitted(already)
+    setNotifyOpen(false)
+    setNotifyEmail(user?.email ?? '')
+  }, [product, selectedVariant, user?.email])
+
   useEffect(() => {
     if (!slug) return
     productApi.getBySlug(slug)
@@ -169,7 +188,9 @@ export default function ProductDetailPage() {
         // Sadece 2+ varyantta seçim gerekir; tekli varyantta basePrice kullanılır
         setSelectedVariant(actives.length >= 2 ? actives[0] : null)
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.error('[ProductDetail] getBySlug hatası:', err?.message || err, '| slug:', slug)
+      })
       .finally(() => setLoading(false))
   }, [slug])
 
@@ -218,6 +239,32 @@ export default function ProductDetailPage() {
     toast.success('Sepete eklendi')
     setAddedToCart(true)
     setTimeout(() => setAddedToCart(false), 1800)
+  }
+
+  const handleNotifyStock = async () => {
+    if (!product) return
+    const email = notifyEmail.trim()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error('Geçerli bir e-posta girin')
+      return
+    }
+    setNotifySaving(true)
+    try {
+      await productApi.notifyStock(product.id, {
+        email,
+        ...(selectedVariant ? { variantId: selectedVariant.id } : {}),
+      })
+      const vid = selectedVariant?.id ?? 0
+      localStorage.setItem(`stock-notify-${product.id}-${vid}`, '1')
+      setNotifySubmitted(true)
+      setNotifyOpen(false)
+      toast.success('Stok geldiğinde e-posta ile bilgilendireceğiz')
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Bir hata oluştu'
+      toast.error(msg)
+    } finally {
+      setNotifySaving(false)
+    }
   }
 
   const handleEditReview = (r: ReviewResponse) => {
@@ -463,22 +510,97 @@ export default function ProductDetailPage() {
 
             {/* Action Buttons */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
-              <button
-                onClick={effectiveStock > 0 ? handleAddToCart : undefined}
-                disabled={effectiveStock <= 0}
-                style={{
-                  width: '100%',
-                  background: effectiveStock <= 0 ? '#e5e7eb' : addedToCart ? '#22c55e' : 'var(--primary)',
-                  color: effectiveStock <= 0 ? '#111' : '#fff',
-                  fontSize: 15, fontWeight: 700, padding: 14, borderRadius: 'var(--r)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  transition: '0.2s',
-                  boxShadow: effectiveStock > 0 ? '0 4px 12px rgba(220,38,38,.35)' : 'none',
-                  border: 'none',
-                  cursor: effectiveStock <= 0 ? 'not-allowed' : 'pointer',
+              {effectiveStock > 0 ? (
+                <button
+                  onClick={handleAddToCart}
+                  style={{
+                    width: '100%',
+                    background: addedToCart ? '#22c55e' : 'var(--primary)',
+                    color: '#fff',
+                    fontSize: 15, fontWeight: 700, padding: 14, borderRadius: 'var(--r)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    transition: '0.2s',
+                    boxShadow: '0 4px 12px rgba(220,38,38,.35)',
+                    border: 'none', cursor: 'pointer',
+                  }}>
+                  {addedToCart ? '✅ Sepete Eklendi!' : '🛒 Sepete Ekle'}
+                </button>
+              ) : notifySubmitted ? (
+                <div style={{
+                  width: '100%', padding: '14px 16px', borderRadius: 'var(--r)',
+                  background: '#ecfdf5', border: '1px solid #a7f3d0',
+                  color: '#065f46', fontSize: 14, fontWeight: 600,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, textAlign: 'center',
                 }}>
-                {effectiveStock <= 0 ? '✕ Stokta Yok' : addedToCart ? '✅ Sepete Eklendi!' : '🛒 Sepete Ekle'}
-              </button>
+                  ✅ Stok geldiğinde mail ile dönüş yapacağız
+                </div>
+              ) : !notifyOpen ? (
+                <button
+                  onClick={() => setNotifyOpen(true)}
+                  style={{
+                    width: '100%',
+                    background: 'var(--primary)',
+                    color: '#fff',
+                    fontSize: 15, fontWeight: 700, padding: 14, borderRadius: 'var(--r)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    transition: '0.2s', boxShadow: '0 4px 12px rgba(220,38,38,.35)',
+                    border: 'none', cursor: 'pointer',
+                  }}>
+                  🔔 Stoğa Gelince Haber Ver
+                </button>
+              ) : (
+                <div style={{
+                  width: '100%', padding: 14, borderRadius: 'var(--r)',
+                  background: 'var(--bg2)', border: '1px solid var(--border)',
+                  display: 'flex', flexDirection: 'column', gap: 10,
+                }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
+                    🔔 Stoğa gelince haber ver
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.5 }}>
+                    E-posta adresinizi girin, ürün tekrar stoğa girdiğinde size bildirim göndereceğiz. Bu işlemi bir kez yapmanız yeterli.
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 8 }}>
+                    <input
+                      type="email"
+                      value={notifyEmail}
+                      onChange={e => setNotifyEmail(e.target.value)}
+                      placeholder="E-posta adresiniz"
+                      disabled={notifySaving}
+                      style={{
+                        flex: 1, minWidth: 0,
+                        padding: '10px 12px',
+                        border: '1px solid var(--border)',
+                        borderRadius: 8,
+                        fontSize: 14, background: 'var(--bg)', color: 'var(--text)',
+                        outline: 'none',
+                      }}
+                    />
+                    <button
+                      onClick={handleNotifyStock}
+                      disabled={notifySaving}
+                      style={{
+                        background: 'var(--primary)', color: '#fff',
+                        fontSize: 14, fontWeight: 700,
+                        padding: '10px 18px', borderRadius: 8,
+                        border: 'none', cursor: notifySaving ? 'wait' : 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}>
+                      {notifySaving ? 'Kaydediliyor…' : 'Haber Ver'}
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => setNotifyOpen(false)}
+                    disabled={notifySaving}
+                    style={{
+                      alignSelf: 'flex-end', background: 'transparent',
+                      color: 'var(--text3)', fontSize: 12, fontWeight: 600,
+                      border: 'none', cursor: 'pointer', padding: 0,
+                    }}>
+                    Vazgeç
+                  </button>
+                </div>
+              )}
               <a href={`https://wa.me/${CONTACT_PHONE}?text=${encodeURIComponent(`Merhaba, "${product.name}" ürünü hakkında bilgi almak istiyorum.`)}`}
                 target="_blank" rel="noopener noreferrer"
                 style={{
@@ -523,7 +645,7 @@ export default function ProductDetailPage() {
             <div>
               {product.shortDescription && <p style={{ fontSize: 15, color: 'var(--text2)', lineHeight: 1.75, marginBottom: 14 }}>{product.shortDescription}</p>}
               <div style={{ background: 'var(--primary-bg)', borderLeft: '4px solid var(--primary)', padding: '14px 18px', borderRadius: '0 var(--r) var(--r) 0', margin: '18px 0', fontSize: 14, color: 'var(--text2)', lineHeight: 1.6 }}>
-                🏆 {import.meta.env.VITE_BRAND_PART1}{import.meta.env.VITE_BRAND_PART2}, en kaliteli pet ürünlerini toptan fiyatlarla sunan güvenilir platformunuzdur.
+                🏆 {siteSettings.brandPart1}{siteSettings.brandPart2}, en kaliteli pet ürünlerini toptan fiyatlarla sunan güvenilir platformunuzdur.
               </div>
               <p style={{ fontSize: 15, color: 'var(--text2)', lineHeight: 1.75, marginBottom: 14 }}>
                 <strong style={{ color: 'var(--text)' }}>Toptan alım avantajı:</strong> Bu ürün özel toptan fiyatlarıyla sunulmaktadır. Pet shop, veteriner klinikleri ve işletmeler için ideal toptan çözüm.

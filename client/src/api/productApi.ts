@@ -33,6 +33,15 @@ export const productApi = {
   featured: () =>
     api.get<Product[]>('/products/featured').then(r => r.data),
 
+  deals: () =>
+    api.get<import('../types').FeaturedProduct[]>('/products/deals').then(r => r.data),
+
+  bestSellers: () =>
+    api.get<import('../types').FeaturedProduct[]>('/products/best-sellers').then(r => r.data),
+
+  newArrivals: () =>
+    api.get<import('../types').FeaturedProduct[]>('/products/new-arrivals').then(r => r.data),
+
   catalog: () =>
     api.get<CatalogResponse>('/public/catalog').then(r => r.data),
 
@@ -47,6 +56,14 @@ export const productApi = {
 
   adminDelete: (id: number) =>
     api.delete(`/admin/products/${id}`),
+
+  notifyStock: (productId: number, data: { email: string; variantId?: number }) =>
+    api.post(`/products/${productId}/notify-stock`, data).then(r => r.data),
+
+  checkStockNotify: (productId: number, email: string, variantId?: number) =>
+    api.get<{ subscribed: boolean }>(`/products/${productId}/notify-stock`, {
+      params: { email, ...(variantId ? { variantId } : {}) },
+    }).then(r => r.data),
 }
 
 export const brandApi = {

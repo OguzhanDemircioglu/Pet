@@ -47,11 +47,14 @@ import type {
 } from '../types'
 import {addressApi} from '../api/addressApi'
 import {authApi} from '../api/authApi'
+import {siteSettingsApi, type SiteSettings} from '../api/siteSettingsApi'
+import {setSiteSettings} from '../store/siteSettingsSlice'
 import {TURKEY_DISTRICTS} from '../data/turkeyDistricts'
-import {NON_DIGIT_RE, PHONE_RE} from '../constants/regex'
+import {PHONE_RE} from '../constants/regex'
+import PhoneInput, {toIntl, fromIntl} from '../components/PhoneInput'
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
-type Section = 'orders' | 'info' | 'addresses' | 'notifications' | 'products' | 'brands' | 'campaigns' | 'categories' | 'users' | 'adminorders'
+type Section = 'orders' | 'info' | 'addresses' | 'notifications' | 'products' | 'brands' | 'campaigns' | 'categories' | 'users' | 'adminorders' | 'sitesettings'
 
 const NAV_CUSTOMER: { id: Section; label: string; icon: string }[] = [
   { id: 'orders', label: 'Siparişlerim', icon: '📦' },
@@ -66,6 +69,7 @@ const NAV_ADMIN: { id: Section; label: string; icon: string }[] = [
   { id: 'categories', label: 'Kategoriler', icon: '🗂️' },
   { id: 'campaigns', label: 'Kampanyalar', icon: '📢' },
   { id: 'users', label: 'Kullanıcılar', icon: '👥' },
+  { id: 'sitesettings', label: 'Site Ayarları', icon: '⚙️' },
 ]
 
 const UNITS = ['adet', 'kg', 'lt', 'kutu', 'paket', 'çift']
@@ -182,6 +186,7 @@ export default function ProfilePage() {
           {section === 'categories' && isAdmin && <AdminCategoriesSection categories={categories} onRefresh={() => dispatch(fetchCategoriesThunk(true))} />}
           {section === 'campaigns' && isAdmin && <AdminCampaignsSection />}
           {section === 'users' && isAdmin && <AdminUsersSection />}
+          {section === 'sitesettings' && isAdmin && <AdminSiteSettingsSection />}
         </div>
       </div>
 
@@ -461,36 +466,6 @@ function InfoSection({ user }: { user: { firstName: string; lastName: string; em
     return ''
   }
 
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value
-    const cursorPos = e.target.selectionStart ?? raw.length
-    const digitsBeforeCursor = raw.slice(0, cursorPos).replace(NON_DIGIT_RE, '').length
-
-    let digits = raw.replace(NON_DIGIT_RE, '').slice(0, 11)
-    if (digits.length >= 1 && digits[0] !== '0') digits = '0' + digits.slice(0, 10)
-    if (digits.length >= 2 && digits[1] !== '5') digits = digits[0] + '5' + digits.slice(2)
-
-    let formatted = digits
-    if (digits.length > 4) formatted = digits.slice(0, 4) + ' ' + digits.slice(4)
-    if (digits.length > 7) formatted = digits.slice(0, 4) + ' ' + digits.slice(4, 7) + ' ' + digits.slice(7)
-    if (digits.length > 9) formatted = digits.slice(0, 4) + ' ' + digits.slice(4, 7) + ' ' + digits.slice(7, 9) + ' ' + digits.slice(9)
-
-    setForm(p => ({ ...p, phone: formatted }))
-    setFormErrors(p => ({ ...p, phone: '' }))
-
-    requestAnimationFrame(() => {
-      if (!phoneInputRef.current) return
-      let digitCount = 0, newCursor = formatted.length
-      for (let i = 0; i < formatted.length; i++) {
-        if (/\d/.test(formatted[i])) {
-          digitCount++
-          if (digitCount === digitsBeforeCursor) { newCursor = i + 1; break }
-        }
-      }
-      phoneInputRef.current.setSelectionRange(newCursor, newCursor)
-    })
-  }
-
   const handleEmailChange = async () => {
     if (!newEmail.trim()) return
     setSending(true)
@@ -554,12 +529,10 @@ function InfoSection({ user }: { user: { firstName: string; lastName: string; em
           {/* Telefon */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>Telefon</label>
-            <input
+            <PhoneInput
               ref={phoneInputRef}
               value={form.phone}
-              onChange={handlePhoneChange}
-              placeholder="05XX XXX XX XX"
-              inputMode="numeric"
+              onChange={v => { setForm(p => ({ ...p, phone: v })); setFormErrors(p => ({ ...p, phone: '' })) }}
               style={{ ...inputStyle, borderColor: formErrors.phone ? '#dc2626' : undefined }}
             />
             {formErrors.phone && <span style={{ fontSize: 11, color: '#dc2626' }}>{formErrors.phone}</span>}
@@ -641,7 +614,6 @@ function AddressesSection() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState<AddressRequest>({ ...EMPTY_ADDRESS_FORM })
   const [saving, setSaving] = useState(false)
-  const phoneInputRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -660,28 +632,6 @@ function AddressesSection() {
     setEditingId(a.id)
     setForm({ title: a.title, fullName: a.fullName, phone: a.phone, city: a.city, district: a.district, addressLine: a.addressLine, isDefault: a.isDefault })
     setFormOpen(true)
-  }
-
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value
-    const cursorPos = e.target.selectionStart ?? raw.length
-    const digitsBeforeCursor = raw.slice(0, cursorPos).replace(/\D/g, '').length
-    let digits = raw.replace(/\D/g, '').slice(0, 11)
-    if (digits.length >= 1 && digits[0] !== '0') digits = '0' + digits.slice(0, 10)
-    if (digits.length >= 2 && digits[1] !== '5') digits = digits[0] + '5' + digits.slice(2)
-    let formatted = digits
-    if (digits.length > 4) formatted = digits.slice(0, 4) + ' ' + digits.slice(4)
-    if (digits.length > 7) formatted = digits.slice(0, 4) + ' ' + digits.slice(4, 7) + ' ' + digits.slice(7)
-    if (digits.length > 9) formatted = digits.slice(0, 4) + ' ' + digits.slice(4, 7) + ' ' + digits.slice(7, 9) + ' ' + digits.slice(9)
-    setForm(p => ({ ...p, phone: formatted }))
-    requestAnimationFrame(() => {
-      if (!phoneInputRef.current) return
-      let digitCount = 0; let newCursor = formatted.length
-      for (let i = 0; i < formatted.length; i++) {
-        if (/\d/.test(formatted[i])) { digitCount++; if (digitCount === digitsBeforeCursor) { newCursor = i + 1; break } }
-      }
-      phoneInputRef.current.setSelectionRange(newCursor, newCursor)
-    })
   }
 
   const handleSave = async () => {
@@ -746,7 +696,7 @@ function AddressesSection() {
             {/* Telefon */}
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: 5 }}>Telefon *</label>
-              <input ref={phoneInputRef} type="tel" value={form.phone} onChange={handlePhoneChange} placeholder="0532 123 45 67"
+              <PhoneInput value={form.phone} onChange={v => setForm(p => ({ ...p, phone: v }))}
                 style={{ width: '100%', height: 40, border: '1.5px solid var(--border)', borderRadius: 'var(--r)', background: 'var(--bg3)', color: 'var(--text)', fontSize: 13.5, padding: '0 12px', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} />
             </div>
             {/* İl */}
@@ -2438,6 +2388,134 @@ function FormField({ label, children, span2, hint }: { label: string; children: 
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, gridColumn: span2 ? '1 / -1' : undefined }}>
       {label && <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>{label}{hint && <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text3)', marginLeft: 6 }}>— {hint}</span>}</label>}
       {children}
+    </div>
+  )
+}
+
+// ─── Admin Site Settings Section ───────────────────────────────────────────────
+function AdminSiteSettingsSection() {
+  const dispatch = useDispatch<AppDispatch>()
+  const isMobile = useIsMobile()
+  const [form, setForm] = useState<SiteSettings>({
+    brandPart1: '', brandPart2: '', contactEmail: '', contactPhone: '', companyAddress: '',
+    contactHours: '', mapCoords: '', appDomain: '', appYear: '',
+  })
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    siteSettingsApi.adminGet()
+      .then(d => setForm({ ...d, contactPhone: fromIntl(d.contactPhone) }))
+      .catch((e: any) => toast.error(e?.message || 'Site ayarları yüklenemedi'))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const handleSave = async () => {
+    if (!form.brandPart1.trim() || !form.brandPart2.trim()) { toast.error('Marka adı zorunlu'); return }
+    if (!form.contactEmail.trim()) { toast.error('İletişim e-postası zorunlu'); return }
+    if (!form.contactPhone.trim()) { toast.error('İletişim telefonu zorunlu'); return }
+    if (!PHONE_RE.test(form.contactPhone)) { toast.error('Telefon 05XX XXX XX XX formatında olmalı'); return }
+    if (!form.appDomain.trim()) { toast.error('Alan adı (domain) zorunlu'); return }
+    if (!form.appYear.trim()) { toast.error('Yıl zorunlu'); return }
+    setSaving(true)
+    try {
+      const payload = { ...form, contactPhone: toIntl(form.contactPhone) }
+      const updated = await siteSettingsApi.update(payload)
+      setForm({ ...updated, contactPhone: fromIntl(updated.contactPhone) })
+      dispatch(setSiteSettings(updated))
+      toast.success('Site ayarları güncellendi')
+    } catch (e: any) {
+      toast.error(e?.message || 'Kaydedilemedi')
+    } finally { setSaving(false) }
+  }
+
+  const input = (v: string, onChange: (v: string) => void, placeholder?: string, type: string = 'text') => (
+    <input
+      type={type}
+      value={v}
+      onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
+      style={{
+        width: '100%', padding: '9px 12px', fontSize: 14,
+        background: 'var(--bg)', border: '1px solid var(--border)',
+        borderRadius: 'var(--r)', color: 'var(--text)', outline: 'none',
+      }}
+    />
+  )
+
+  return (
+    <div>
+      <SectionHead title="Site Ayarları" sub="Marka, iletişim ve adres bilgileri" />
+      {loading ? (
+        <div style={{ padding: 40, textAlign: 'center', color: 'var(--text3)' }}>Yükleniyor...</div>
+      ) : (
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', padding: isMobile ? 16 : 22 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14 }}>
+            <FormField label="Marka Adı — 1. kısım" hint="örn: Pet">
+              {input(form.brandPart1, v => setForm({ ...form, brandPart1: v }), 'Pet')}
+            </FormField>
+            <FormField label="Marka Adı — 2. kısım" hint="örn: Toptan">
+              {input(form.brandPart2, v => setForm({ ...form, brandPart2: v }), 'Toptan')}
+            </FormField>
+            <FormField label="İletişim E-posta">
+              {input(form.contactEmail, v => setForm({ ...form, contactEmail: v }), 'info@ornek.com', 'email')}
+            </FormField>
+            <FormField label="WhatsApp / Telefon" hint="05XX XXX XX XX">
+              <PhoneInput
+                value={form.contactPhone}
+                onChange={v => setForm({ ...form, contactPhone: v })}
+                style={{
+                  width: '100%', padding: '9px 12px', fontSize: 14,
+                  background: 'var(--bg)', border: '1px solid var(--border)',
+                  borderRadius: 'var(--r)', color: 'var(--text)', outline: 'none',
+                  fontFamily: 'inherit',
+                }}
+              />
+            </FormField>
+            <FormField label="Alan Adı (Domain)" hint="örn: pettoptan.com.tr">
+              {input(form.appDomain, v => setForm({ ...form, appDomain: v }), 'pettoptan.com.tr')}
+            </FormField>
+            <FormField label="Yıl" hint="e-posta altlıklarında görünen">
+              {input(form.appYear, v => setForm({ ...form, appYear: v.replace(/\D/g, '').slice(0, 4) }), '2025')}
+            </FormField>
+            <FormField label="Çalışma Saatleri" hint="InfoBar & İletişim sayfasında görünür" span2>
+              {input(form.contactHours, v => setForm({ ...form, contactHours: v }), 'Haftaiçi 09:00–18:00')}
+            </FormField>
+            <FormField label="Harita Koordinatları" hint="Google Maps → sağ tık → koordinatı kopyala (örn: 41.0082,28.9784)" span2>
+              {input(form.mapCoords, v => setForm({ ...form, mapCoords: v }), '41.0082,28.9784')}
+            </FormField>
+            <FormField label="Şirket Adresi" span2>
+              <textarea
+                value={form.companyAddress}
+                onChange={e => setForm({ ...form, companyAddress: e.target.value })}
+                rows={3}
+                placeholder="Mah. Cad. No:X, İlçe / İl"
+                style={{
+                  width: '100%', padding: '9px 12px', fontSize: 14,
+                  background: 'var(--bg)', border: '1px solid var(--border)',
+                  borderRadius: 'var(--r)', color: 'var(--text)', outline: 'none',
+                  resize: 'vertical', fontFamily: 'inherit',
+                }}
+              />
+            </FormField>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 18 }}>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{
+                background: 'var(--primary)', color: '#fff', border: 'none',
+                borderRadius: 'var(--r)', padding: '10px 22px', fontSize: 14,
+                fontWeight: 700, cursor: saving ? 'wait' : 'pointer',
+                opacity: saving ? 0.7 : 1,
+              }}
+            >
+              {saving ? 'Kaydediliyor...' : 'Kaydet'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

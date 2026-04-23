@@ -1,6 +1,7 @@
 package com.petshop.service;
 
 import com.petshop.constant.EmailMessages;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -12,11 +13,13 @@ import java.util.Map;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class EmailService {
 
     private static final String BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
     private final RestTemplate restTemplate = new RestTemplate();
+    private final SiteSettingsService siteSettings;
 
     @Value("${app.brevo-api-key:}")
     private String brevoApiKey;
@@ -24,20 +27,11 @@ public class EmailService {
     @Value("${app.mail-from:info@petshop.com.tr}")
     private String fromEmail;
 
-    @Value("${app.name}")
-    private String appName;
-
-    @Value("${app.name-part1}")
-    private String appNamePart1;
-
-    @Value("${app.name-part2}")
-    private String appNamePart2;
-
-    @Value("${app.domain}")
-    private String appDomain;
-
-    @Value("${app.year}")
-    private String appYear;
+    private String appName()      { return siteSettings.getAppName(); }
+    private String appNamePart1() { return siteSettings.getAppNamePart1(); }
+    private String appNamePart2() { return siteSettings.getAppNamePart2(); }
+    private String appDomain()    { return siteSettings.getAppDomain(); }
+    private String appYear()      { return siteSettings.getAppYear(); }
 
     void sendHtml(String to, String subject, String html) throws Exception {
         if (brevoApiKey == null || brevoApiKey.isBlank()) {
@@ -49,7 +43,7 @@ public class EmailService {
         headers.set("api-key", brevoApiKey);
 
         Map<String, Object> body = Map.of(
-                "sender",      Map.of("name", appName, "email", fromEmail),
+                "sender",      Map.of("name", appName(), "email", fromEmail),
                 "to",          List.of(Map.of("email", to)),
                 "subject",     subject,
                 "htmlContent", html
@@ -139,7 +133,7 @@ public class EmailService {
               </table>
             </body>
             </html>
-            """.formatted(appNamePart1, appNamePart2, firstName, orderId, itemsHtml, totalAmount, deliveryAddress, appYear, appNamePart1, appNamePart2, appDomain);
+            """.formatted(appNamePart1(), appNamePart2(), firstName, orderId, itemsHtml, totalAmount, deliveryAddress, appYear(), appNamePart1(), appNamePart2(), appDomain());
     }
 
     String buildVerificationEmail(String firstName, String code) {
@@ -196,7 +190,66 @@ public class EmailService {
               </table>
             </body>
             </html>
-            """.formatted(appNamePart1, appNamePart2, firstName, appName, code, appYear, appName, appDomain);
+            """.formatted(appNamePart1(), appNamePart2(), firstName, appName(), code, appYear(), appName(), appDomain());
+    }
+
+    String buildStockNotificationEmail(String productName, String variantLabel, String productUrl) {
+        String variantLine = variantLabel == null || variantLabel.isBlank()
+                ? ""
+                : "<p style=\"margin:0 0 12px;font-size:14px;color:#64748b\">Seçim: <strong>" + variantLabel + "</strong></p>";
+        return """
+            <!DOCTYPE html>
+            <html lang="tr">
+            <head><meta charset="UTF-8"></head>
+            <body style="margin:0;padding:0;background:#f8f9fa;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+              <table width="100%%" cellpadding="0" cellspacing="0" style="background:#f8f9fa;padding:40px 0">
+                <tr><td align="center">
+                  <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08)">
+
+                    <tr>
+                      <td style="background:#1e3a5f;padding:28px 40px;text-align:center">
+                        <span style="font-size:22px;font-weight:700;color:#ffffff">
+                          <span style="color:#dc2626">%s</span><span style="color:#38bdf8">%s</span>
+                        </span>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td style="padding:40px">
+                        <p style="margin:0 0 8px;font-size:18px;font-weight:700;color:#1e3a5f">🎉 Beklediğiniz Ürün Stoğa Geldi!</p>
+                        <p style="margin:0 0 20px;font-size:15px;color:#64748b;line-height:1.6">
+                          Haber verilmesini istediğiniz ürün artık tekrar stoklarımızda.
+                        </p>
+
+                        <div style="background:#f1f5f9;border-radius:10px;padding:18px;margin-bottom:24px">
+                          <p style="margin:0 0 6px;font-size:16px;font-weight:700;color:#1a1a1a">%s</p>
+                          %s
+                        </div>
+
+                        <div style="text-align:center;margin-bottom:28px">
+                          <a href="%s" style="display:inline-block;background:#dc2626;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px">
+                            Ürünü Görüntüle
+                          </a>
+                        </div>
+
+                        <p style="margin:0;font-size:13px;color:#94a3b8;line-height:1.6">
+                          Stoklar sınırlı olabilir — hızlı davranmanızı öneririz. Bu e-postayı siz talep ettiniz, tekrar bildirim almayacaksınız.
+                        </p>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td style="background:#f8f9fa;padding:20px 40px;text-align:center;border-top:1px solid #e2e8f0">
+                        <p style="margin:0;font-size:12px;color:#94a3b8">© %s %s · %s</p>
+                      </td>
+                    </tr>
+
+                  </table>
+                </td></tr>
+              </table>
+            </body>
+            </html>
+            """.formatted(appNamePart1(), appNamePart2(), productName, variantLine, productUrl, appYear(), appName(), appDomain());
     }
 
     String buildEmailChangeEmail(String firstName, String confirmUrl) {
@@ -252,6 +305,6 @@ public class EmailService {
               </table>
             </body>
             </html>
-            """.formatted(appNamePart1, appNamePart2, firstName, appName, confirmUrl, confirmUrl, appYear, appName, appDomain);
+            """.formatted(appNamePart1(), appNamePart2(), firstName, appName(), confirmUrl, confirmUrl, appYear(), appName(), appDomain());
     }
 }

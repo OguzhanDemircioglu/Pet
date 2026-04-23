@@ -33,9 +33,14 @@ api.interceptors.request.use((config) => {
   const token = localStorage.getItem('accessToken')
   if (token) config.headers.Authorization = `Bearer ${token}`
 
-  const fp = getFingerprint(config)
-  if (failedFingerprints.has(fp)) {
-    return Promise.reject(new Error('Lütfen bilgileri değiştirip tekrar deneyin'))
+  // Fingerprint kontrolü sadece mutasyon request'leri için (POST/PUT/PATCH/DELETE).
+  // GET idempotent — aynı URL'e tekrar istek atmak zararsız, bloke etmemeli.
+  const method = (config.method || 'get').toLowerCase()
+  if (method !== 'get') {
+    const fp = getFingerprint(config)
+    if (failedFingerprints.has(fp)) {
+      return Promise.reject(new Error('Lütfen bilgileri değiştirip tekrar deneyin'))
+    }
   }
 
   return config
@@ -74,9 +79,10 @@ api.interceptors.response.use(
       }
     }
 
-    // 4xx hatalarında parmak izini kaydet
+    // 4xx hatalarında parmak izini kaydet — sadece mutasyon request'leri için
     const status = error.response?.status
-    if (status && status >= 400 && status < 500) {
+    const method = (original.method || 'get').toLowerCase()
+    if (status && status >= 400 && status < 500 && method !== 'get') {
       failedFingerprints.add(getFingerprint(original))
     }
 

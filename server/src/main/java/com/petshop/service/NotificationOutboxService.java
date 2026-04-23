@@ -8,7 +8,6 @@ import com.petshop.entity.NotificationOutbox.Status;
 import com.petshop.repository.NotificationOutboxRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,15 +25,15 @@ public class NotificationOutboxService {
 
     private final NotificationOutboxRepository outboxRepository;
     private final EmailService emailService;
+    private final SiteSettingsService siteSettings;
 
-    @Value("${app.name}")
-    private String appName;
+    private String appName() { return siteSettings.getAppName(); }
 
     // --- enqueue methods ---
 
     @Transactional
     public void enqueueVerificationCode(String toEmail, String firstName, String code) {
-        String subject = appName + EmailMessages.SUBJECT_VERIFY_SUFFIX.get();
+        String subject = appName() + EmailMessages.SUBJECT_VERIFY_SUFFIX.get();
         String html = emailService.buildVerificationEmail(firstName, code);
         save(toEmail, subject, html, true);   // commit sonrası anlık gönderim
     }
@@ -48,8 +47,15 @@ public class NotificationOutboxService {
     }
 
     @Transactional
+    public void enqueueStockNotification(String toEmail, String productName, String variantLabel, String productUrl) {
+        String subject = appName() + " · Stoğa Geldi: " + productName;
+        String html = emailService.buildStockNotificationEmail(productName, variantLabel, productUrl);
+        save(toEmail, subject, html, true);   // commit sonrası anlık gönderim
+    }
+
+    @Transactional
     public void enqueueEmailChangeConfirmation(String toEmail, String firstName, String confirmUrl) {
-        String subject = appName + EmailMessages.SUBJECT_EMAIL_CHANGE.get();
+        String subject = appName() + EmailMessages.SUBJECT_EMAIL_CHANGE.get();
         String html = emailService.buildEmailChangeEmail(firstName, confirmUrl);
         save(toEmail, subject, html, true);   // commit sonrası anlık gönderim
     }

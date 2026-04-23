@@ -33,6 +33,7 @@ public class ProductService {
     private final CategoryRepository categoryRepository;
     private final ProductReviewRepository productReviewRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final StockNotificationService stockNotificationService;
 
     // ─── Public listing ───────────────────────────────────────────────────────
 
@@ -65,6 +66,47 @@ public class ProductService {
 
     public List<FeaturedProductDto> getFeatured(int limit) {
         List<Product> products = productRepository.findFeaturedWithImages(PageRequest.of(0, limit));
+        return enrichFeatured(products);
+    }
+
+    public List<FeaturedProductDto> getDeals(int limit) {
+        Map<Long, ProductResponse.ActiveDiscountDto> dm = buildDiscountMap();
+        if (dm.isEmpty()) return List.of();
+        List<Long> ids = dm.keySet().stream().limit(Math.max(limit, 1)).toList();
+        List<Product> products = productRepository.findByIdsWithImages(ids).stream()
+                .filter(p -> Boolean.TRUE.equals(p.getIsActive()))
+                .toList();
+        if (products.isEmpty()) return List.of();
+        Map<Long, List<ProductVariant>> variantMap = buildVariantMap(products.stream().map(Product::getId).toList());
+        return products.stream()
+                .map(p -> toFeaturedDto(p, dm.get(p.getId()), variantMap.getOrDefault(p.getId(), List.of())))
+                .toList();
+    }
+
+    public List<FeaturedProductDto> getNewArrivals(int limit) {
+        LocalDateTime since = LocalDateTime.now().minusDays(30);
+        List<Product> products = productRepository.findNewArrivalsWithImages(since, PageRequest.of(0, limit));
+        return enrichFeatured(products);
+    }
+
+    public List<FeaturedProductDto> getBestSellers(int limit) {
+        List<com.petshop.entity.Order.OrderStatus> statuses = List.of(
+                com.petshop.entity.Order.OrderStatus.PAID,
+                com.petshop.entity.Order.OrderStatus.PROCESSING,
+                com.petshop.entity.Order.OrderStatus.SHIPPED,
+                com.petshop.entity.Order.OrderStatus.DELIVERED
+        );
+        List<Object[]> rows = productRepository.findBestSellerProductIds(statuses, PageRequest.of(0, limit));
+        if (rows.isEmpty()) return List.of();
+        List<Long> ids = rows.stream().map(r -> (Long) r[0]).toList();
+        List<Product> products = productRepository.findByIdsWithImages(ids);
+        // Sipariş adedine göre sıralamayı koru
+        Map<Long, Product> byId = products.stream().collect(Collectors.toMap(Product::getId, p -> p));
+        List<Product> ordered = ids.stream().map(byId::get).filter(Objects::nonNull).toList();
+        return enrichFeatured(ordered);
+    }
+
+    private List<FeaturedProductDto> enrichFeatured(List<Product> products) {
         if (products.isEmpty()) return List.of();
         Map<Long, ProductResponse.ActiveDiscountDto> dm = buildDiscountMap();
         Map<Long, List<ProductVariant>> variantMap = buildVariantMap(products.stream().map(Product::getId).toList());
@@ -122,6 +164,8 @@ public class ProductService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(ProductMessages.PRODUCT_NOT_FOUND.get(), id));
 
+        int previousAvailable = product.getAvailableStock();
+
         product.setName(req.name());
         product.setSlug(SlugUtil.toSlug(req.name()));
         product.setSku(req.sku());
@@ -146,7 +190,14 @@ public class ProductService {
         }
         product.setBrand(brand);
 
-        return ProductResponse.from(productRepository.save(product));
+        Product saved = productRepository.save(product);
+
+        // 0 → pozitife geçtiyse bekleyen abonelere e-posta
+        if (previousAvailable <= 0 && saved.getAvailableStock() > 0) {
+            stockNotificationService.notifyProductRestocked(saved.getId());
+        }
+
+        return ProductResponse.from(saved);
     }
 
     @Transactional

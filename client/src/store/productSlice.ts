@@ -12,6 +12,9 @@ interface ProductState {
   activeDiscounts: DiscountResponse[]
   featured: FeaturedProduct[]
   featuredLoaded: boolean
+  bestSellers: FeaturedProduct[]
+  newArrivals: FeaturedProduct[]
+  deals: FeaturedProduct[]
 }
 
 const initialState: ProductState = {
@@ -21,6 +24,9 @@ const initialState: ProductState = {
   activeDiscounts: [],
   featured: [],
   featuredLoaded: false,
+  bestSellers: [],
+  newArrivals: [],
+  deals: [],
 }
 
 export const fetchCatalogThunk = createAsyncThunk(
@@ -46,6 +52,15 @@ const productSlice = createSlice({
     setFeatured: (state, action) => {
       state.featured = action.payload
       state.featuredLoaded = true
+    },
+    setBestSellers: (state, action) => {
+      state.bestSellers = action.payload
+    },
+    setNewArrivals: (state, action) => {
+      state.newArrivals = action.payload
+    },
+    setDeals: (state, action) => {
+      state.deals = action.payload
     },
     setActiveDiscounts: (state, action) => {
       state.activeDiscounts = action.payload
@@ -73,5 +88,5 @@ const productSlice = createSlice({
   },
 })
 
-export const { setFeatured, setActiveDiscounts, resetCatalog, resetFeatured } = productSlice.actions
+export const { setFeatured, setBestSellers, setNewArrivals, setDeals, setActiveDiscounts, resetCatalog, resetFeatured } = productSlice.actions
 export default productSlice.reducer

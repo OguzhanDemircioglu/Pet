@@ -8,8 +8,10 @@ import {loginThunk, logout, registerThunk, setUser, verifyEmailThunk} from '../s
 import {authApi} from '../api/authApi'
 import InfoBar from '../components/InfoBar'
 import {useTheme} from '../context/ThemeContext'
-import {EMAIL_RE, NON_DIGIT_RE, PHONE_RE, WHITESPACE_RE} from '../constants/regex'
+import {EMAIL_RE, PHONE_RE, WHITESPACE_RE} from '../constants/regex'
+import PhoneInput from '../components/PhoneInput'
 import type {RootState} from '../store'
+import {useSiteSettings} from '../hooks/useSiteSettings'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
 
@@ -114,6 +116,7 @@ export default function LoginPage() {
   const dispatch = useAppDispatch()
   const authUser = useSelector((s: RootState) => s.auth.user)
   const authInitialized = useSelector((s: RootState) => s.auth.initialized)
+  const siteSettings = useSiteSettings()
   const navigate = useNavigate()
 
   const [searchParams, setSearchParams] = useSearchParams()
@@ -222,39 +225,6 @@ export default function LoginPage() {
     }
   }
 
-  const phoneInputRef = useRef<HTMLInputElement>(null)
-
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value
-    const cursorPos = e.target.selectionStart ?? raw.length
-    const digitsBeforeCursor = raw.slice(0, cursorPos).replace(NON_DIGIT_RE, '').length
-
-    let digits = raw.replace(NON_DIGIT_RE, '').slice(0, 11)
-    // 05 zorunluluğu
-    if (digits.length >= 1 && digits[0] !== '0') digits = '0' + digits.slice(0, 10)
-    if (digits.length >= 2 && digits[1] !== '5') digits = digits[0] + '5' + digits.slice(2)
-
-    let formatted = digits
-    if (digits.length > 4) formatted = digits.slice(0, 4) + ' ' + digits.slice(4)
-    if (digits.length > 7) formatted = digits.slice(0, 4) + ' ' + digits.slice(4, 7) + ' ' + digits.slice(7)
-    if (digits.length > 9) formatted = digits.slice(0, 4) + ' ' + digits.slice(4, 7) + ' ' + digits.slice(7, 9) + ' ' + digits.slice(9)
-    setRegPhone(formatted)
-    setRegErrors(p => ({ ...p, phone: '' }))
-
-    requestAnimationFrame(() => {
-      if (!phoneInputRef.current) return
-      let digitCount = 0
-      let newCursor = formatted.length
-      for (let i = 0; i < formatted.length; i++) {
-        if (/\d/.test(formatted[i])) {
-          digitCount++
-          if (digitCount === digitsBeforeCursor) { newCursor = i + 1; break }
-        }
-      }
-      phoneInputRef.current.setSelectionRange(newCursor, newCursor)
-    })
-  }
-
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     const errs: Record<string, string> = {}
@@ -351,8 +321,8 @@ export default function LoginPage() {
           <Link to="/" onClick={() => localStorage.setItem('pt-guest', 'true')} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
             <div style={{ width: 44, height: 44, background: 'linear-gradient(135deg,var(--primary),#ef4444)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 2px 8px rgba(220,38,38,.35)' }}>🐾</div>
             <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.5 }}>
-              <span style={{ color: 'var(--primary)' }}>{import.meta.env.VITE_BRAND_PART1}</span>
-              <span style={{ color: 'var(--accent)' }}>{import.meta.env.VITE_BRAND_PART2}</span>
+              <span style={{ color: 'var(--primary)' }}>{siteSettings.brandPart1}</span>
+              <span style={{ color: 'var(--accent)' }}>{siteSettings.brandPart2}</span>
             </div>
           </Link>
           <button onClick={toggleTheme} title="Tema" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: 6, display: 'flex', alignItems: 'center', marginLeft: 8, fontSize: 24, lineHeight: 1 }}>
@@ -472,12 +442,9 @@ export default function LoginPage() {
                     placeholder="ornek@email.com" error={regErrors.email} />
                   <div style={{ marginBottom: 16 }}>
                     <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text2)', marginBottom: 6 }}>Telefon Numarası</label>
-                    <input
-                      ref={phoneInputRef}
-                      type="text"
+                    <PhoneInput
                       value={regPhone}
-                      onChange={handlePhoneChange}
-                      placeholder="0532 123 45 67"
+                      onChange={v => { setRegPhone(v); setRegErrors(p => ({ ...p, phone: '' })) }}
                       style={{
                         width: '100%', height: 46,
                         border: `1.5px solid ${regErrors.phone ? '#dc2626' : 'var(--border)'}`,
@@ -553,7 +520,7 @@ export default function LoginPage() {
 
       <footer style={{ background: 'var(--bg2)', borderTop: '1px solid var(--border)', padding: '18px 24px', textAlign: 'center' }}>
         <div style={{ fontSize: 12, color: 'var(--text3)' }}>
-          © 2025 {import.meta.env.VITE_BRAND_PART1}{import.meta.env.VITE_BRAND_PART2} &nbsp;·&nbsp;
+          © 2025 {siteSettings.brandPart1}{siteSettings.brandPart2} &nbsp;·&nbsp;
           <a href="#" style={{ color: 'var(--primary)' }}>Gizlilik Politikası</a> &nbsp;·&nbsp;
           <a href="#" style={{ color: 'var(--primary)' }}>Kullanım Koşulları</a>
         </div>

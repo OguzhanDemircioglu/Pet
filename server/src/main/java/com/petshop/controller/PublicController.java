@@ -8,6 +8,7 @@ import com.petshop.service.CampaignService;
 import com.petshop.service.CategoryService;
 import com.petshop.service.DiscountService;
 import com.petshop.service.ProductService;
+import com.petshop.service.SiteSettingsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,6 +29,12 @@ public class PublicController {
     private final DiscountService discountService;
     private final ProductService productService;
     private final CategoryService categoryService;
+    private final SiteSettingsService siteSettingsService;
+
+    @GetMapping("/site-settings")
+    public ResponseEntity<DataGenericResponse<SiteSettingsResponse>> siteSettings() {
+        return ResponseEntity.ok(DataGenericResponse.of(siteSettingsService.getPublic()));
+    }
 
     @GetMapping("/health")
     public ResponseEntity<DataGenericResponse<String>> health() {

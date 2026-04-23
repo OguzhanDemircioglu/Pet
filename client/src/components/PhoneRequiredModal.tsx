@@ -1,47 +1,19 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import type { RootState, AppDispatch } from '../store'
 import { updateUserPhone } from '../store/authSlice'
 import { authApi } from '../api/authApi'
-import { PHONE_RE, NON_DIGIT_RE } from '../constants/regex'
+import { PHONE_RE } from '../constants/regex'
+import { useSiteSettings } from '../hooks/useSiteSettings'
+import PhoneInput from './PhoneInput'
 
 export default function PhoneRequiredModal() {
   const dispatch = useDispatch<AppDispatch>()
   const user = useSelector((s: RootState) => s.auth.user)
+  const settings = useSiteSettings()
   const [phoneVal, setPhoneVal] = useState('')
   const [phoneError, setPhoneError] = useState('')
   const [saving, setSaving] = useState(false)
-  const phoneInputRef = useRef<HTMLInputElement>(null)
-
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value
-    const cursorPos = e.target.selectionStart ?? raw.length
-    const digitsBeforeCursor = raw.slice(0, cursorPos).replace(NON_DIGIT_RE, '').length
-
-    let digits = raw.replace(NON_DIGIT_RE, '').slice(0, 11)
-    if (digits.length >= 1 && digits[0] !== '0') digits = '0' + digits.slice(0, 10)
-    if (digits.length >= 2 && digits[1] !== '5') digits = digits[0] + '5' + digits.slice(2)
-
-    let formatted = digits
-    if (digits.length > 4) formatted = digits.slice(0, 4) + ' ' + digits.slice(4)
-    if (digits.length > 7) formatted = digits.slice(0, 4) + ' ' + digits.slice(4, 7) + ' ' + digits.slice(7)
-    if (digits.length > 9) formatted = digits.slice(0, 4) + ' ' + digits.slice(4, 7) + ' ' + digits.slice(7, 9) + ' ' + digits.slice(9)
-    setPhoneVal(formatted)
-    setPhoneError('')
-
-    requestAnimationFrame(() => {
-      if (!phoneInputRef.current) return
-      let digitCount = 0
-      let newCursor = formatted.length
-      for (let i = 0; i < formatted.length; i++) {
-        if (/\d/.test(formatted[i])) {
-          digitCount++
-          if (digitCount === digitsBeforeCursor) { newCursor = i + 1; break }
-        }
-      }
-      phoneInputRef.current.setSelectionRange(newCursor, newCursor)
-    })
-  }
 
   const handleSubmit = async () => {
     if (!PHONE_RE.test(phoneVal)) {
@@ -77,8 +49,8 @@ export default function PhoneRequiredModal() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 28 }}>
           <img src="/logo.svg" alt="Logo" style={{ width: 36, height: 36 }} />
           <span style={{ fontSize: 20, fontWeight: 900 }}>
-            <span style={{ color: 'var(--primary)' }}>{import.meta.env.VITE_BRAND_PART1}</span>
-            <span style={{ color: 'var(--accent)' }}>{import.meta.env.VITE_BRAND_PART2}</span>
+            <span style={{ color: 'var(--primary)' }}>{settings.brandPart1}</span>
+            <span style={{ color: 'var(--accent)' }}>{settings.brandPart2}</span>
           </span>
         </div>
 
@@ -96,12 +68,9 @@ export default function PhoneRequiredModal() {
           <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)', display: 'block', marginBottom: 6 }}>
             Telefon Numarası *
           </label>
-          <input
-            ref={phoneInputRef}
-            type="tel"
+          <PhoneInput
             value={phoneVal}
-            onChange={handlePhoneChange}
-            placeholder="0532 123 45 67"
+            onChange={v => { setPhoneVal(v); setPhoneError('') }}
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
             autoFocus
             style={{

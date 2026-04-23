@@ -51,11 +51,7 @@ app:
   url: ${APP_URL:http://localhost:8080}
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
   mail-from: ${MAIL_FROM:info@petshop.com.tr}
-  name: ${APP_NAME:PetShop}
-  name-part1: ${APP_NAME_PART1:Pet}
-  name-part2: ${APP_NAME_PART2:Shop}
-  domain: ${APP_DOMAIN:petshop.com.tr}
-  year: ${APP_YEAR:2025}
+  # Marka adı, alan adı ve yıl artık DB'den (site_settings) okunuyor — admin panelinden yönetilir
   telegram:
     chat-id: ${TELEGRAM_CHAT_ID:}
     api-key: ${TELEGRAM_API_KEY:}

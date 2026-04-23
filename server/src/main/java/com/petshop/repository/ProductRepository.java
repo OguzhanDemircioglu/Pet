@@ -34,6 +34,30 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.images WHERE p.isActive = true ORDER BY p.name ASC")
     List<Product> findAllActiveWithImages();
 
+    // ─── New arrivals (son 30 gün içinde eklenen aktif ürünler) ───────────────
+
+    @Query("""
+        SELECT DISTINCT p FROM Product p
+        LEFT JOIN FETCH p.images
+        WHERE p.isActive = true AND p.createdAt >= :since
+        ORDER BY p.createdAt DESC
+        """)
+    List<Product> findNewArrivalsWithImages(@Param("since") LocalDateTime since, Pageable pageable);
+
+    // ─── Best sellers (sipariş kalemlerinden toplam satış adedine göre) ──────
+    // Sadece iptal/iade edilmemiş siparişler sayılır.
+
+    @Query("""
+        SELECT oi.product.id, SUM(oi.quantity) AS total
+        FROM OrderItem oi
+        WHERE oi.order.status IN :statuses
+          AND oi.product.isActive = true
+        GROUP BY oi.product.id
+        ORDER BY total DESC
+        """)
+    List<Object[]> findBestSellerProductIds(@Param("statuses") java.util.Collection<com.petshop.entity.Order.OrderStatus> statuses,
+                                             Pageable pageable);
+
     // ─── Category / search (paginated — no collection fetch to avoid HHH90003004) ──
 
     @Query(value = "SELECT p FROM Product p WHERE p.isActive = true AND p.category.id = :categoryId",
