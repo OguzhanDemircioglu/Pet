@@ -20,7 +20,28 @@ import {useIsMobile} from '../hooks/useIsMobile'
 import MobileMenu from './MobileMenu'
 import {useSiteSettings} from '../hooks/useSiteSettings'
 
-type CheckoutStep = 'cart' | 'login' | 'phone' | 'address' | 'confirm'
+type CheckoutStep = 'cart' | 'login' | 'phone' | 'address' | 'invoice' | 'confirm'
+
+type InvoiceForm = {
+  invoiceType: 'INDIVIDUAL' | 'CORPORATE'
+  invoiceIdentityNo: string
+  invoiceTitle: string
+  invoiceTaxOffice: string
+  invoiceAddress: string
+  invoiceCity: string
+  invoiceDistrict: string
+  sameAsShipping: boolean
+}
+const EMPTY_INVOICE: InvoiceForm = {
+  invoiceType: 'INDIVIDUAL',
+  invoiceIdentityNo: '',
+  invoiceTitle: '',
+  invoiceTaxOffice: '',
+  invoiceAddress: '',
+  invoiceCity: '',
+  invoiceDistrict: '',
+  sameAsShipping: true,
+}
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
 
@@ -109,6 +130,8 @@ export default function Header({ showSearch = true }: HeaderProps) {
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>('cart')
   const [addressForm, setAddressForm] = useState<AddressForm>({ ...EMPTY_ADDRESS })
   const [addrSubmitted, setAddrSubmitted] = useState(false)
+  const [invoiceForm, setInvoiceForm] = useState<InvoiceForm>({ ...EMPTY_INVOICE })
+  const [invoiceSubmitted, setInvoiceSubmitted] = useState(false)
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
   const [loginLoading, setLoginLoading] = useState(false)
@@ -195,7 +218,7 @@ export default function Header({ showSearch = true }: HeaderProps) {
           address: saved.addressLine,
         })
       }
-      setCheckoutStep('confirm')
+      setCheckoutStep('invoice')
       return
     }
     setAddrSubmitted(true)
@@ -211,7 +234,46 @@ export default function Header({ showSearch = true }: HeaderProps) {
         // non-blocking
       }
     }
+    setCheckoutStep('invoice')
+  }
+
+  const handleInvoiceSubmit = () => {
+    setInvoiceSubmitted(true)
+    const f = invoiceForm
+    if (f.invoiceType === 'INDIVIDUAL') {
+      if (!f.invoiceIdentityNo || f.invoiceIdentityNo.length !== 11) {
+        toast.error('11 haneli TCKN girin')
+        return
+      }
+    } else {
+      if (!f.invoiceIdentityNo || f.invoiceIdentityNo.length !== 10) {
+        toast.error('10 haneli VKN girin')
+        return
+      }
+      if (!f.invoiceTitle.trim()) { toast.error('Firma ünvanı zorunlu'); return }
+      if (!f.invoiceTaxOffice.trim()) { toast.error('Vergi dairesi zorunlu'); return }
+    }
+    if (!f.sameAsShipping) {
+      if (!f.invoiceAddress.trim() || !f.invoiceCity.trim() || !f.invoiceDistrict.trim()) {
+        toast.error('Fatura adresi eksik')
+        return
+      }
+    }
     setCheckoutStep('confirm')
+  }
+
+  const buildInvoicePayload = () => {
+    const f = invoiceForm
+    const same = f.sameAsShipping
+    return {
+      invoiceType: f.invoiceType,
+      invoiceIdentityNo: f.invoiceIdentityNo,
+      invoiceTitle: f.invoiceType === 'CORPORATE' ? f.invoiceTitle : undefined,
+      invoiceTaxOffice: f.invoiceType === 'CORPORATE' ? f.invoiceTaxOffice : undefined,
+      invoiceAddress: same ? addressForm.address : f.invoiceAddress,
+      invoiceCity: same ? addressForm.city : f.invoiceCity,
+      invoiceDistrict: same ? addressForm.district : f.invoiceDistrict,
+    } as const
   }
 
   const handleLoginSubmit = async () => {
@@ -272,6 +334,7 @@ export default function Header({ showSearch = true }: HeaderProps) {
           quantity: i.quantity,
           unitPrice: i.basePrice,
         })),
+        ...buildInvoicePayload(),
       })
       dispatch(clearCart())
       dispatch(closeCart())
@@ -300,6 +363,7 @@ export default function Header({ showSearch = true }: HeaderProps) {
           quantity: i.quantity,
           unitPrice: i.basePrice,
         })),
+        ...buildInvoicePayload(),
       })
       dispatch(clearCart())
       dispatch(closeCart())
@@ -336,6 +400,7 @@ export default function Header({ showSearch = true }: HeaderProps) {
     login: '🔐 Giriş Yapın',
     phone: '📱 Telefon Numaranız',
     address: '📍 Teslimat Adresi',
+    invoice: '🧾 Fatura Bilgileri',
     confirm: '✅ Sipariş Onayı',
   }
 
@@ -471,20 +536,21 @@ export default function Header({ showSearch = true }: HeaderProps) {
                   {/* Step indicator (login ve phone adımlarında gizle) */}
                   {checkoutStep !== 'login' && checkoutStep !== 'phone' && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                      {(['cart', 'address', 'confirm'] as CheckoutStep[]).map((s, i) => {
-                        const steps = ['cart', 'address', 'confirm']
+                      {(['cart', 'address', 'invoice', 'confirm'] as CheckoutStep[]).map((s, i) => {
+                        const steps = ['cart', 'address', 'invoice', 'confirm']
                         const curIdx = steps.indexOf(checkoutStep)
                         const done = curIdx > i
                         const active = checkoutStep === s
+                        const label = s === 'cart' ? 'Sepet' : s === 'address' ? 'Adres' : s === 'invoice' ? 'Fatura' : 'Onay'
                         return (
-                          <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <div style={{ width: 22, height: 22, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, background: active ? 'var(--primary)' : done ? '#16a34a' : 'var(--bg3)', color: active || done ? '#fff' : 'var(--text3)', transition: '0.2s' }}>
+                          <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <div style={{ width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, background: active ? 'var(--primary)' : done ? '#16a34a' : 'var(--bg3)', color: active || done ? '#fff' : 'var(--text3)', transition: '0.2s' }}>
                               {done ? '✓' : i + 1}
                             </div>
-                            <span style={{ fontSize: 11, fontWeight: 600, color: active ? 'var(--text)' : 'var(--text3)', whiteSpace: 'nowrap' }}>
-                              {s === 'cart' ? 'Sepet' : s === 'address' ? 'Adres' : 'Onay'}
+                            <span style={{ fontSize: 10.5, fontWeight: 600, color: active ? 'var(--text)' : 'var(--text3)', whiteSpace: 'nowrap' }}>
+                              {label}
                             </span>
-                            {i < 2 && <div style={{ width: 20, height: 1, background: 'var(--border)', flexShrink: 0 }} />}
+                            {i < 3 && <div style={{ width: 12, height: 1, background: 'var(--border)', flexShrink: 0 }} />}
                           </div>
                         )
                       })}
@@ -501,7 +567,8 @@ export default function Header({ showSearch = true }: HeaderProps) {
                     <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>{drawerTitle[checkoutStep]}</h3>
                     {checkoutStep !== 'cart' && (
                       <button onClick={() => {
-                        if (checkoutStep === 'confirm') setCheckoutStep('address')
+                        if (checkoutStep === 'confirm') setCheckoutStep('invoice')
+                        else if (checkoutStep === 'invoice') setCheckoutStep('address')
                         else if (checkoutStep === 'phone') setCheckoutStep('login')
                         else setCheckoutStep('cart')
                       }} style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '4px 10px', cursor: 'pointer' }}>← Geri</button>
@@ -782,6 +849,97 @@ export default function Header({ showSearch = true }: HeaderProps) {
                     </div>
                     <div style={{ borderTop: '1px solid var(--border)', padding: '16px 20px', flexShrink: 0 }}>
                       <button onClick={handleAddressNext}
+                        style={{ width: '100%', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--r)', padding: '13px 0', fontSize: 15, fontWeight: 800, cursor: 'pointer' }}>
+                        Devam Et →
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {/* ── Step: Invoice ── */}
+                {checkoutStep === 'invoice' && (
+                  <>
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+                      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                        {(['INDIVIDUAL', 'CORPORATE'] as const).map(t => (
+                          <button key={t}
+                            onClick={() => setInvoiceForm(f => ({ ...f, invoiceType: t, invoiceIdentityNo: '' }))}
+                            style={{
+                              flex: 1, padding: '10px 0', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                              border: `1.5px solid ${invoiceForm.invoiceType === t ? 'var(--primary)' : 'var(--border)'}`,
+                              borderRadius: 'var(--r)',
+                              background: invoiceForm.invoiceType === t ? 'var(--primary)' : 'var(--bg3)',
+                              color: invoiceForm.invoiceType === t ? '#fff' : 'var(--text2)',
+                            }}>
+                            {t === 'INDIVIDUAL' ? '👤 Bireysel' : '🏢 Kurumsal'}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div style={{ marginBottom: 12 }}>
+                        <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: 5 }}>
+                          {invoiceForm.invoiceType === 'INDIVIDUAL' ? 'TCKN (11 hane)' : 'VKN (10 hane)'}
+                        </label>
+                        <input
+                          value={invoiceForm.invoiceIdentityNo}
+                          onChange={e => setInvoiceForm(f => ({ ...f, invoiceIdentityNo: e.target.value.replace(/\D/g, '').slice(0, f.invoiceType === 'INDIVIDUAL' ? 11 : 10) }))}
+                          placeholder={invoiceForm.invoiceType === 'INDIVIDUAL' ? '11 haneli TCKN' : '10 haneli VKN'}
+                          style={{ width: '100%', border: `1.5px solid ${invoiceSubmitted && !invoiceForm.invoiceIdentityNo ? 'var(--primary)' : 'var(--border)'}`, borderRadius: 'var(--r)', background: 'var(--bg3)', color: 'var(--text)', fontSize: 13.5, padding: '10px 12px', outline: 'none', boxSizing: 'border-box' }} />
+                      </div>
+
+                      {invoiceForm.invoiceType === 'CORPORATE' && (
+                        <>
+                          <div style={{ marginBottom: 12 }}>
+                            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: 5 }}>Firma Ünvanı</label>
+                            <input
+                              value={invoiceForm.invoiceTitle}
+                              onChange={e => setInvoiceForm(f => ({ ...f, invoiceTitle: e.target.value }))}
+                              placeholder="Ör: ABC Ticaret Ltd. Şti."
+                              style={{ width: '100%', border: `1.5px solid ${invoiceSubmitted && !invoiceForm.invoiceTitle.trim() ? 'var(--primary)' : 'var(--border)'}`, borderRadius: 'var(--r)', background: 'var(--bg3)', color: 'var(--text)', fontSize: 13.5, padding: '10px 12px', outline: 'none', boxSizing: 'border-box' }} />
+                          </div>
+                          <div style={{ marginBottom: 12 }}>
+                            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: 5 }}>Vergi Dairesi</label>
+                            <input
+                              value={invoiceForm.invoiceTaxOffice}
+                              onChange={e => setInvoiceForm(f => ({ ...f, invoiceTaxOffice: e.target.value }))}
+                              placeholder="Ör: Kadıköy"
+                              style={{ width: '100%', border: `1.5px solid ${invoiceSubmitted && !invoiceForm.invoiceTaxOffice.trim() ? 'var(--primary)' : 'var(--border)'}`, borderRadius: 'var(--r)', background: 'var(--bg3)', color: 'var(--text)', fontSize: 13.5, padding: '10px 12px', outline: 'none', boxSizing: 'border-box' }} />
+                          </div>
+                        </>
+                      )}
+
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: 'var(--text2)', cursor: 'pointer', padding: '10px 0' }}>
+                        <input type="checkbox" checked={invoiceForm.sameAsShipping}
+                          onChange={e => setInvoiceForm(f => ({ ...f, sameAsShipping: e.target.checked }))} />
+                        Fatura adresi teslimat adresiyle aynı
+                      </label>
+
+                      {!invoiceForm.sameAsShipping && (
+                        <div style={{ marginTop: 8, padding: 12, background: 'var(--bg3)', borderRadius: 'var(--r)' }}>
+                          <div style={{ marginBottom: 10 }}>
+                            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: 5 }}>Fatura Adresi</label>
+                            <textarea rows={2}
+                              value={invoiceForm.invoiceAddress}
+                              onChange={e => setInvoiceForm(f => ({ ...f, invoiceAddress: e.target.value }))}
+                              style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 'var(--r)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 13, padding: '8px 10px', outline: 'none', fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box' }} />
+                          </div>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <input placeholder="İl" value={invoiceForm.invoiceCity}
+                              onChange={e => setInvoiceForm(f => ({ ...f, invoiceCity: e.target.value }))}
+                              style={{ flex: 1, border: '1.5px solid var(--border)', borderRadius: 'var(--r)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 13, padding: '8px 10px', outline: 'none', boxSizing: 'border-box' }} />
+                            <input placeholder="İlçe" value={invoiceForm.invoiceDistrict}
+                              onChange={e => setInvoiceForm(f => ({ ...f, invoiceDistrict: e.target.value }))}
+                              style={{ flex: 1, border: '1.5px solid var(--border)', borderRadius: 'var(--r)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 13, padding: '8px 10px', outline: 'none', boxSizing: 'border-box' }} />
+                          </div>
+                        </div>
+                      )}
+
+                      <div style={{ marginTop: 12, fontSize: 11.5, color: 'var(--text3)', lineHeight: 1.5 }}>
+                        * Ödeme tamamlandığında e-{invoiceForm.invoiceType === 'CORPORATE' ? 'Fatura' : 'Arşiv'} belgesi düzenlenecek ve e-postanıza gönderilecektir.
+                      </div>
+                    </div>
+                    <div style={{ borderTop: '1px solid var(--border)', padding: '16px 20px', flexShrink: 0 }}>
+                      <button onClick={handleInvoiceSubmit}
                         style={{ width: '100%', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--r)', padding: '13px 0', fontSize: 15, fontWeight: 800, cursor: 'pointer' }}>
                         Devam Et →
                       </button>

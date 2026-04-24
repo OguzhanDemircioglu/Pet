@@ -9,12 +9,12 @@ interface State {
 const DEFAULTS: SiteSettings = {
   brandPart1: 'Pet',
   brandPart2: 'Toptan',
-  contactEmail: 'info@pettoptan.com.tr',
+  contactEmail: 'info@petshop.com.tr',
   contactPhone: '905000000000',
   companyAddress: '',
   contactHours: 'Haftaiçi 09:00–18:00',
   mapCoords: '',
-  appDomain: 'pettoptan.com.tr',
+  appDomain: 'petshop.com.tr',
   appYear: String(new Date().getFullYear()),
 }
 

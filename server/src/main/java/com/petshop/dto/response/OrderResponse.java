@@ -19,7 +19,14 @@ public record OrderResponse(
         String district,
         String address,
         List<OrderItemResponse> items,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        // Fatura
+        String invoiceType,
+        String parasutInvoiceStatus,
+        String parasutEBelgeUrl,
+        // İade
+        LocalDateTime refundedAt,
+        String refundReason
 ) {
     public static OrderResponse from(Order o) {
         List<OrderItemResponse> itemResponses = o.getItems() == null ? List.of() :
@@ -40,7 +47,6 @@ public record OrderResponse(
                 o.getStatus() != null ? o.getStatus().name() : null,
                 o.getPaymentMethod() != null ? o.getPaymentMethod().name() : "COD",
                 o.getTotal(),
-                // fullName: guestName veya user adı
                 o.getGuestName() != null ? o.getGuestName()
                         : (o.getUser() != null
                            ? o.getUser().getFirstName() + " " + o.getUser().getLastName()
@@ -51,7 +57,12 @@ public record OrderResponse(
                 o.getShippingDistrict(),
                 o.getShippingAddress(),
                 itemResponses,
-                o.getCreatedAt()
+                o.getCreatedAt(),
+                o.getInvoiceType() != null ? o.getInvoiceType().name() : null,
+                o.getParasutInvoiceStatus() != null ? o.getParasutInvoiceStatus().name() : null,
+                o.getParasutEBelgeUrl(),
+                o.getRefundedAt(),
+                o.getRefundReason()
         );
     }
 }

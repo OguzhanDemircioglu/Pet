@@ -15,7 +15,6 @@ public record CatalogProductDto(
         Long brandId,
         String brandName,
         BigDecimal basePrice,
-        BigDecimal vatRate,
         Integer availableStock,
         String unit,
         Boolean isActive,

@@ -38,6 +38,7 @@ public class PaymentService {
     private final NotificationService notificationService;
     private final NotificationOutboxService notificationOutboxService;
     private final TelegramOutboxService telegramOutboxService;
+    private final InvoiceOutboxService invoiceOutboxService;
     private final IyzicoClient iyzicoClient;
 
     @Value("${app.url}")
@@ -53,6 +54,8 @@ public class PaymentService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException(OrderMessages.USER_NOT_FOUND.get() + userId));
 
+        validateInvoiceFields(req);
+
         String orderNumber = generateOrderNumber();
 
         // Sipariş oluştur (PENDING + CREDIT_CARD)
@@ -67,10 +70,16 @@ public class PaymentService {
                 .shippingCity(req.city())
                 .shippingDistrict(req.district())
                 .shippingAddress(req.address())
+                .invoiceType(parseInvoiceType(req.invoiceType()))
+                .invoiceIdentityNo(req.invoiceIdentityNo())
+                .invoiceTitle(req.invoiceTitle())
+                .invoiceTaxOffice(req.invoiceTaxOffice())
+                .invoiceAddress(req.invoiceAddress() != null ? req.invoiceAddress() : req.address())
+                .invoiceCity(req.invoiceCity() != null ? req.invoiceCity() : req.city())
+                .invoiceDistrict(req.invoiceDistrict() != null ? req.invoiceDistrict() : req.district())
                 .total(req.totalAmount())
                 .subtotal(req.totalAmount())
                 .discountAmount(BigDecimal.ZERO)
-                .vatAmount(BigDecimal.ZERO)
                 .items(orderItems)
                 .build();
 
@@ -86,7 +95,6 @@ public class PaymentService {
                     .productSku(product != null && product.getSku() != null ? product.getSku() : "")
                     .quantity(itemReq.quantity())
                     .unitPrice(itemReq.unitPrice())
-                    .vatRate(BigDecimal.ZERO)
                     .lineTotal(itemReq.unitPrice().multiply(BigDecimal.valueOf(itemReq.quantity())))
                     .build();
             orderItems.add(item);
@@ -163,12 +171,20 @@ public class PaymentService {
 
         if ("success".equalsIgnoreCase(form.getStatus()) && "SUCCESS".equals(form.getPaymentStatus())) {
             order.setStatus(Order.OrderStatus.PAID);
+            order.setIyzicoPaymentId(form.getPaymentId());
             orderRepository.save(order);
             log.info("iyzico ödeme başarılı — sipariş #{}, ödeme ID: {}, tutar: {} TL",
                     order.getId(), form.getPaymentId(), form.getPaidPrice());
 
             // Email + Telegram bildirimleri (hata olsa sipariş etkilenmez)
             sendPostPaymentNotifications(order);
+
+            // Paraşüt fatura outbox'a ekle (async retry'li)
+            try {
+                invoiceOutboxService.enqueueIssue(order);
+            } catch (Exception e) {
+                log.error("Fatura outbox enqueue başarısız — sipariş #{}: {}", order.getId(), e.getMessage());
+            }
 
             return frontendUrl + "/odeme-sonuc?orderId=" + order.getId() + "&success=true";
         } else {
@@ -331,6 +347,34 @@ public class PaymentService {
             telegramOutboxService.enqueue(sb.toString());
         } catch (Exception e) {
             log.error(OrderMessages.LOG_TELEGRAM_QUEUE_FAIL.get(), e.getMessage());
+        }
+    }
+
+    private Order.InvoiceType parseInvoiceType(String s) {
+        if (s == null || s.isBlank()) return Order.InvoiceType.INDIVIDUAL;
+        try { return Order.InvoiceType.valueOf(s.toUpperCase()); }
+        catch (Exception e) { return Order.InvoiceType.INDIVIDUAL; }
+    }
+
+    private void validateInvoiceFields(OrderRequest req) {
+        if (req.invoiceIdentityNo() == null || req.invoiceIdentityNo().isBlank()) {
+            throw new BusinessException("Fatura için TCKN/VKN zorunludur");
+        }
+        boolean corporate = "CORPORATE".equalsIgnoreCase(req.invoiceType());
+        if (corporate) {
+            if (req.invoiceIdentityNo().length() != 10) {
+                throw new BusinessException("Kurumsal fatura için 10 haneli VKN gereklidir");
+            }
+            if (req.invoiceTitle() == null || req.invoiceTitle().isBlank()) {
+                throw new BusinessException("Kurumsal fatura için ünvan zorunludur");
+            }
+            if (req.invoiceTaxOffice() == null || req.invoiceTaxOffice().isBlank()) {
+                throw new BusinessException("Kurumsal fatura için vergi dairesi zorunludur");
+            }
+        } else {
+            if (req.invoiceIdentityNo().length() != 11) {
+                throw new BusinessException("Bireysel fatura için 11 haneli TCKN gereklidir");
+            }
         }
     }
 

@@ -44,12 +44,8 @@ public class OrderItem {
     @Column(nullable = false)
     private Integer quantity;
 
-    // Sipariş anındaki birim fiyat (KDV hariç)
     @Column(name = "unit_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal unitPrice;
-
-    @Column(name = "vat_rate", nullable = false, precision = 5, scale = 2)
-    private BigDecimal vatRate;
 
     @Column(name = "line_total", nullable = false, precision = 12, scale = 2)
     private BigDecimal lineTotal;

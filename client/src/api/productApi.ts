@@ -18,7 +18,6 @@ export interface ProductForm {
   categoryId: number
   brandId: number
   basePrice: number
-  vatRate: number
   stockQuantity: number
   unit: string
   shortDescription: string

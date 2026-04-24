@@ -6,4 +6,4 @@
  * kullanımlar için default olarak tutulur.
  */
 export const CONTACT_PHONE_FALLBACK = '905527735994'
-export const CONTACT_EMAIL_FALLBACK = 'info@pettoptan.com.tr'
+export const CONTACT_EMAIL_FALLBACK = 'info@petshop.com.tr'

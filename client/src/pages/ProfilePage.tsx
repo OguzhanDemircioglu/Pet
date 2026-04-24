@@ -76,7 +76,7 @@ const UNITS = ['adet', 'kg', 'lt', 'kutu', 'paket', 'çift']
 
 const EMPTY_FORM: ProductForm = {
   name: '', sku: '', categoryId: 0, brandId: 0,
-  basePrice: 0, vatRate: 20, stockQuantity: 0,
+  basePrice: 0, stockQuantity: 0,
   unit: 'adet', shortDescription: '', isActive: true, isFeatured: false,
 }
 
@@ -302,6 +302,14 @@ function OrdersSection() {
                   <span style={{ display: 'inline-block', padding: '3px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: 'var(--bg3)', color: 'var(--text3)' }}>{PAYMENT_LABEL[o.paymentMethod] || '💵 Teslimatta'}</span>
                   <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: st.bg, color: st.color }}>{label}</span>
                 </div>
+                {o.parasutEBelgeUrl && (
+                  <div style={{ marginTop: 6 }}>
+                    <a href={o.parasutEBelgeUrl} target="_blank" rel="noopener noreferrer"
+                       style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--primary)', textDecoration: 'none' }}>
+                      🧾 Faturayı İndir
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           )
@@ -347,6 +355,28 @@ function AdminOrdersSection() {
     finally { setActionLoading(null) }
   }
 
+  const handleRefund = async (id: number) => {
+    const reason = window.prompt('İade sebebi:')
+    if (reason === null) return
+    if (!window.confirm(`Sipariş #${id} iade edilecek (iyzico'dan para iadesi + Paraşüt faturası iptal). Onaylıyor musunuz?`)) return
+    setActionLoading(id)
+    try {
+      await adminOrderApi.refund(id, reason)
+      await load()
+    } catch (e: unknown) {
+      alert('İade başarısız: ' + ((e as Error).message ?? ''))
+    } finally { setActionLoading(null) }
+  }
+
+  const handleRetryInvoice = async (id: number) => {
+    setActionLoading(id)
+    try {
+      await adminOrderApi.retryInvoice(id)
+      await load()
+    } catch { /* ignore */ }
+    finally { setActionLoading(null) }
+  }
+
   const filtered = filter === 'ALL' ? orders : orders.filter(o => o.status === filter)
 
   return (
@@ -387,6 +417,14 @@ function AdminOrdersSection() {
           const itemSummary = o.items.map(it => `${it.productName} ×${it.quantity}`).join(', ')
           const date = new Date(o.createdAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })
           const canAct = o.status === 'PENDING' || o.status === 'PAID'
+          const canRefund = ['PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED'].includes(o.status) && o.paymentMethod === 'CREDIT_CARD'
+          const invStatus = o.parasutInvoiceStatus
+          const invStatusStyle: Record<string, { bg: string; color: string; label: string }> = {
+            PENDING:   { bg: '#fef3c7', color: '#92400e', label: '⏳ Fatura beklemede' },
+            CREATED:   { bg: '#dcfce7', color: '#166534', label: '✅ Fatura kesildi' },
+            FAILED:    { bg: '#fee2e2', color: '#991b1b', label: '❌ Fatura hatası' },
+            CANCELLED: { bg: '#e5e7eb', color: '#374151', label: '🚫 Fatura iptal' },
+          }
           return (
             <div key={o.id} style={{ padding: '16px 20px', borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : 'none' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
@@ -395,6 +433,11 @@ function AdminOrdersSection() {
                     <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>#{String(o.id).padStart(6, '0')}</span>
                     <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: 'var(--bg3)', color: 'var(--text3)' }}>{PAYMENT_LABEL[o.paymentMethod] || '💵'}</span>
                     <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: st.bg, color: st.color }}>{label}</span>
+                    {invStatus && invStatusStyle[invStatus] && (
+                      <span style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 7px', borderRadius: 20, background: invStatusStyle[invStatus].bg, color: invStatusStyle[invStatus].color }}>
+                        {invStatusStyle[invStatus].label}
+                      </span>
+                    )}
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 3 }}>
                     {date} · {o.fullName} · {o.phone}
@@ -404,22 +447,40 @@ function AdminOrdersSection() {
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>₺{Number(o.totalAmount).toFixed(2)}</div>
-                  {canAct && (
-                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                  <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                    {canAct && (
+                      <>
+                        <button
+                          disabled={actionLoading === o.id}
+                          onClick={() => handleAction(o.id, 'approve')}
+                          style={{ fontSize: 12, fontWeight: 700, padding: '5px 14px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 'var(--r)', cursor: actionLoading === o.id ? 'not-allowed' : 'pointer', opacity: actionLoading === o.id ? 0.6 : 1 }}>
+                          ✓ Onayla
+                        </button>
+                        <button
+                          disabled={actionLoading === o.id}
+                          onClick={() => handleAction(o.id, 'reject')}
+                          style={{ fontSize: 12, fontWeight: 600, padding: '5px 10px', background: 'var(--bg3)', color: 'var(--primary)', border: '1.5px solid var(--primary)', borderRadius: 'var(--r)', cursor: actionLoading === o.id ? 'not-allowed' : 'pointer', opacity: actionLoading === o.id ? 0.6 : 1 }}>
+                          ✗ İptal
+                        </button>
+                      </>
+                    )}
+                    {canRefund && (
                       <button
                         disabled={actionLoading === o.id}
-                        onClick={() => handleAction(o.id, 'approve')}
-                        style={{ fontSize: 12, fontWeight: 700, padding: '5px 14px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 'var(--r)', cursor: actionLoading === o.id ? 'not-allowed' : 'pointer', opacity: actionLoading === o.id ? 0.6 : 1 }}>
-                        ✓ Onayla
+                        onClick={() => handleRefund(o.id)}
+                        style={{ fontSize: 12, fontWeight: 700, padding: '5px 10px', background: '#f97316', color: '#fff', border: 'none', borderRadius: 'var(--r)', cursor: actionLoading === o.id ? 'not-allowed' : 'pointer', opacity: actionLoading === o.id ? 0.6 : 1 }}>
+                        ↩ İade Et
                       </button>
+                    )}
+                    {invStatus === 'FAILED' && (
                       <button
                         disabled={actionLoading === o.id}
-                        onClick={() => handleAction(o.id, 'reject')}
-                        style={{ fontSize: 12, fontWeight: 600, padding: '5px 10px', background: 'var(--bg3)', color: 'var(--primary)', border: '1.5px solid var(--primary)', borderRadius: 'var(--r)', cursor: actionLoading === o.id ? 'not-allowed' : 'pointer', opacity: actionLoading === o.id ? 0.6 : 1 }}>
-                        ✗ İptal
+                        onClick={() => handleRetryInvoice(o.id)}
+                        style={{ fontSize: 12, fontWeight: 700, padding: '5px 10px', background: 'var(--bg3)', color: 'var(--text2)', border: '1.5px solid var(--border)', borderRadius: 'var(--r)', cursor: actionLoading === o.id ? 'not-allowed' : 'pointer', opacity: actionLoading === o.id ? 0.6 : 1 }}>
+                        🔄 Fatura Tekrar Dene
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -920,7 +981,7 @@ function AdminProductsSection({ products, onRefresh, categories, categoriesLoadi
     setParentCatId(pid > 0 ? pid : (p.categoryId ?? 0))
     setForm({
       name: p.name, sku: p.sku, categoryId: p.categoryId ?? 0, brandId: p.brandId ?? 0,
-      basePrice: p.basePrice, vatRate: p.vatRate, stockQuantity: p.availableStock,
+      basePrice: p.basePrice, stockQuantity: p.availableStock,
       unit: p.unit, shortDescription: p.shortDescription || '', isActive: p.isActive, isFeatured: p.isFeatured,
     })
     setSubmitted(false); setImgSubmitted(false); setEditing(p); setSavedProductId(p.id)
@@ -1223,9 +1284,6 @@ function AdminProductsSection({ products, onRefresh, categories, categoriesLoadi
                     </FormField>
                     <FormField label="Birim Fiyat (₺) *">
                       <input type="number" value={form.basePrice} onChange={e => setForm(p => ({ ...p, basePrice: Number(e.target.value) }))} style={{ ...inputStyle, borderColor: submitted && !form.basePrice ? 'var(--primary)' : undefined }} min={0} step={0.01} />
-                    </FormField>
-                    <FormField label="KDV Oranı (%)">
-                      <input type="number" value={form.vatRate} onChange={e => setForm(p => ({ ...p, vatRate: Number(e.target.value) }))} style={inputStyle} min={0} max={100} />
                     </FormField>
                     <FormField label="Stok Miktarı">
                       <input type="number" value={form.stockQuantity} onChange={e => setForm(p => ({ ...p, stockQuantity: Number(e.target.value) }))} style={inputStyle} min={0} />
@@ -2472,8 +2530,8 @@ function AdminSiteSettingsSection() {
                 }}
               />
             </FormField>
-            <FormField label="Alan Adı (Domain)" hint="örn: pettoptan.com.tr">
-              {input(form.appDomain, v => setForm({ ...form, appDomain: v }), 'pettoptan.com.tr')}
+            <FormField label="Alan Adı (Domain)" hint="örn: petshop.com.tr">
+              {input(form.appDomain, v => setForm({ ...form, appDomain: v }), 'petshop.com.tr')}
             </FormField>
             <FormField label="Yıl" hint="e-posta altlıklarında görünen">
               {input(form.appYear, v => setForm({ ...form, appYear: v.replace(/\D/g, '').slice(0, 4) }), '2025')}

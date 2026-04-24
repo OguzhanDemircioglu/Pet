@@ -71,14 +71,57 @@ public class Order {
     @Column(name = "discount_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal discountAmount = BigDecimal.ZERO;
 
-    @Column(name = "vat_amount", nullable = false, precision = 12, scale = 2)
-    private BigDecimal vatAmount = BigDecimal.ZERO;
-
     @Column(name = "total", nullable = false, precision = 12, scale = 2)
     private BigDecimal total = BigDecimal.ZERO;
 
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
+
+    // ─── Fatura bilgileri (Paraşüt) ─────────────────────────────────────────
+    @Enumerated(EnumType.STRING)
+    @Column(name = "invoice_type", length = 20)
+    private InvoiceType invoiceType;
+
+    @Column(name = "invoice_identity_no", length = 11)
+    private String invoiceIdentityNo;   // TCKN (11) veya VKN (10)
+
+    @Column(name = "invoice_title", length = 255)
+    private String invoiceTitle;         // Kurumsal ünvan
+
+    @Column(name = "invoice_tax_office", length = 100)
+    private String invoiceTaxOffice;
+
+    @Column(name = "invoice_address", columnDefinition = "TEXT")
+    private String invoiceAddress;
+
+    @Column(name = "invoice_city", length = 50)
+    private String invoiceCity;
+
+    @Column(name = "invoice_district", length = 50)
+    private String invoiceDistrict;
+
+    @Column(name = "parasut_contact_id", length = 50)
+    private String parasutContactId;
+
+    @Column(name = "parasut_invoice_id", length = 50)
+    private String parasutInvoiceId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "parasut_invoice_status", length = 20)
+    private ParasutInvoiceStatus parasutInvoiceStatus;
+
+    @Column(name = "parasut_ebelge_url", length = 500)
+    private String parasutEBelgeUrl;
+
+    // ─── iyzico / İade ───────────────────────────────────────────────────────
+    @Column(name = "iyzico_payment_id", length = 100)
+    private String iyzicoPaymentId;
+
+    @Column(name = "refunded_at")
+    private LocalDateTime refundedAt;
+
+    @Column(name = "refund_reason", length = 500)
+    private String refundReason;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
@@ -105,5 +148,17 @@ public class Order {
     public enum PaymentMethod {
         COD,            // Teslimatta öde
         CREDIT_CARD     // Kredi kartı (iyzico)
+    }
+
+    public enum InvoiceType {
+        INDIVIDUAL,     // Bireysel — e-Arşiv (TCKN)
+        CORPORATE       // Kurumsal — e-Fatura (VKN)
+    }
+
+    public enum ParasutInvoiceStatus {
+        PENDING,        // Kuyrukta
+        CREATED,        // Fatura + e-belge başarıyla kesildi
+        FAILED,         // 3 deneme sonrası hata
+        CANCELLED       // İade sonrası iptal edildi
     }
 }

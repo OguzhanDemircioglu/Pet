@@ -85,7 +85,6 @@ public class OrderService {
                 .total(req.totalAmount())
                 .subtotal(req.totalAmount())
                 .discountAmount(java.math.BigDecimal.ZERO)
-                .vatAmount(java.math.BigDecimal.ZERO)
                 .items(orderItems)
                 .build();
 
@@ -112,7 +111,6 @@ public class OrderService {
                     .variantLabel(variantLabel)
                     .quantity(itemReq.quantity())
                     .unitPrice(itemReq.unitPrice())
-                    .vatRate(java.math.BigDecimal.ZERO)
                     .lineTotal(itemReq.unitPrice().multiply(java.math.BigDecimal.valueOf(itemReq.quantity())))
                     .build();
             orderItems.add(item);

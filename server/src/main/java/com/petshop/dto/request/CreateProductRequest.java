@@ -9,7 +9,6 @@ public record CreateProductRequest(
         @NotNull Long categoryId,
         Long brandId,
         @NotNull @DecimalMin("0.01") BigDecimal basePrice,
-        BigDecimal vatRate,
         Integer stockQuantity,
         String unit,
         String shortDescription,

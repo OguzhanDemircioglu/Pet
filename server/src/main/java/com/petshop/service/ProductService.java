@@ -147,7 +147,6 @@ public class ProductService {
                 .category(category)
                 .brand(brand)
                 .basePrice(req.basePrice())
-                .vatRate(req.vatRate() != null ? req.vatRate() : new BigDecimal("20.00"))
                 .stockQuantity(req.stockQuantity() != null ? req.stockQuantity() : 0)
                 .unit(req.unit() != null ? req.unit() : ProductMessages.DEFAULT_UNIT.get())
                 .shortDescription(req.shortDescription())
@@ -171,7 +170,6 @@ public class ProductService {
         product.setSku(req.sku());
         product.setBasePrice(req.basePrice());
 
-        if (req.vatRate() != null) product.setVatRate(req.vatRate());
         if (req.stockQuantity() != null) product.setStockQuantity(req.stockQuantity());
         if (req.unit() != null) product.setUnit(req.unit());
         if (req.shortDescription() != null) product.setShortDescription(req.shortDescription());
@@ -238,7 +236,7 @@ public class ProductService {
                 p.getCategory() != null ? p.getCategory().getSlug() : null,
                 p.getBrand() != null ? p.getBrand().getId() : null,
                 p.getBrand() != null ? p.getBrand().getName() : null,
-                p.getBasePrice(), p.getVatRate(),
+                p.getBasePrice(),
                 p.getAvailableStock(), p.getUnit(),
                 p.getIsActive(), p.getIsFeatured(),
                 primaryImage, images, discDto, variantDtos

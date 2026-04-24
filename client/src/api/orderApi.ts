@@ -16,6 +16,14 @@ export interface OrderRequest {
   address: string
   totalAmount: number
   items: OrderItemRequest[]
+  // Fatura (zorunlu)
+  invoiceType: 'INDIVIDUAL' | 'CORPORATE'
+  invoiceIdentityNo: string
+  invoiceTitle?: string
+  invoiceTaxOffice?: string
+  invoiceAddress?: string
+  invoiceCity?: string
+  invoiceDistrict?: string
 }
 
 export interface OrderItemResponse {
@@ -27,6 +35,7 @@ export interface OrderItemResponse {
 
 export interface OrderResponse {
   id: number
+  orderNumber?: string
   status: string
   paymentMethod: string
   totalAmount: number
@@ -37,6 +46,11 @@ export interface OrderResponse {
   address: string
   items: OrderItemResponse[]
   createdAt: string
+  invoiceType?: 'INDIVIDUAL' | 'CORPORATE' | null
+  parasutInvoiceStatus?: 'PENDING' | 'CREATED' | 'FAILED' | 'CANCELLED' | null
+  parasutEBelgeUrl?: string | null
+  refundedAt?: string | null
+  refundReason?: string | null
 }
 
 export interface NotificationResponse {
@@ -62,6 +76,8 @@ export const orderApi = {
 
   initiatePayment: (data: OrderRequest) =>
     api.post<PaymentInitiateResponse>('/payment/iyzico/initiate', data).then(r => r.data),
+
+  invoiceUrl: (orderId: number) => `/orders/${orderId}/invoice`,
 }
 
 export const notificationApi = {
@@ -84,4 +100,10 @@ export const adminOrderApi = {
 
   reject: (id: number) =>
     api.patch<OrderResponse>(`/admin/orders/${id}/reject`).then(r => r.data),
+
+  refund: (id: number, reason: string) =>
+    api.post<{ message: string }>(`/admin/orders/${id}/refund`, { reason }).then(r => r.data),
+
+  retryInvoice: (id: number) =>
+    api.post<{ message: string }>(`/admin/orders/${id}/invoice/retry`).then(r => r.data),
 }

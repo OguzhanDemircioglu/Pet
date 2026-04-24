@@ -50,12 +50,8 @@ public class Product {
     @JoinColumn(name = "brand_id")
     private Brand brand;
 
-    // Birim fiyat (KDV hariç)
     @Column(name = "base_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal basePrice;
-
-    @Column(name = "vat_rate", nullable = false, precision = 5, scale = 2)
-    private BigDecimal vatRate = new BigDecimal("20.00");
 
     @Column(name = "stock_quantity", nullable = false)
     private Integer stockQuantity = 0;

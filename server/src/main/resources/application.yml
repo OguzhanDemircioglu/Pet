@@ -62,6 +62,15 @@ iyzico:
   secret-key: ${IYZICO_SECRET_KEY:}
   base-url: ${IYZICO_BASE_URL:https://sandbox-api.iyzipay.com}
 
+parasut:
+  enabled: ${PARASUT_ENABLED:false}
+  client-id: ${PARASUT_CLIENT_ID:}
+  client-secret: ${PARASUT_CLIENT_SECRET:}
+  username: ${PARASUT_USERNAME:}
+  password: ${PARASUT_PASSWORD:}
+  company-id: ${PARASUT_COMPANY_ID:}
+  base-url: ${PARASUT_BASE_URL:https://api.parasut.com/v4}
+
 cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME:}
   api-key: ${CLOUDINARY_API_KEY:}

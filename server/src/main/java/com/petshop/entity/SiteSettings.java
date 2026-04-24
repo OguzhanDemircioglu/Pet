@@ -42,7 +42,7 @@ public class SiteSettings {
     @Column(name = "app_domain", length = 100)
     private String appDomain;
 
-    @Column(name = "app_year", length = 10)
+    @Column(name = "app_year", length = 4)
     private String appYear;
 
     @UpdateTimestamp

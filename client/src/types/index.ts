@@ -51,7 +51,6 @@ export interface Product {
   brandId: number | null
   brandName: string | null
   basePrice: number
-  vatRate: number
   availableStock: number
   unit: string
   isActive: boolean
@@ -105,7 +104,6 @@ export interface CatalogProduct {
   brandId: number | null
   brandName: string | null
   basePrice: number
-  vatRate: number
   availableStock: number
   unit: string
   isActive: boolean
