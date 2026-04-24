@@ -54,13 +54,13 @@ public class SiteSettingsService {
         return repository.findById(SINGLETON_ID).orElseGet(() -> {
             SiteSettings s = SiteSettings.builder()
                     .id(SINGLETON_ID)
-                    .brandPart1("My")
-                    .brandPart2("Petshop")
-                    .contactEmail("info@myPetshop.com.tr")
-                    .contactPhone("905000000000")
+                    .brandPart1("Pet")
+                    .brandPart2("Toptan")
+                    .contactEmail("")
+                    .contactPhone("")
                     .companyAddress("")
-                    .contactHours("Haftaiçi 09:00–18:00")
-                    .appDomain("mypetshop.com.tr")
+                    .contactHours("")
+                    .appDomain("")
                     .appYear(String.valueOf(Year.now().getValue()))
                     .build();
             return repository.save(s);

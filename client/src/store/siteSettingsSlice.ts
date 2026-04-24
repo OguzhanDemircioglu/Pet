@@ -9,13 +9,13 @@ interface State {
 const DEFAULTS: SiteSettings = {
   brandPart1: 'Pet',
   brandPart2: 'Toptan',
-  contactEmail: 'info@pettoptan.com.tr',
-  contactPhone: '905000000000',
+  contactEmail: '',
+  contactPhone: '',
   companyAddress: '',
-  contactHours: 'Haftaiçi 09:00–18:00',
+  contactHours: '',
   mapCoords: '',
-  appDomain: 'pettoptan.com.tr',
-  appYear: String(new Date().getFullYear()),
+  appDomain: '',
+  appYear: '',
 }
 
 const LS_KEY = 'pt-site-settings'
