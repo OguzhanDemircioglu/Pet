@@ -17,29 +17,29 @@ public class SiteSettings {
     @Id
     private Long id;
 
-    @Column(name = "brand_part1", nullable = false, length = 60)
+    @Column(name = "brand_part1", nullable = false, length = 30)
     private String brandPart1;
 
-    @Column(name = "brand_part2", nullable = false, length = 60)
+    @Column(name = "brand_part2", nullable = false, length = 30)
     private String brandPart2;
 
-    @Column(name = "contact_email", nullable = false, length = 150)
+    @Column(name = "contact_email", nullable = false, length = 100)
     private String contactEmail;
 
-    @Column(name = "contact_phone", nullable = false, length = 30)
+    @Column(name = "contact_phone", nullable = false, length = 20)
     private String contactPhone;
 
-    @Column(name = "company_address", length = 500)
+    @Column(name = "company_address", length = 255)
     private String companyAddress;
 
-    @Column(name = "contact_hours", length = 120)
+    @Column(name = "contact_hours", length = 60)
     private String contactHours;
 
     /** "lat,lng" formatında — örn: "41.0082,28.9784" */
-    @Column(name = "map_coords", length = 50)
+    @Column(name = "map_coords", length = 40)
     private String mapCoords;
 
-    @Column(name = "app_domain", length = 100)
+    @Column(name = "app_domain", length = 60)
     private String appDomain;
 
     @Column(name = "app_year", length = 4)
