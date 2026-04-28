@@ -9,6 +9,7 @@ import adminCampaignReducer from './adminCampaignSlice'
 import notificationReducer from './notificationSlice'
 import orderReducer from './orderSlice'
 import siteSettingsReducer from './siteSettingsSlice'
+import routesReducer from './routesSlice'
 
 export const store = configureStore({
   reducer: {
@@ -22,6 +23,7 @@ export const store = configureStore({
     notifications: notificationReducer,
     orders: orderReducer,
     siteSettings: siteSettingsReducer,
+    routes: routesReducer,
   },
 })
 

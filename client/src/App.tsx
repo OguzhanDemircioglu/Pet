@@ -10,6 +10,7 @@ import { fetchNotificationsThunk } from './store/notificationSlice'
 import { fetchHomepageThunk } from './store/campaignSlice'
 import { fetchCatalogThunk } from './store/productSlice'
 import { fetchSiteSettingsThunk } from './store/siteSettingsSlice'
+import { fetchAllowedRoutesThunk } from './store/routesSlice'
 import { useAppDispatch } from './hooks/useAppDispatch'
 import { ThemeProvider } from './context/ThemeContext'
 import type { RootState } from './store'
@@ -24,15 +25,9 @@ import ContactPage from './pages/ContactPage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import FAQPage from './pages/FAQPage'
 import PhoneRequiredModal from './components/PhoneRequiredModal'
+import RouteGuard from './components/RouteGuard'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
-
-function PrivateRoute({ children, authInitialized, user }: { children: React.ReactNode; authInitialized: boolean; user: unknown }) {
-  if (!authInitialized) return null   // token kontrolü bitmeden yönlendirme yapma
-  const isGuest = localStorage.getItem('pt-guest') === 'true'
-  if (!user && !isGuest) return <Navigate to="/login" replace />
-  return <>{children}</>
-}
 
 function AppInner() {
   const dispatch = useAppDispatch()
@@ -42,8 +37,8 @@ function AppInner() {
   useEffect(() => {
     dispatch(loadMeThunk())
     dispatch(fetchSiteSettingsThunk())
-    dispatch(fetchHomepageThunk())  // phase 1: kritik path
-    // phase 2: catalog arka planda, homepage isteği bittikten sonra başlasın
+    dispatch(fetchAllowedRoutesThunk())
+    dispatch(fetchHomepageThunk())
     const t = setTimeout(() => dispatch(fetchCatalogThunk()), 2000)
     return () => clearTimeout(t)
   }, [dispatch])
@@ -58,18 +53,21 @@ function AppInner() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/"           element={<PrivateRoute authInitialized={authInitialized} user={user}><HomePage /></PrivateRoute>} />
-        <Route path="/login"      element={<LoginPage />} />
-        <Route path="/urunler"    element={<PrivateRoute authInitialized={authInitialized} user={user}><ProductListPage /></PrivateRoute>} />
-        <Route path="/urun/:slug" element={<PrivateRoute authInitialized={authInitialized} user={user}><ProductDetailPage /></PrivateRoute>} />
-        <Route path="/profil"     element={<PrivateRoute authInitialized={authInitialized} user={user}><ProfilePage /></PrivateRoute>} />
-        <Route path="/odeme-sonuc" element={<PaymentResultPage />} />
-        <Route path="/hakkimizda"         element={<AboutPage />} />
-        <Route path="/iletisim"           element={<ContactPage />} />
-        <Route path="/gizlilik-politikasi" element={<PrivacyPolicyPage />} />
-        <Route path="/sss"                element={<FAQPage />} />
-      </Routes>
+      <RouteGuard>
+        <Routes>
+          <Route path="/"                    element={<HomePage />} />
+          <Route path="/login"               element={<LoginPage />} />
+          <Route path="/urunler"             element={<ProductListPage />} />
+          <Route path="/urun/:slug"          element={<ProductDetailPage />} />
+          <Route path="/profil"              element={<ProfilePage />} />
+          <Route path="/odeme-sonuc"         element={<PaymentResultPage />} />
+          <Route path="/hakkimizda"          element={<AboutPage />} />
+          <Route path="/iletisim"            element={<ContactPage />} />
+          <Route path="/gizlilik-politikasi" element={<PrivacyPolicyPage />} />
+          <Route path="/sss"                 element={<FAQPage />} />
+          <Route path="*"                    element={<Navigate to="/" replace />} />
+        </Routes>
+      </RouteGuard>
       <Toaster position="top-right" />
     </BrowserRouter>
   )

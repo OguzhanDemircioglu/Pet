@@ -1,6 +1,6 @@
 package com.petshop.exception;
 
-import com.petshop.constant.AuthMessages;
+import com.petshop.constant.ExceptionMessages;
 import com.petshop.constant.ExceptionMessages;
 import com.petshop.dto.response.GenericResponse;
 import jakarta.validation.ConstraintViolationException;
@@ -58,7 +58,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<GenericResponse> handleBadCredentials(BadCredentialsException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(GenericResponse.error(AuthMessages.INVALID_CREDENTIALS.get()));
+                .body(GenericResponse.error(ExceptionMessages.INVALID_CREDENTIALS.get()));
     }
 
     @ExceptionHandler(AccessDeniedException.class)

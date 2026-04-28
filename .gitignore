@@ -1,5 +1,6 @@
 # Project exclude paths
 /server/target/
+/server/graphify-out/
 .env
 .env.*
 **/.env

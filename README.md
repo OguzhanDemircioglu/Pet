@@ -1,5 +1,56 @@
 # Petshop — Geliştirici Notları
 
+## Modüler Mimari (Spring Modulith)
+
+Backend `com.petshop` altında **12 izole iş modülü + 5 cross-cutting flat paket** olarak yapılandırıldı. Her modül kendi `entity / repository / service / controller / dto / api` paketlerine sahip; modüller birbirine **sadece `api/` facade'lar üzerinden** erişir.
+
+### Modüller
+
+| Modül | Sorumluluğu |
+|---|---|
+| `auth` | User, JWT, refresh token, email change, login/register |
+| `address` | Müşteri teslimat adresleri |
+| `catalog` | Product, ProductVariant, ProductImage, Brand, Category |
+| `pricing` | Product/Category/Brand/General indirimler + kupon |
+| `order` | Order + OrderItem; PENDING → PAID/CANCELLED/REFUNDED state machine |
+| `payment` | iyzico checkout + refund (kart verisi geçmez, PCI-DSS dışı) |
+| `invoice` | Paraşüt entegrasyonu + outbox pattern (async retry) |
+| `notification` | In-app notification + email outbox + telegram outbox + stok geri bildirimi |
+| `review` | Ürün yorumu (sadece teslim almış müşteri) |
+| `siteadmin` | Site ayarları, kampanya carousel'i |
+| `telemetry` | HTTP request log + 30 günlük temizlik job'u |
+| `web` | Composition layer — `PublicController`, `BestSellerController` (BFF) |
+
+### Cross-cutting (flat paketler)
+
+`config/` (CloudinaryConfig, SchemaInitializer) · `constant/` (AppConstants, ResponseMessages, ExceptionMessages) · `dto/` (GenericResponse, DataGenericResponse) · `exception/` (BusinessException, GlobalExceptionHandler) · `util/` (SlugUtil)
+
+### Cross-module Erişim Kuralları
+
+- Modül **A** modül **B**'nin `entity / repository / service` paketine **kesinlikle erişemez**
+- Erişim sadece `B.api.*Facade` interface'i ve `api/` altındaki record DTO'lar üzerinden olur
+- Cross-module FK'ler `@ManyToOne` değil `Long xId` (DB kolon adları korundu)
+- Modüller arası event communication için `api/events/` (örn. `StockRestoredEvent` — catalog publish, notification listen)
+
+### Modulith Enforcement
+
+`server/src/main/java/com/petshop/<modul>/package-info.java` her modül için `@ApplicationModule(allowedDependencies = {...})` deklare eder. Yanlış import varsa **CI build kırılır**:
+
+```bash
+mvn test -Dtest=ModularityTests
+```
+
+Test başarılı çalışınca `target/spring-modulith-docs/` altında her modül için PlantUML + AsciiDoc diagram üretilir.
+
+### İlgili Pattern'ler
+
+- **Facade + DTO record** her modülde: `auth.api.AuthFacade` + `UserSummary`, `catalog.api.CatalogFacade` + `ProductSummary` / `VariantSummary`, vb.
+- **Outbox pattern**: invoice, notification.email, notification.telegram — async retry, exponential backoff, max 3 deneme
+- **NamedInterface**: `api`, `dto-response`, `events`, `constant` (cross-module çağrılan paketler)
+- **Application events**: catalog → notification (stock restored)
+
+---
+
 ## Telegram Bot Entegrasyonu
 
 Yeni sipariş geldiğinde admin'e Telegram üzerinden bildirim gönderilir.
@@ -188,3 +239,70 @@ Frontend                Backend                    iyzico              Paraşüt
 2. **iyzico HTTP çağrısını tx dışına çıkar** — connection pool koruma
 3. **PENDING sipariş reconcile scheduler** — kaybolmuş callback'ler için
 4. **Stok için pessimistic lock** — yarış koşulu
+
+---
+
+## Frontend Route Whitelist & Role Guard
+
+Tanımsız URL'lerin boş sayfa render etmesini ve kullanıcıların yetkileri olmayan sayfalara girmesini engellemek için backend-driven bir whitelist katmanı eklendi.
+
+### Akış
+
+```
+Boot → fetchAllowedRoutesThunk → GET /public/allowed-routes
+        │
+        ▼
+  Redux state.routes.data  (localStorage cache: pt-allowed-routes)
+        │
+  <RouteGuard> her navigasyonda:
+    1. location.hash varsa → Navigate(pathname+search, replace)   # # temizliği
+    2. findBucket(pathname, routes) → 'public' | 'customer' | 'admin' | null
+    3. null      → Navigate("/")
+       admin    → user.role !== 'ADMIN'  → Navigate("/")
+       customer → !user && !guest        → Navigate("/login")
+       public   → serbest
+```
+
+### Endpoint
+
+`GET /public/allowed-routes` → `AllowedRoutesResponse`
+
+```json
+{
+  "publicRoutes":   ["/login","/hakkimizda","/iletisim","/sss","/gizlilik-politikasi","/odeme-sonuc"],
+  "customerRoutes": ["/","/urunler","/urun/:slug","/profil"],
+  "adminRoutes":    []
+}
+```
+
+Pattern formatı React Router v6 ile uyumlu (`:slug` parametresi desteklenir — `matchPath` kullanıyoruz).
+
+### Dosyalar
+
+**Backend:**
+- `controller/PublicController.java` — `allowedRoutes()` endpoint
+- `dto/response/AllowedRoutesResponse.java` — record DTO
+
+**Frontend:**
+- `api/routesApi.ts` — endpoint client
+- `store/routesSlice.ts` — cache + thunk (siteSettingsSlice pattern'i)
+- `utils/matchRoute.ts` — `findBucket()` helper, `matchPath` tabanlı
+- `components/RouteGuard.tsx` — tüm `<Routes>`'u saran guard
+- `App.tsx` — eski `PrivateRoute` kaldırıldı, `RouteGuard` + catch-all `*` → `Navigate("/")` eklendi
+
+### Güvenlik Katmanları
+
+Bu katman **UX** katmanıdır, gerçek güvenlik değildir. Admin endpoint'lerini bypass etmeye çalışan biri yine `SecurityConfig`'teki `hasRole("ADMIN")` duvarına çarpar (JWT + role check). Frontend guard sadece:
+
+- Yanlış/bozuk URL girişlerini nazikçe anasayfaya çeker
+- Customer kullanıcının admin sayfalarını görmesini engeller (devtools bypass mümkün ama backend API yine 403 döner)
+- `#fragment` URL'leri normalize eder
+
+**Bilinen leak:** `/public/allowed-routes` endpoint'i admin path'lerini de listeler — saldırgan hangi admin sayfalarının var olduğunu öğrenebilir. Admin paneli eklenince bu endpoint authenticate edilmeli, role'e göre filtrelenmeli.
+
+### Yeni Route Eklerken
+
+1. Backend'de `PublicController.allowedRoutes()` içindeki uygun listeye path'i ekle.
+2. Frontend'de `App.tsx`'e `<Route>` ekle.
+3. localStorage cache'i invalidate et (`invalidateRoutes` action'ı veya devtools'tan `pt-allowed-routes` sil).
+
