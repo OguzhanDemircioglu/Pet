@@ -6,6 +6,7 @@ import { authClientApi } from '@/lib/api'
 import { PHONE_RE } from '@/lib/constants'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import SectionHead from './SectionHead'
+import PhoneInput from '@/components/common/PhoneInput'
 
 interface Props {
   user: {
@@ -150,9 +151,8 @@ export default function InfoSection({ user }: Props) {
           {/* Telefon */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>Telefon</label>
-            <input value={form.phone}
-              onChange={e => handleFieldChange('phone', e.target.value)}
-              placeholder="05XX XXX XX XX"
+            <PhoneInput value={form.phone}
+              onChange={v => handleFieldChange('phone', v)}
               style={{ ...inputStyle, borderColor: formErrors.phone ? '#dc2626' : undefined }} />
             {formErrors.phone && <span style={{ fontSize: 11, color: '#dc2626' }}>{formErrors.phone}</span>}
           </div>

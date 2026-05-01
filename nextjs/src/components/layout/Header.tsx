@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useTheme } from 'next-themes'
 import dynamic from 'next/dynamic'
+import { useMounted } from '@/hooks/useMounted'
 import { useAppDispatch, useAppSelector } from '@/hooks/useAppStore'
 import { openCart, closeCart, toggleCart } from '@/store/uiSlice'
 import { markRead, markAllRead, setNotifications } from '@/store/notificationSlice'
@@ -68,7 +69,8 @@ export default function Header({ settings, categories, showSearch = true }: Prop
     if (searchVal.trim()) router.push(`/urunler?q=${encodeURIComponent(searchVal.trim())}`)
   }
 
-  const isDark = theme === 'dark'
+  const mounted = useMounted()
+  const isDark = mounted && theme === 'dark'
 
   return (
     <header style={{ background: isDark ? '#1a2333' : 'var(--bg2)', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 200, boxShadow: '0 2px 8px rgba(0,0,0,.07)' }}>
@@ -174,7 +176,7 @@ export default function Header({ settings, categories, showSearch = true }: Prop
             <button onClick={() => dispatch(cartOpen ? closeCart() : openCart())}
               style={{ position: 'relative', background: cartOpen ? 'var(--primary)' : 'none', height: 42, borderRadius: 'var(--r)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: cartOpen ? '#fff' : 'var(--text)', padding: isMobile ? '0 10px' : '0 12px', gap: 6, border: '2px solid var(--border)', cursor: 'pointer', transition: '0.2s' }}>
               <span style={{ fontSize: 18 }}>🛒</span>
-              {!isMobile && <span style={{ fontSize: 13.5, fontWeight: 700 }}>₺{cartTotal.toFixed(2)}</span>}
+              {!isMobile && <span style={{ fontSize: 13.5, fontWeight: 700 }}>₺{(cartHydrated ? cartTotal : 0).toFixed(2)}</span>}
               {cartHydrated && cartCount > 0 && (
                 <span style={{ position: 'absolute', top: -6, right: -6, background: 'var(--primary)', color: '#fff', fontSize: 10, fontWeight: 800, minWidth: 18, height: 18, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>{cartCount}</span>
               )}

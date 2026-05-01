@@ -56,39 +56,49 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
 
   callbacks: {
-    async signIn({ account, profile: _profile }) {
-      if (account?.provider === 'google') {
+    async jwt({ token, account, user, trigger }) {
+      // Google ilk login: Google access_token'ı backend /auth/google'a değiş, kendi JWT'mizi al.
+      if (account?.provider === 'google' && account.access_token) {
         try {
+          console.log('[auth.jwt] google → backend exchange başlıyor')
           const res = await fetch(`${BASE_URL}/auth/google`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ accessToken: account.access_token }),
           })
-          if (!res.ok) return false
-          const json = await res.json()
-          const tokens = unwrap<{ accessToken: string; refreshToken: string; user: User }>(json)
-          ;(account as Record<string, unknown>).backendAccessToken = tokens.accessToken
-          ;(account as Record<string, unknown>).backendRefreshToken = tokens.refreshToken
-          ;(account as Record<string, unknown>).backendUser = tokens.user
-        } catch {
-          return false
+          console.log('[auth.jwt] backend /auth/google status:', res.status)
+          if (res.ok) {
+            const json = await res.json()
+            const tokens = unwrap<{ accessToken: string; refreshToken: string; user: User }>(json)
+            token.accessToken = tokens.accessToken
+            token.refreshToken = tokens.refreshToken
+            token.backendUser = tokens.user
+            console.log('[auth.jwt] backend tokens alındı, accessToken length:', tokens.accessToken?.length, 'phone:', tokens.user?.phone)
+          } else {
+            const text = await res.text().catch(() => '')
+            console.error('[auth.jwt] backend /auth/google başarısız:', text.slice(0, 200))
+          }
+        } catch (err) {
+          console.error('[auth.jwt] backend exchange exception:', err)
         }
-      }
-      return true
-    },
-
-    async jwt({ token, account, user }) {
-      if (account?.provider === 'google') {
-        const acc = account as Record<string, unknown>
-        token.accessToken = acc.backendAccessToken as string
-        token.refreshToken = acc.backendRefreshToken as string
-        token.backendUser = acc.backendUser as User
       }
       if (user && account?.provider === 'credentials') {
         const u = user as Record<string, unknown>
         token.accessToken = u.accessToken as string
         token.refreshToken = u.refreshToken as string
         token.backendUser = u.backendUser as User
+      }
+      // Client `update()` çağrısı: backend'den fresh user çek, token'ı yenile.
+      if (trigger === 'update' && token.accessToken) {
+        try {
+          const res = await fetch(`${BASE_URL}/auth/me`, {
+            headers: { Authorization: `Bearer ${token.accessToken as string}` },
+          })
+          if (res.ok) {
+            const json = await res.json()
+            token.backendUser = unwrap<User>(json)
+          }
+        } catch { /* token eski haliyle kalsın */ }
       }
       return token
     },

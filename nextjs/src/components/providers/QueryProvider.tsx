@@ -8,6 +8,9 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
       queries: {
         staleTime: 60_000,
         retry: 1,
+        // Sekme/window focus değişince otomatik refetch atma — gereksiz network spam yapıyor.
+        // Mutation'lar zaten invalidateQueries ile cache'i tazeliyor.
+        refetchOnWindowFocus: false,
       },
     },
   }))

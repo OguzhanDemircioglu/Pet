@@ -5,7 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn, useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { useTheme } from 'next-themes'
+import { useMounted } from '@/hooks/useMounted'
 import { authClientApi } from '@/lib/api'
+import PhoneInput from '@/components/common/PhoneInput'
 import { EMAIL_RE, PHONE_RE, WHITESPACE_RE } from '@/lib/constants'
 
 function validateEmail(v: string) {
@@ -46,7 +48,8 @@ export default function LoginClient() {
   const searchParams = useSearchParams()
   const { data: session, status } = useSession()
   const { theme, setTheme } = useTheme()
-  const isDark = theme === 'dark'
+  const mounted = useMounted()
+  const isDark = mounted && theme === 'dark'
 
   useEffect(() => {
     if (status === 'authenticated' && session) router.replace('/')
@@ -77,20 +80,15 @@ export default function LoginClient() {
   const [verifyCode, setVerifyCode] = useState('')
   const [verifyError, setVerifyError] = useState('')
 
-  // Geri sayım — backend config'inden alınır
+  // Geri sayım — register response'undan dönen verifyExpiryMinutes ile başlatılır
   const [verifyMinutes, setVerifyMinutes] = useState(3)
-  const [secondsLeft, setSecondsLeft] = useState(180)
+  const [secondsLeft, setSecondsLeft] = useState(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  useEffect(() => {
-    authClientApi.getConfig()
-      .then(c => setVerifyMinutes(c.verifyExpiryMinutes))
-      .catch(() => {})
-  }, [])
-
-  const startTimer = useCallback(() => {
+  const startTimer = useCallback((minutes?: number) => {
     if (timerRef.current) clearInterval(timerRef.current)
-    setSecondsLeft(verifyMinutes * 60)
+    const m = minutes ?? verifyMinutes
+    setSecondsLeft(m * 60)
     timerRef.current = setInterval(() => {
       setSecondsLeft(s => {
         if (s <= 1) { clearInterval(timerRef.current!); return 0 }
@@ -152,11 +150,13 @@ export default function LoginClient() {
     if (Object.keys(errs).length) { setRegErrors(errs); return }
     setLoading(true)
     try {
-      await authClientApi.register(regEmail, regPassword, regFirstName, regLastName, regPhone.replace(WHITESPACE_RE, ''))
+      const res = await authClientApi.register(regEmail, regPassword, regFirstName, regLastName, regPhone.replace(WHITESPACE_RE, ''))
+      const minutes = res?.verifyExpiryMinutes ?? 3
+      setVerifyMinutes(minutes)
       setPendingEmail(regEmail)
       setPendingPassword(regPassword)
       setVerifyMode('register')
-      startTimer()
+      startTimer(minutes)
       toast.success('Doğrulama kodu e-postanıza gönderildi')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Kayıt başarısız')
@@ -330,7 +330,13 @@ export default function LoginClient() {
                         <Field label="Soyad" value={regLastName} onChange={v => { setRegLastName(v.replace(/\d/g, '').slice(0, 20)); setRegErrors(p => ({ ...p, lastName: '' })) }} placeholder="Soyadınız" error={regErrors.lastName} />
                       </div>
                       <Field label="E-posta Adresi" type="email" value={regEmail} onChange={v => { setRegEmail(v); setRegErrors(p => ({ ...p, email: '' })) }} placeholder="ornek@email.com" error={regErrors.email} />
-                      <Field label="Telefon" value={regPhone} onChange={v => { setRegPhone(v); setRegErrors(p => ({ ...p, phone: '' })) }} placeholder="05XX XXX XX XX" error={regErrors.phone} />
+                      <div style={{ marginBottom: 16 }}>
+                        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text2)', marginBottom: 6 }}>Telefon</label>
+                        <PhoneInput value={regPhone}
+                          onChange={v => { setRegPhone(v); setRegErrors(p => ({ ...p, phone: '' })) }}
+                          style={{ width: '100%', height: 46, border: `1.5px solid ${regErrors.phone ? '#dc2626' : 'var(--border)'}`, borderRadius: 8, background: regErrors.phone ? '#fef2f2' : 'var(--bg3)', color: 'var(--text)', fontSize: 14.5, padding: '0 14px', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                        {regErrors.phone && <div style={{ fontSize: 12, color: '#dc2626', marginTop: 4 }}>{regErrors.phone}</div>}
+                      </div>
                       <Field label="Şifre" type={regShowPass ? 'text' : 'password'} value={regPassword} onChange={v => { setRegPassword(v); setRegErrors(p => ({ ...p, password: '' })) }} placeholder="En az 8 karakter" error={regErrors.password} extra={eyeBtn(regShowPass, () => setRegShowPass(!regShowPass))} />
                       <button type="submit" disabled={loading} style={btnStyle}>
                         {loading ? 'Kaydediliyor...' : 'Üye Ol'}

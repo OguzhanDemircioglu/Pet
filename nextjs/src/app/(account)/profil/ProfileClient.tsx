@@ -22,6 +22,9 @@ export default function ProfileClient() {
   const router = useRouter()
   const isMobile = useIsMobile()
   const [section, setSection] = useState<Section>('orders')
+  // AddressesSection telefon kaydedince session'ı poll'lamak yerine override ile UI'ı güncelliyoruz.
+  // Session'ı update() ile yenilemek NextAuth v5 + Next 16'da context loop'larına yol açıyor.
+  const [phoneOverride, setPhoneOverride] = useState<string | null>(null)
 
   if (status === 'loading') {
     return <div style={{ padding: 60, textAlign: 'center', color: 'var(--text3)' }}>Yükleniyor...</div>
@@ -125,9 +128,14 @@ export default function ProfileClient() {
           {section === 'orders' && <OrdersSection />}
           {section === 'info' && <InfoSection user={{
             firstName: user.firstName, lastName: user.lastName, email: user.email,
-            phone: user.phone, pendingEmailChange: !!user.pendingEmailChange,
+            phone: phoneOverride ?? user.phone, pendingEmailChange: !!user.pendingEmailChange,
           }} />}
-          {section === 'addresses' && <AddressesSection />}
+          {section === 'addresses' && (
+            <AddressesSection
+              userPhone={phoneOverride ?? user.phone}
+              onPhoneSaved={(p) => setPhoneOverride(p)}
+            />
+          )}
           {section === 'notifications' && <NotificationsSection />}
         </div>
       </div>

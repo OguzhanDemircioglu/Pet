@@ -2,23 +2,58 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { addressClientApi } from '@/lib/api'
+import { addressClientApi, authClientApi } from '@/lib/api'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { TURKEY_DISTRICTS } from '@/data/turkeyDistricts'
+import { PHONE_RE } from '@/lib/constants'
 import type { Address, AddressRequest } from '@/types'
 import SectionHead from './SectionHead'
+import PhoneInput from '@/components/common/PhoneInput'
 
 const EMPTY_FORM: AddressRequest = {
   title: '', fullName: '', phone: '', city: '', district: '', addressLine: '', isDefault: false,
 }
 
-export default function AddressesSection() {
+interface Props {
+  userPhone: string | null
+  onPhoneSaved: (phone: string) => void
+}
+
+export default function AddressesSection({ userPhone, onPhoneSaved }: Props) {
   const qc = useQueryClient()
   const isMobile = useIsMobile()
+  const phoneRequired = !userPhone
+
+  const [defaultPhone, setDefaultPhone] = useState('')
+  const [defaultPhoneErr, setDefaultPhoneErr] = useState('')
+  const [savingDefaultPhone, setSavingDefaultPhone] = useState(false)
+
+  const handleSaveDefaultPhone = async () => {
+    if (!PHONE_RE.test(defaultPhone)) {
+      setDefaultPhoneErr('05XX XXX XX XX formatında girin')
+      return
+    }
+    setSavingDefaultPhone(true)
+    try {
+      const cleaned = defaultPhone.replace(/\s/g, '')
+      await authClientApi.updatePhone(cleaned)
+      onPhoneSaved(cleaned)
+      toast.success('Varsayılan telefon kaydedildi')
+      setDefaultPhone('')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Kaydedilemedi')
+    } finally {
+      setSavingDefaultPhone(false)
+    }
+  }
 
   const { data: addresses, isLoading } = useQuery<Address[]>({
     queryKey: ['addresses'],
     queryFn: () => addressClientApi.list(),
+    // Sekme her açılışında yeni fetch atmasın; mutation'lar zaten invalidate ediyor.
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   })
 
   const [formOpen, setFormOpen] = useState(false)
@@ -98,14 +133,66 @@ export default function AddressesSection() {
     <div>
       <SectionHead title="Adreslerim" sub={`${list.length} kayıtlı adres`}
         action={!formOpen && list.length < 10 ? (
-          <button onClick={openNew} style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            background: 'var(--primary)', color: '#fff', border: 'none',
-            borderRadius: 'var(--r)', padding: '8px 16px',
-            fontSize: 13, fontWeight: 700, cursor: 'pointer',
-          }}>+ Yeni Adres</button>
+          <button onClick={openNew} disabled={phoneRequired}
+            title={phoneRequired ? 'Önce varsayılan telefon numaranızı girin' : undefined}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: phoneRequired ? 'var(--bg3)' : 'var(--primary)',
+              color: phoneRequired ? 'var(--text3)' : '#fff', border: 'none',
+              borderRadius: 'var(--r)', padding: '8px 16px',
+              fontSize: 13, fontWeight: 700,
+              cursor: phoneRequired ? 'not-allowed' : 'pointer',
+            }}>+ Yeni Adres</button>
         ) : undefined}
       />
+
+      {phoneRequired && (
+        <div style={{
+          background: 'var(--bg2)', border: '2px solid var(--primary)',
+          borderRadius: 'var(--r2)', padding: 20, marginBottom: 20,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <span style={{ fontSize: 22 }}>📱</span>
+            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>
+              Varsayılan Telefon Numarası
+            </div>
+          </div>
+          <p style={{ fontSize: 13, color: 'var(--text2)', margin: '0 0 14px', lineHeight: 1.5 }}>
+            Adres ekleyebilmek ve sipariş verebilmek için varsayılan telefon numaranızı girmelisiniz.
+            Bu numara sipariş bildirimlerinde kullanılacaktır.
+          </p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <PhoneInput
+              value={defaultPhone}
+              onChange={v => { setDefaultPhone(v); setDefaultPhoneErr('') }}
+              onKeyDown={e => e.key === 'Enter' && handleSaveDefaultPhone()}
+              style={{
+                flex: 1, minWidth: 200, height: 44,
+                border: `1.5px solid ${defaultPhoneErr ? '#dc2626' : 'var(--border)'}`,
+                borderRadius: 'var(--r)',
+                background: defaultPhoneErr ? '#fef2f2' : 'var(--bg3)',
+                color: 'var(--text)', fontSize: 14.5,
+                padding: '0 14px', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
+              }}
+            />
+            <button onClick={handleSaveDefaultPhone} disabled={savingDefaultPhone}
+              style={{
+                height: 44, padding: '0 20px', fontSize: 14, fontWeight: 700,
+                background: 'var(--primary)', color: '#fff', border: 'none',
+                borderRadius: 'var(--r)',
+                cursor: savingDefaultPhone ? 'not-allowed' : 'pointer',
+                opacity: savingDefaultPhone ? 0.7 : 1,
+              }}>
+              {savingDefaultPhone ? 'Kaydediliyor...' : 'Kaydet'}
+            </button>
+          </div>
+          {defaultPhoneErr && (
+            <div style={{ fontSize: 12, color: '#dc2626', marginTop: 6, fontWeight: 600 }}>
+              {defaultPhoneErr}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Form */}
       {formOpen && (
@@ -126,8 +213,8 @@ export default function AddressesSection() {
             </div>
             <div>
               <Label>Telefon *</Label>
-              <input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))}
-                placeholder="05XX XXX XX XX" style={inputBase} />
+              <PhoneInput value={form.phone} onChange={v => setForm(p => ({ ...p, phone: v }))}
+                style={inputBase} />
             </div>
             <div>
               <Label>İl *</Label>

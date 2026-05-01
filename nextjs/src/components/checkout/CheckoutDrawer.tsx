@@ -11,7 +11,7 @@ import { imgUrl } from '@/lib/utils'
 import { addressClientApi, orderClientApi, authClientApi } from '@/lib/api'
 import { PHONE_RE } from '@/lib/constants'
 import type { Address } from '@/types'
-import PhoneInput from '@/components/ui/PhoneInput'
+import PhoneInput from '@/components/common/PhoneInput'
 
 const GOOGLE_SVG = (
   <svg viewBox="0 0 24 24" style={{ width: 18, height: 18, flexShrink: 0 }}>
@@ -72,7 +72,7 @@ interface Props {
 
 export default function CheckoutDrawer({ isMobile, onClose }: Props) {
   const dispatch = useAppDispatch()
-  const { data: session } = useSession()
+  const { data: session, update: updateSession } = useSession()
   const user = session?.user ?? null
   const cartItems = useAppSelector(s => s.cart.items)
   const checkoutStep = useAppSelector(s => s.ui.checkoutStep)
@@ -121,21 +121,27 @@ export default function CheckoutDrawer({ isMobile, onClose }: Props) {
     setPaymentMethod('COD')
   }, [dispatch])
 
+  // Address step'ine geçildiğinde kayıtlı adresleri TEK BİR KEZ yükle.
+  // Bağımlılık `user` objesi değil id; useSession refresh'lerinde yeni reference loop tetikler.
+  const userId = user?.id
+  const userFirstName = user?.firstName
+  const userLastName = user?.lastName
+  const userPhoneSafe = user?.phone
   useEffect(() => {
-    if (checkoutStep === 'address' && user) {
-      setAddressForm(prev => ({
-        ...prev,
-        fullName: prev.fullName || `${user.firstName} ${user.lastName}`.trim(),
-        phone: prev.phone || (user.phone ?? ''),
-      }))
-      addressClientApi.list().then(list => {
-        setSavedAddresses(list)
-        const def = list.find((a: Address) => a.isDefault) ?? list[0]
-        if (def) { setSelectedSavedId(def.id); setShowManualForm(false) }
-        else setShowManualForm(true)
-      }).catch(() => setShowManualForm(true))
-    }
-  }, [checkoutStep, user])
+    if (checkoutStep !== 'address' || !userId) return
+    setAddressForm(prev => ({
+      ...prev,
+      fullName: prev.fullName || `${userFirstName ?? ''} ${userLastName ?? ''}`.trim(),
+      phone: prev.phone || (userPhoneSafe ?? ''),
+    }))
+    addressClientApi.list().then(list => {
+      setSavedAddresses(list)
+      const def = list.find((a: Address) => a.isDefault) ?? list[0]
+      if (def) { setSelectedSavedId(def.id); setShowManualForm(false) }
+      else setShowManualForm(true)
+    }).catch(() => setShowManualForm(true))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkoutStep, userId])
 
   const handleAddressNext = async () => {
     if (selectedSavedId !== null && !showManualForm) {
@@ -209,6 +215,7 @@ export default function CheckoutDrawer({ isMobile, onClose }: Props) {
     setPhoneSaving(true)
     try {
       await authClientApi.updatePhone(val)
+      await updateSession()
       dispatch(setCheckoutStep('address'))
     } catch {
       setPhoneError('Telefon kaydedilemedi, tekrar deneyin')
@@ -362,7 +369,7 @@ export default function CheckoutDrawer({ isMobile, onClose }: Props) {
             <div style={{ borderTop: '1px solid var(--border)', padding: '16px 20px', flexShrink: 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 13, color: 'var(--text2)' }}><span>{cartCount} ürün</span><span>₺{cartTotal.toFixed(2)}</span></div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14, fontSize: 16, fontWeight: 800 }}><span>Toplam</span><span style={{ color: 'var(--primary)' }}>₺{cartTotal.toFixed(2)}</span></div>
-              <button onClick={() => dispatch(setCheckoutStep(user ? 'address' : 'login'))}
+              <button onClick={() => dispatch(setCheckoutStep(!user ? 'login' : (!user.phone ? 'phone' : 'address')))}
                 style={{ width: '100%', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--r)', padding: '13px 0', fontSize: 15, fontWeight: 800, cursor: 'pointer' }}>
                 Siparişi Tamamla →
               </button>

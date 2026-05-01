@@ -4,7 +4,6 @@ import InfoBar from '@/components/layout/InfoBar'
 import Header from '@/components/layout/Header'
 import CategoryBar from '@/components/layout/CategoryBar'
 import Footer from '@/components/layout/Footer'
-import PhoneGate from '@/components/auth/PhoneGate'
 
 export default async function ShopLayout({ children }: { children: React.ReactNode }) {
   const [settingsData, categoriesData] = await Promise.all([
@@ -15,7 +14,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
   const categories = categoriesData ?? []
 
   return (
-    <PhoneGate brandPart1={settings.brandPart1} brandPart2={settings.brandPart2}>
+    <>
       <InfoBar settings={settings} />
       <Header settings={settings} categories={categories} />
       <CategoryBar categories={categories} />
@@ -23,6 +22,6 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
         {children}
       </main>
       <Footer settings={settings} />
-    </PhoneGate>
+    </>
   )
 }

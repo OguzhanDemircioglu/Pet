@@ -10,7 +10,7 @@ export const authClientApi = {
   login: (email: string, password: string) =>
     clientApi.post('/auth/login', { email, password }).then(r => r.data),
   register: (email: string, password: string, firstName: string, lastName: string, phone: string) =>
-    clientApi.post('/auth/register', { email, password, firstName, lastName, phone }).then(r => r.data),
+    clientApi.post<{ verifyExpiryMinutes: number }>('/auth/register', { email, password, firstName, lastName, phone }).then(r => r.data),
   verifyEmail: (email: string, code: string) =>
     clientApi.post('/auth/verify-email', { email, code }).then(r => r.data),
   resendVerification: (email: string) =>
@@ -23,7 +23,6 @@ export const authClientApi = {
   updateProfile: (firstName: string, lastName: string, phone: string) =>
     clientApi.patch('/auth/me/profile', { firstName, lastName, phone }).then(r => r.data),
   requestEmailChange: (newEmail: string) => clientApi.post('/auth/me/email/request', { newEmail }),
-  getConfig: () => clientApi.get<{ verifyExpiryMinutes: number }>('/public/config').then(r => r.data),
 }
 
 // Addresses
