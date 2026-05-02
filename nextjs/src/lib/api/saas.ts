@@ -144,6 +144,20 @@ export const saasApi = {
   async revokeApiKey(id: number): Promise<void> {
     await clientApi.delete(`/admin/saas/api-keys/${id}`)
   },
+  async getCompanySettings(): Promise<CompanySettingsDto> {
+    const r = await clientApi.get('/admin/saas/company/settings')
+    return r.data
+  },
+  async updateCompanySettings(input: Partial<{
+    name: string
+    lowStockThreshold: number
+    lowStockAlertEnabled: boolean
+    dailySummaryEnabled: boolean
+    notificationEmail: string
+  }>): Promise<CompanySettingsDto> {
+    const r = await clientApi.put('/admin/saas/company/settings', input)
+    return r.data
+  },
   async monthlyMetrics(period?: string): Promise<MonthlyMetrics> {
     const r = await clientApi.get('/admin/saas/metrics/monthly', {
       params: period ? { period } : {},
@@ -205,6 +219,17 @@ export interface BulkImportResult {
   createdCount: number
   skippedCount: number
   errors: { row: number; reason: string }[]
+}
+
+export interface CompanySettingsDto {
+  id: number
+  name: string
+  slug: string
+  plan: 'FREE' | 'PRO' | 'PRO_PLUS'
+  lowStockThreshold: number
+  lowStockAlertEnabled: boolean
+  dailySummaryEnabled: boolean
+  notificationEmail: string | null
 }
 
 export interface ApiKeyDto {

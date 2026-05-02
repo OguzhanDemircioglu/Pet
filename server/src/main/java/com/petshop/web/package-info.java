@@ -24,6 +24,7 @@
                 "siteadmin :: api",
                 "siteadmin :: dto-response",
                 "tenant",
+                "saas",
                 "dto",
                 "constant"
         }

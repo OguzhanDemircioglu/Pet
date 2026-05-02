@@ -29,6 +29,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
+    private final com.petshop.web.ApiKeyAuthFilter apiKeyAuthFilter;
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
@@ -55,6 +56,7 @@ public class SecurityConfig {
                 // Hepsi auth
                 .anyRequest().authenticated()
             )
+            .addFilterBefore(apiKeyAuthFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

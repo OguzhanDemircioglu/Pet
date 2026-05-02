@@ -29,6 +29,22 @@ public class Company {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
+    /** Düşük stok alarm eşiği (varsayılan 5). Email alert + dashboard low-stock listesi bunu kullanır. */
+    @Column(name = "low_stock_threshold", nullable = false)
+    private Integer lowStockThreshold = 5;
+
+    /** PRO+: günlük 09:00 düşük stok özeti email'i gönderilsin mi? */
+    @Column(name = "low_stock_alert_enabled", nullable = false)
+    private Boolean lowStockAlertEnabled = false;
+
+    /** PRO+: günlük 18:00 satış özeti email'i. */
+    @Column(name = "daily_summary_enabled", nullable = false)
+    private Boolean dailySummaryEnabled = false;
+
+    /** Bildirim e-postası — boşsa şirketin ilk admin user email'i kullanılır. */
+    @Column(name = "notification_email", length = 150)
+    private String notificationEmail;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

@@ -114,6 +114,8 @@ export default function SettingsPage() {
         </p>
       </section>
 
+      <NotificationSettingsCard />
+
       <section className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950">
         <h2 className="mb-1 text-lg font-semibold">Veri Yedekle</h2>
         <p className="mb-4 text-sm text-gray-500">
@@ -121,6 +123,124 @@ export default function SettingsPage() {
         </p>
         <ExportButton />
       </section>
+    </div>
+  )
+}
+
+function NotificationSettingsCard() {
+  const [settings, setSettings] = useState<Awaited<ReturnType<typeof saasApi.getCompanySettings>> | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    saasApi.getCompanySettings().then(setSettings).finally(() => setLoading(false))
+  }, [])
+
+  if (loading || !settings) return null
+
+  const isFree = settings.plan === 'FREE'
+  const update = async (patch: Parameters<typeof saasApi.updateCompanySettings>[0]) => {
+    setBusy(true)
+    try {
+      const updated = await saasApi.updateCompanySettings(patch)
+      setSettings(updated)
+      toast.success('Ayarlar güncellendi')
+    } catch (e) {
+      const err = e as Error & { code?: string }
+      if (err.code === 'PLAN_FEATURE_LOCKED') {
+        toast.error('Bu özellik PRO plan ile açılır')
+      } else {
+        toast.error(err.message)
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950">
+      <h2 className="mb-1 text-lg font-semibold">Bildirim Ayarları</h2>
+      <p className="mb-4 text-sm text-gray-500">E-posta bildirimleri (PRO+)</p>
+
+      <div className="space-y-4">
+        <Toggle
+          label="Düşük stok uyarısı"
+          desc="Her sabah 09:00 — eşik altına düşen ürünleri özetler"
+          enabled={settings.lowStockAlertEnabled}
+          locked={isFree}
+          onChange={(v) => update({ lowStockAlertEnabled: v })}
+          busy={busy}
+        />
+
+        <div className="flex items-center justify-between">
+          <div>
+            <label className="text-sm font-medium">Düşük stok eşiği</label>
+            <p className="text-xs text-gray-500">Stok bu değerin altına düşerse uyarır</p>
+          </div>
+          <input
+            type="number" min={1} max={1000}
+            value={settings.lowStockThreshold}
+            onChange={(e) => update({ lowStockThreshold: Number(e.target.value) })}
+            className="w-24 rounded-md border border-gray-300 px-3 py-1.5 text-right text-sm dark:border-gray-700 dark:bg-gray-900"
+            disabled={busy}
+          />
+        </div>
+
+        <Toggle
+          label="Günlük satış özeti"
+          desc="Akşam — günün satış raporunu email olarak alın"
+          enabled={settings.dailySummaryEnabled}
+          locked={isFree}
+          onChange={(v) => update({ dailySummaryEnabled: v })}
+          busy={busy}
+        />
+
+        <div>
+          <label className="block text-sm font-medium">Bildirim e-postası</label>
+          <p className="mb-1 text-xs text-gray-500">Boş bırakırsanız ilk admin'in email'i kullanılır</p>
+          <input
+            type="email"
+            placeholder="ops@isletmen.com"
+            defaultValue={settings.notificationEmail ?? ''}
+            onBlur={(e) => {
+              const val = e.target.value.trim()
+              if (val !== (settings.notificationEmail ?? '')) {
+                update({ notificationEmail: val })
+              }
+            }}
+            disabled={busy}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+          />
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function Toggle({ label, desc, enabled, locked, busy, onChange }: {
+  label: string; desc: string; enabled: boolean; locked?: boolean; busy?: boolean
+  onChange: (v: boolean) => void
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium">{label}</label>
+          {locked && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-400">PRO</span>}
+        </div>
+        <p className="text-xs text-gray-500">{desc}</p>
+      </div>
+      <button
+        type="button"
+        onClick={() => !locked && !busy && onChange(!enabled)}
+        disabled={busy}
+        aria-pressed={enabled}
+        className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors ${
+          enabled ? 'bg-red-600' : 'bg-gray-300 dark:bg-gray-700'
+        } ${locked ? 'opacity-50 cursor-not-allowed' : ''}`}
+      >
+        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${enabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+      </button>
     </div>
   )
 }

@@ -23,6 +23,10 @@ public interface NotificationFacade {
 
     void enqueuePasswordResetEmail(String toEmail, String firstName, String resetUrl);
 
+    /** SaaS-jenerik bildirim (düşük stok / günlük rapor / vs). */
+    void enqueueSaasNotification(String toEmail, String subject, String title,
+                                 String introHtml, String tableHtml, String ctaLabel, String ctaUrl);
+
     void enqueueTelegramMessage(String text);
 
     // ─── Stok abonelik (catalog modülünden çağrılır) ─────────────────────

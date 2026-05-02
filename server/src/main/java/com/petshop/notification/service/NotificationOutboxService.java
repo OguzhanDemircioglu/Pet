@@ -66,6 +66,14 @@ public class NotificationOutboxService {
         save(toEmail, subject, html, true);
     }
 
+    @Transactional
+    public void enqueueSaasNotification(String toEmail, String subject, String title,
+                                        String introHtml, String tableHtml, String ctaLabel, String ctaUrl) {
+        String fullSubject = appName() + " · " + subject;
+        String html = emailService.buildSimpleNotificationEmail(title, introHtml, tableHtml, ctaLabel, ctaUrl);
+        save(toEmail, fullSubject, html, true);
+    }
+
     @Scheduled(fixedDelay = NotificationSchedulerConstants.EMAIL_OUTBOX_DELAY_MS)
     @Transactional
     public void processOutbox() {

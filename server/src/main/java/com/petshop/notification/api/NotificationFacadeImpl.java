@@ -56,6 +56,12 @@ class NotificationFacadeImpl implements NotificationFacade {
     }
 
     @Override
+    public void enqueueSaasNotification(String toEmail, String subject, String title,
+                                        String introHtml, String tableHtml, String ctaLabel, String ctaUrl) {
+        notificationOutboxService.enqueueSaasNotification(toEmail, subject, title, introHtml, tableHtml, ctaLabel, ctaUrl);
+    }
+
+    @Override
     public void enqueueTelegramMessage(String text) {
         telegramOutboxService.enqueue(text);
     }
