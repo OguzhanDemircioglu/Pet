@@ -5,5 +5,22 @@
 .env.*
 **/.env
 **/.env.*
+!.env.example
+!**/.env.example
 /.idea/
 /.claude/
+
+# Frontend build
+/nextjs/node_modules/
+/nextjs/.next/
+/nextjs/out/
+
+# Test artifacts
+/nextjs/test-results/
+/nextjs/playwright-report/
+/nextjs/coverage/
+/nextjs/playwright/.cache/
+
+# OS
+Thumbs.db
+.DS_Store
