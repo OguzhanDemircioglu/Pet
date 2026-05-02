@@ -55,6 +55,16 @@ class AuthFacadeImpl implements AuthFacade {
     }
 
     @Override
+    @Transactional
+    public void bumpTokenVersion(Long userId) {
+        if (userId == null) return;
+        userRepository.findById(userId).ifPresent(u -> {
+            u.setTokenVersion(u.getTokenVersion() + 1);
+            userRepository.save(u);
+        });
+    }
+
+    @Override
     public Optional<AdminInfoResponse> findFirstAdminInfo() {
         return userRepository.findFirstByRole(User.Role.ADMIN)
                 .map(u -> new AdminInfoResponse(u.getEmail(), u.getPhone()));

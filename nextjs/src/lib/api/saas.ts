@@ -103,4 +103,12 @@ export const saasApi = {
   async deactivateUser(id: number): Promise<void> {
     await clientApi.delete(`/admin/saas/users/${id}`)
   },
+  async planInfo(): Promise<{ plan: 'FREE' | 'PRO' | 'PRO_PLUS'; availablePlans: ('FREE' | 'PRO' | 'PRO_PLUS')[]; companyId: number; companyName: string; companySlug: string }> {
+    const r = await clientApi.get('/admin/saas/plan')
+    return r.data
+  },
+  async changePlan(plan: 'FREE' | 'PRO' | 'PRO_PLUS'): Promise<{ plan: string }> {
+    const r = await clientApi.post('/admin/saas/plan/change', { plan })
+    return r.data
+  },
 }

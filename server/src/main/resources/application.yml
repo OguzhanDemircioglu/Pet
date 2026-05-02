@@ -87,6 +87,29 @@ cloudinary:
 features:
   legacy-ecommerce: ${LEGACY_ECOMMERCE:false}
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: never  # production'da detay sızdırma
+      probes:
+        enabled: true       # /actuator/health/liveness + /actuator/health/readiness
+  health:
+    db:
+      enabled: true
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: PetToptan SaaS
+    version: '@project.version@'
+
 logging:
   level:
     com.petshop: INFO

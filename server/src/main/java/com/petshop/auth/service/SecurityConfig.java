@@ -46,6 +46,8 @@ public class SecurityConfig {
                 // Public PRO+ mini shop (Faz 5) — sadece okuma
                 .requestMatchers(HttpMethod.GET, "/public/shop/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
+                // Health check endpoints (load balancer + monitoring için)
+                .requestMatchers(HttpMethod.GET, "/actuator/health/**", "/actuator/info").permitAll()
                 // Admin only
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 // Hepsi auth

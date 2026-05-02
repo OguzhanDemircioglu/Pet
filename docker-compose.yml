@@ -1,0 +1,41 @@
+# Lokal geliştirme — postgres + opsiyonel adminer
+# Backend ve frontend hostta (mvn spring-boot:run + npm run dev) çalışır.
+#
+#   docker compose up -d
+#   cd server && DB_HOST=localhost DB_PORT=5432 DB_NAME=petshop DB_USERNAME=petshop DB_PASSWORD=petshop DB_SSL_MODE=disable mvn spring-boot:run
+#   cd nextjs && npm run dev
+#
+# Adminer: http://localhost:8081 (Server: postgres, User: petshop, Password: petshop, Database: petshop)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pettoptan-postgres
+    environment:
+      POSTGRES_DB: petshop
+      POSTGRES_USER: petshop
+      POSTGRES_PASSWORD: petshop
+    ports:
+      - "5432:5432"
+    volumes:
+      - pettoptan-pgdata:/var/lib/postgresql/data
+      - ./server/src/main/resources/db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U petshop -d petshop"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  adminer:
+    image: adminer:latest
+    container_name: pettoptan-adminer
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pettoptan-pgdata:

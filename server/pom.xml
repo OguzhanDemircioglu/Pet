@@ -108,6 +108,12 @@
       <version>1.38.0</version>
     </dependency>
 
+    <!-- Spring Actuator (health, info, metrics) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+
     <!-- Flyway DB migration -->
     <dependency>
       <groupId>org.flywaydb</groupId>

@@ -23,6 +23,12 @@ public interface AuthFacade {
     java.util.Optional<Integer> findTokenVersion(Long userId);
 
     /**
+     * Token version'ı artırarak kullanıcının tüm aktif JWT'lerini geçersiz kıl.
+     * Plan upgrade, role değişimi gibi durumlarda çağrılır.
+     */
+    void bumpTokenVersion(Long userId);
+
+    /**
      * Public endpoint için: ilk admin'in iletişim bilgileri.
      */
     java.util.Optional<com.petshop.auth.dto.response.AdminInfoResponse> findFirstAdminInfo();
