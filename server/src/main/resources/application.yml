@@ -107,7 +107,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics
       base-path: /actuator
   endpoint:
     health:
@@ -120,6 +120,12 @@ management:
   info:
     env:
       enabled: true
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      slo:
+        http.server.requests: 100ms,500ms,1s
 
 info:
   app:

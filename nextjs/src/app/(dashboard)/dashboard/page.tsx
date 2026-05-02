@@ -1,8 +1,10 @@
 'use client'
 import { useQuery } from '@tanstack/react-query'
+import Link from 'next/link'
 import StatCard from '@/components/dashboard/StatCard'
 import { saasApi } from '@/lib/api/saas'
 import { useSearchParams } from 'next/navigation'
+import { Package, Receipt, Users, Sparkles } from 'lucide-react'
 
 export default function DashboardPage() {
   const params = useSearchParams()
@@ -18,7 +20,64 @@ export default function DashboardPage() {
   if (error) return <div className="text-red-600">Hata: {(error as Error).message}</div>
   if (!stats) return null
 
+  const isFirstTime = stats.productCount === 0 && stats.salesCount === 0
   const limitText = stats.productLimit < 0 ? 'sınırsız' : `/ ${stats.productLimit} limit`
+
+  if (isFirstTime) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-6 py-8">
+        <div className="text-center">
+          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-700 text-white">
+            <Sparkles className="h-8 w-8" />
+          </div>
+          <h1 className="text-3xl font-bold">PetToptan'a hoş geldin!</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
+            İşletmen için stok ve satış yönetimini birkaç dakikada kuralım.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <OnboardStep
+            num={1}
+            icon={Package}
+            title="İlk ürününü ekle"
+            desc="Stok takibine başla. CSV ile toplu ekleyebilirsin."
+            actionLabel="Ürün ekle"
+            actionHref="/urunler/yeni"
+            secondaryLabel="CSV yükle"
+            secondaryHref="/urunler/import"
+          />
+          <OnboardStep
+            num={2}
+            icon={Receipt}
+            title="Satış kaydet"
+            desc="Mağazada bir satış olduğunda kaydet — stok otomatik düşer."
+            actionLabel="Satış oluştur"
+            actionHref="/satislar/yeni"
+            disabled={stats.plan === 'FREE'}
+            disabledNote="Satış geçmişi PRO plan ile açılır"
+          />
+          <OnboardStep
+            num={3}
+            icon={Users}
+            title="Ekip arkadaşı davet et"
+            desc="Çoklu kullanıcı ile mağazanı birlikte yönet."
+            actionLabel="Kullanıcı ekle"
+            actionHref="/kullanicilar"
+            disabled={stats.plan === 'FREE'}
+            disabledNote="Çoklu kullanıcı PRO plan ile açılır"
+          />
+        </div>
+
+        <div className="rounded-lg border border-gray-200 bg-white p-5 text-sm dark:border-gray-800 dark:bg-gray-950">
+          <p className="text-gray-600 dark:text-gray-400">
+            Mevcut planın: <strong>{stats.plan}</strong> · Ürün limiti: <strong>{stats.productLimit < 0 ? 'sınırsız' : stats.productLimit}</strong>
+          </p>
+          <Link href="/ayarlar" className="mt-1 inline-block text-sky-700 hover:underline">Plan yükselt →</Link>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -80,6 +139,48 @@ export default function DashboardPage() {
           </ul>
         )}
       </section>
+    </div>
+  )
+}
+
+function OnboardStep({
+  num, icon: Icon, title, desc, actionLabel, actionHref, secondaryLabel, secondaryHref, disabled, disabledNote,
+}: {
+  num: number
+  icon: React.ComponentType<{ className?: string }>
+  title: string
+  desc: string
+  actionLabel: string
+  actionHref: string
+  secondaryLabel?: string
+  secondaryHref?: string
+  disabled?: boolean
+  disabledNote?: string
+}) {
+  return (
+    <div className="flex flex-col rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-950">
+      <div className="mb-3 flex items-center gap-2">
+        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+          {num}
+        </span>
+        <Icon className="h-5 w-5 text-gray-500" />
+      </div>
+      <h3 className="mb-1 font-semibold">{title}</h3>
+      <p className="mb-4 flex-1 text-sm text-gray-500">{desc}</p>
+      {disabled ? (
+        <p className="text-xs italic text-gray-400">🔒 {disabledNote}</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          <Link href={actionHref} className="inline-block rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700">
+            {actionLabel}
+          </Link>
+          {secondaryLabel && secondaryHref && (
+            <Link href={secondaryHref} className="inline-block rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">
+              {secondaryLabel}
+            </Link>
+          )}
+        </div>
+      )}
     </div>
   )
 }

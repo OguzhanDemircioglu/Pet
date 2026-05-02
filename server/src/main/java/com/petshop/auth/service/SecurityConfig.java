@@ -48,6 +48,8 @@ public class SecurityConfig {
                 .requestMatchers("/uploads/**").permitAll()
                 // Health check endpoints (load balancer + monitoring için)
                 .requestMatchers(HttpMethod.GET, "/actuator/health/**", "/actuator/info").permitAll()
+                // Metrics (production'da reverse proxy/firewall ile internal IP'lere kısıtlanmalı)
+                .requestMatchers(HttpMethod.GET, "/actuator/metrics/**").hasRole("ADMIN")
                 // Admin only
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 // Hepsi auth

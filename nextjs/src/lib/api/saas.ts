@@ -121,6 +121,21 @@ export const saasApi = {
   async confirmPasswordReset(token: string, newPassword: string): Promise<void> {
     await clientApi.post('/auth/password-reset/confirm', { token, newPassword })
   },
+  async importProductsCsv(file: File): Promise<BulkImportResult> {
+    const fd = new FormData()
+    fd.append('file', file)
+    const r = await clientApi.post('/admin/saas/import/products', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return r.data
+  },
+}
+
+export interface BulkImportResult {
+  totalRows: number
+  createdCount: number
+  skippedCount: number
+  errors: { row: number; reason: string }[]
 }
 
 export interface AuditLogDto {

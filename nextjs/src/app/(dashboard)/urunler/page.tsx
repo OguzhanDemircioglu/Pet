@@ -50,12 +50,20 @@ export default function ProductsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold">Ürünler</h1>
-        <Link
-          href="/urunler/yeni"
-          className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-        >
-          + Yeni Ürün
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/urunler/import"
+            className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
+          >
+            CSV Yükle
+          </Link>
+          <Link
+            href="/urunler/yeni"
+            className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+          >
+            + Yeni Ürün
+          </Link>
+        </div>
       </div>
 
       <div className="relative max-w-sm">
