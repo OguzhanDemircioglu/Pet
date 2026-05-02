@@ -113,7 +113,43 @@ export default function SettingsPage() {
           Plan değişimi şu an ödeme alımı yapmaz — Stripe entegrasyonu sonraki sürümde.
         </p>
       </section>
+
+      <section className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950">
+        <h2 className="mb-1 text-lg font-semibold">Veri Yedekle</h2>
+        <p className="mb-4 text-sm text-gray-500">
+          Tüm ürünlerinizi ve son 1000 satışınızı tek JSON dosyası olarak indirin.
+        </p>
+        <ExportButton />
+      </section>
     </div>
+  )
+}
+
+function ExportButton() {
+  const [busy, setBusy] = useState(false)
+  const handle = async () => {
+    setBusy(true)
+    try {
+      const blob = await saasApi.exportAll()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+      a.href = url
+      a.download = `pettoptan-export-${ts}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success('Veri yedeği indirildi')
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <button onClick={handle} disabled={busy}
+      className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800">
+      {busy ? 'İndiriliyor…' : 'JSON olarak indir'}
+    </button>
   )
 }
 

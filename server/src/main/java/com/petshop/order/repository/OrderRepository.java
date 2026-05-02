@@ -51,4 +51,34 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Optional<Order> findByIdAndCompanyId(Long id, Long companyId);
 
     List<Order> findTop10ByCompanyIdOrderByCreatedAtDesc(Long companyId);
+
+    @org.springframework.data.jpa.repository.Query("""
+        SELECT FUNCTION('to_char', o.createdAt, 'YYYY-MM-DD') AS day,
+               COUNT(o) AS cnt,
+               COALESCE(SUM(o.total), 0) AS total
+        FROM Order o
+        WHERE o.companyId = :cid
+          AND o.createdAt >= :since
+        GROUP BY FUNCTION('to_char', o.createdAt, 'YYYY-MM-DD')
+        ORDER BY day ASC
+        """)
+    List<Object[]> aggregateDailyByCompanySince(
+            @org.springframework.data.repository.query.Param("cid") Long companyId,
+            @org.springframework.data.repository.query.Param("since") java.time.LocalDateTime since);
+
+    @org.springframework.data.jpa.repository.Query("""
+        SELECT o FROM Order o
+        WHERE o.companyId = :cid
+          AND (:from IS NULL OR o.createdAt >= :from)
+          AND (:to   IS NULL OR o.createdAt <= :to)
+          AND (:q    IS NULL OR LOWER(COALESCE(o.guestName, '')) LIKE LOWER(CONCAT('%', :q, '%'))
+                              OR LOWER(o.orderNumber) LIKE LOWER(CONCAT('%', :q, '%')))
+        ORDER BY o.createdAt DESC
+        """)
+    org.springframework.data.domain.Page<Order> searchByCompany(
+            @org.springframework.data.repository.query.Param("cid") Long companyId,
+            @org.springframework.data.repository.query.Param("from") java.time.LocalDateTime from,
+            @org.springframework.data.repository.query.Param("to") java.time.LocalDateTime to,
+            @org.springframework.data.repository.query.Param("q") String q,
+            org.springframework.data.domain.Pageable pageable);
 }

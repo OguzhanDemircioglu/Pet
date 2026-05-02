@@ -102,6 +102,10 @@ cloudinary:
 
 features:
   legacy-ecommerce: ${LEGACY_ECOMMERCE:false}
+  # SaaS register-company sonrası e-posta doğrulama zorunlu mu?
+  # false: admin direkt giriş yapar (frictionless)
+  # true:  6 haneli kod gönderilir, /verify-email gerekir
+  saas-email-verification: ${SAAS_EMAIL_VERIFICATION:false}
 
 management:
   endpoints:

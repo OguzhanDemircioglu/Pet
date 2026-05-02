@@ -56,6 +56,7 @@ class AuthServiceRegisterCompanyTest {
                 companyService
         );
         ReflectionTestUtils.setField(service, "refreshTokenExpirationMs", 604_800_000L);
+        ReflectionTestUtils.setField(service, "saasEmailVerificationRequired", false);
 
         when(passwordEncoder.encode(anyString())).thenReturn("hash");
         AtomicLong userIdSeq = new AtomicLong(1);

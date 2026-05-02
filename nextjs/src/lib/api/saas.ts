@@ -121,6 +121,26 @@ export const saasApi = {
   async confirmPasswordReset(token: string, newPassword: string): Promise<void> {
     await clientApi.post('/auth/password-reset/confirm', { token, newPassword })
   },
+  async salesDaily(days = 30): Promise<DailySalesPoint[]> {
+    const r = await clientApi.get('/admin/saas/charts/sales-daily', { params: { days } })
+    return r.data
+  },
+  async searchSales(opts: { page?: number; size?: number; from?: string; to?: string; q?: string } = {}): Promise<PageResp<SaleDto>> {
+    const r = await clientApi.get('/admin/saas/sales', {
+      params: {
+        page: opts.page ?? 0,
+        size: opts.size ?? 20,
+        ...(opts.from ? { from: opts.from } : {}),
+        ...(opts.to ? { to: opts.to } : {}),
+        ...(opts.q ? { q: opts.q } : {}),
+      },
+    })
+    return r.data
+  },
+  async exportAll(): Promise<Blob> {
+    const r = await clientApi.get('/admin/saas/export', { responseType: 'blob' })
+    return r.data as Blob
+  },
   async importProductsCsv(file: File): Promise<BulkImportResult> {
     const fd = new FormData()
     fd.append('file', file)
@@ -129,6 +149,12 @@ export const saasApi = {
     })
     return r.data
   },
+}
+
+export interface DailySalesPoint {
+  date: string
+  count: number
+  total: number
 }
 
 export interface BulkImportResult {

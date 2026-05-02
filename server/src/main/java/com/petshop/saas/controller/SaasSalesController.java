@@ -29,8 +29,11 @@ public class SaasSalesController {
     @GetMapping
     public ResponseEntity<DataGenericResponse<Page<SaleDto>>> list(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(DataGenericResponse.of(service.list(page, size)));
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate from,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate to,
+            @RequestParam(required = false) String q) {
+        return ResponseEntity.ok(DataGenericResponse.of(service.search(page, size, from, to, q)));
     }
 
     @GetMapping("/recent")

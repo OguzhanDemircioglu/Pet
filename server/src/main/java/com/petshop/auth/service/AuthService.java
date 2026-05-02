@@ -53,6 +53,9 @@ public class AuthService {
     @Value("${app.url}")
     private String appUrl;
 
+    @Value("${features.saas-email-verification:false}")
+    private boolean saasEmailVerificationRequired;
+
     @Value("${app.frontend-url}")
     private String frontendUrl;
 
@@ -63,7 +66,8 @@ public class AuthService {
 
     /**
      * SaaS register: Company + Admin user atomik oluşturur, FREE plan ile başlar.
-     * Email verification atlanır (admin direkt giriş yapsın).
+     * features.saas-email-verification=true ise verify code gönderilir, login
+     * ancak verify-email sonrası mümkün olur. Default false (frictionless onboarding).
      */
     @Transactional
     public AuthResponse registerCompany(com.petshop.auth.dto.request.RegisterCompanyRequest req) {
@@ -74,6 +78,14 @@ public class AuthService {
         com.petshop.tenant.entity.Company company = companyService.createCompany(
                 req.companyName(), com.petshop.tenant.entity.Company.Plan.FREE);
 
+        boolean verified = !saasEmailVerificationRequired;
+        String code = null;
+        java.time.LocalDateTime codeExpiry = null;
+        if (saasEmailVerificationRequired) {
+            code = String.format("%06d", RANDOM.nextInt(1_000_000));
+            codeExpiry = LocalDateTime.now().plusMinutes(AuthSchedulerConstants.VERIFICATION_CODE_EXPIRY_MINUTES);
+        }
+
         User admin = User.builder()
                 .companyId(company.getId())
                 .email(req.email())
@@ -82,10 +94,22 @@ public class AuthService {
                 .lastName(req.lastName())
                 .role(User.Role.ADMIN)
                 .isActive(true)
-                .emailVerified(true)
+                .emailVerified(verified)
+                .verificationCode(code)
+                .verificationCodeExpiresAt(codeExpiry)
                 .build();
         userRepository.save(admin);
 
+        if (saasEmailVerificationRequired) {
+            try {
+                notificationFacade.enqueueVerificationEmail(req.email(), req.firstName(), code);
+            } catch (Exception e) {
+                log.warn("SaaS register doğrulama maili kuyruğa atılamadı: {}", e.getMessage());
+            }
+        }
+
+        // Verification gerekiyorsa token döndür ama email_verified=false → login engelli olur.
+        // Frontend'in /verify-email akışına yönlendirmesi gerek.
         return generateAuthResponse(admin);
     }
 

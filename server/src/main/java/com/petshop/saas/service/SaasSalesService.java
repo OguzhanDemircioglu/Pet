@@ -87,10 +87,19 @@ public class SaasSalesService {
 
     @Transactional(readOnly = true)
     public Page<SaleDto> list(int page, int size) {
+        return search(page, size, null, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<SaleDto> search(int page, int size,
+                                java.time.LocalDate from, java.time.LocalDate to, String q) {
         Long cid = TenantContext.require();
         planLimitService.assertFeatureSalesHistory(cid);
+        java.time.LocalDateTime fromDt = from != null ? from.atStartOfDay() : null;
+        java.time.LocalDateTime toDt   = to != null ? to.plusDays(1).atStartOfDay() : null;
+        String qNorm = (q == null || q.isBlank()) ? null : q.trim();
         return orderRepository
-                .findByCompanyIdOrderByCreatedAtDesc(cid, PageRequest.of(page, Math.min(size, 100)))
+                .searchByCompany(cid, fromDt, toDt, qNorm, PageRequest.of(page, Math.min(size, 100)))
                 .map(SaleDto::from);
     }
 

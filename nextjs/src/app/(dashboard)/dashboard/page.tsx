@@ -2,6 +2,7 @@
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import StatCard from '@/components/dashboard/StatCard'
+import SalesChart from '@/components/dashboard/SalesChart'
 import { saasApi } from '@/lib/api/saas'
 import { useSearchParams } from 'next/navigation'
 import { Package, Receipt, Users, Sparkles } from 'lucide-react'
@@ -14,6 +15,13 @@ export default function DashboardPage() {
     queryKey: ['saas', 'dashboard'],
     queryFn: () => saasApi.dashboard(),
     staleTime: 30_000,
+  })
+
+  const { data: chart } = useQuery({
+    queryKey: ['saas', 'chart', 'sales-daily', 30],
+    queryFn: () => saasApi.salesDaily(30),
+    staleTime: 60_000,
+    enabled: !isLoading && !!stats && stats.salesCount > 0,
   })
 
   if (isLoading) return <div className="text-gray-500">Yükleniyor…</div>
@@ -94,6 +102,13 @@ export default function DashboardPage() {
         <StatCard label="Toplam Satış" value={stats.salesCount} />
         <StatCard label="Düşük Stok" value={stats.lowStock.length} tone={stats.lowStock.length > 0 ? 'warn' : 'default'} hint="≤ 5 adet" />
       </div>
+
+      {chart && chart.length > 0 && (
+        <section className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-950">
+          <h2 className="mb-3 text-lg font-semibold">Satış Trendi</h2>
+          <SalesChart data={chart} />
+        </section>
+      )}
 
       <section>
         <h2 className="mb-3 text-lg font-semibold">Düşük Stoklu Ürünler</h2>
