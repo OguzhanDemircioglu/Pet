@@ -63,6 +63,9 @@ export default function LoginClient() {
         <p className="mt-6 text-center text-sm text-gray-500">
           Hesabın yok mu? <Link href="/kayit" className="text-sky-700 hover:underline">Ücretsiz başla</Link>
         </p>
+        <p className="mt-2 text-center text-sm text-gray-500">
+          <Link href="/sifre-unuttum" className="text-gray-500 hover:text-sky-700 hover:underline">Şifremi unuttum</Link>
+        </p>
       </div>
     </div>
   )

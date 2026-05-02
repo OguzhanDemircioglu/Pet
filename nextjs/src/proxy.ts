@@ -1,10 +1,12 @@
 import { auth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 
-const dashboardPaths = ['/dashboard', '/urunler', '/satislar', '/kullanicilar', '/ayarlar']
-const authOnlyVisitorPaths = ['/giris', '/kayit']
+const dashboardPaths = ['/dashboard', '/urunler', '/satislar', '/kullanicilar', '/audit', '/ayarlar']
+// Auth'suz public sayfalar — giriş'liyken bu sayfaları görenler /dashboard'a yönlendirilir
+const authOnlyVisitorPaths = ['/giris', '/kayit', '/sifre-unuttum']
+// /sifre-sifirla?token=... emaildeki linkten geldiği için auth'lu da görebilir, redirect etme
 
-const proPaths = ['/satislar', '/kullanicilar']
+const proPaths = ['/satislar', '/kullanicilar', '/audit']
 const proPlusPaths = ['/shop-settings']
 
 function startsWithAny(path: string, list: string[]) {

@@ -51,6 +51,11 @@ class NotificationFacadeImpl implements NotificationFacade {
     }
 
     @Override
+    public void enqueuePasswordResetEmail(String toEmail, String firstName, String resetUrl) {
+        notificationOutboxService.enqueuePasswordReset(toEmail, firstName, resetUrl);
+    }
+
+    @Override
     public void enqueueTelegramMessage(String text) {
         telegramOutboxService.enqueue(text);
     }

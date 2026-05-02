@@ -59,6 +59,13 @@ public class NotificationOutboxService {
         save(toEmail, subject, html, true);
     }
 
+    @Transactional
+    public void enqueuePasswordReset(String toEmail, String firstName, String resetUrl) {
+        String subject = appName() + " · Şifre Sıfırlama";
+        String html = emailService.buildPasswordResetEmail(firstName, resetUrl);
+        save(toEmail, subject, html, true);
+    }
+
     @Scheduled(fixedDelay = NotificationSchedulerConstants.EMAIL_OUTBOX_DELAY_MS)
     @Transactional
     public void processOutbox() {

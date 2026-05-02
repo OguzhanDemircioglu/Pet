@@ -111,4 +111,25 @@ export const saasApi = {
     const r = await clientApi.post('/admin/saas/plan/change', { plan })
     return r.data
   },
+  async listAudit(page = 0, size = 50): Promise<PageResp<AuditLogDto>> {
+    const r = await clientApi.get('/admin/saas/audit', { params: { page, size } })
+    return r.data
+  },
+  async requestPasswordReset(email: string): Promise<void> {
+    await clientApi.post('/auth/password-reset', { email })
+  },
+  async confirmPasswordReset(token: string, newPassword: string): Promise<void> {
+    await clientApi.post('/auth/password-reset/confirm', { token, newPassword })
+  },
+}
+
+export interface AuditLogDto {
+  id: number
+  action: string
+  resourceType: string | null
+  resourceId: number | null
+  userId: number | null
+  details: string | null
+  ip: string | null
+  createdAt: string
 }

@@ -21,6 +21,8 @@ public interface NotificationFacade {
 
     void enqueueEmailChangeConfirmationEmail(String toEmail, String firstName, String confirmUrl);
 
+    void enqueuePasswordResetEmail(String toEmail, String firstName, String resetUrl);
+
     void enqueueTelegramMessage(String text);
 
     // ─── Stok abonelik (catalog modülünden çağrılır) ─────────────────────

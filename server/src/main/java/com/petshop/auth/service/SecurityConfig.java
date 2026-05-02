@@ -41,7 +41,7 @@ public class SecurityConfig {
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 // Public auth endpoints
-                .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/register", "/auth/register-company", "/auth/google", "/auth/refresh", "/auth/verify-email", "/auth/resend-verification").permitAll()
+                .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/register", "/auth/register-company", "/auth/google", "/auth/refresh", "/auth/verify-email", "/auth/resend-verification", "/auth/password-reset", "/auth/password-reset/confirm").permitAll()
                 .requestMatchers(HttpMethod.GET, "/auth/me/email/confirm").permitAll()
                 // Public PRO+ mini shop (Faz 5) — sadece okuma
                 .requestMatchers(HttpMethod.GET, "/public/shop/**").permitAll()

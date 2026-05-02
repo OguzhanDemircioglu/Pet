@@ -25,6 +25,7 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final com.petshop.auth.service.PasswordResetService passwordResetService;
 
     @PostMapping("/login")
     public ResponseEntity<DataGenericResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest req) {
@@ -41,6 +42,21 @@ public class AuthController {
     public ResponseEntity<DataGenericResponse<AuthResponse>> registerCompany(
             @Valid @RequestBody com.petshop.auth.dto.request.RegisterCompanyRequest req) {
         return ResponseEntity.ok(DataGenericResponse.of(authService.registerCompany(req)));
+    }
+
+    @PostMapping("/password-reset")
+    public ResponseEntity<GenericResponse> passwordReset(
+            @Valid @RequestBody com.petshop.auth.dto.request.PasswordResetRequest req) {
+        passwordResetService.requestReset(req.email());
+        // Her zaman 200 — user enumeration koruması
+        return ResponseEntity.ok(GenericResponse.ok("Sıfırlama bağlantısı, sistemde kayıtlıysa e-postanıza gönderildi."));
+    }
+
+    @PostMapping("/password-reset/confirm")
+    public ResponseEntity<GenericResponse> passwordResetConfirm(
+            @Valid @RequestBody com.petshop.auth.dto.request.PasswordResetConfirmRequest req) {
+        passwordResetService.confirmReset(req.token(), req.newPassword());
+        return ResponseEntity.ok(GenericResponse.ok("Şifreniz sıfırlandı. Giriş yapabilirsiniz."));
     }
 
     @PostMapping("/verify-email")

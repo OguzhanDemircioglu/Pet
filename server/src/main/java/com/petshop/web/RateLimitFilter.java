@@ -43,12 +43,14 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private static final Limit[] LIMITS = new Limit[] {
-            new Limit("/auth/login",            10, Duration.ofMinutes(1)),
-            new Limit("/auth/register-company",  5, Duration.ofMinutes(1)),
-            new Limit("/auth/register",          5, Duration.ofMinutes(1)),
-            new Limit("/auth/refresh",          30, Duration.ofMinutes(1)),
-            new Limit("/auth/verify-email",     20, Duration.ofMinutes(1)),
-            new Limit("/auth/google",           20, Duration.ofMinutes(1)),
+            new Limit("/auth/login",                  10, Duration.ofMinutes(1)),
+            new Limit("/auth/register-company",        5, Duration.ofMinutes(1)),
+            new Limit("/auth/register",                5, Duration.ofMinutes(1)),
+            new Limit("/auth/password-reset",          5, Duration.ofMinutes(1)),
+            new Limit("/auth/password-reset/confirm", 10, Duration.ofMinutes(1)),
+            new Limit("/auth/refresh",                30, Duration.ofMinutes(1)),
+            new Limit("/auth/verify-email",           20, Duration.ofMinutes(1)),
+            new Limit("/auth/google",                 20, Duration.ofMinutes(1)),
     };
 
     @Override
