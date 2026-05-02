@@ -94,11 +94,32 @@ export default function DashboardPage() {
     )
   }
 
+  const lowCount = stats.lowStock.length
+
   return (
     <div className="space-y-6">
       {upgradeHint && (
         <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
           Bu özellik için <strong>PRO</strong> plana yükseltme gereklidir.
+        </div>
+      )}
+
+      {lowCount >= 3 && (
+        <div className="flex items-start gap-3 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm dark:border-amber-700 dark:bg-amber-950/40">
+          <span className="text-xl">⚠</span>
+          <div className="flex-1">
+            <strong className="text-amber-900 dark:text-amber-200">{lowCount} ürün</strong>
+            <span className="text-amber-800 dark:text-amber-300"> düşük stoklu (≤ 5 adet). </span>
+            {stats.plan === 'FREE' ? (
+              <Link href="/ayarlar" className="text-amber-900 underline hover:no-underline dark:text-amber-200">
+                E-posta uyarısı için PRO'ya yükselt →
+              </Link>
+            ) : (
+              <Link href="/ayarlar" className="text-amber-900 underline hover:no-underline dark:text-amber-200">
+                Otomatik e-posta uyarılarını ayarla →
+              </Link>
+            )}
+          </div>
         </div>
       )}
 

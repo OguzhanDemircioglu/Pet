@@ -106,6 +106,25 @@ public class AuthService {
             } catch (Exception e) {
                 log.warn("SaaS register doğrulama maili kuyruğa atılamadı: {}", e.getMessage());
             }
+        } else {
+            // Frictionless akış: hoş geldin emaili
+            try {
+                String fn = req.firstName() == null || req.firstName().isBlank() ? "" : req.firstName();
+                String dashboardUrl = frontendUrl == null ? "" : frontendUrl.replaceAll("/$", "") + "/dashboard";
+                String intro = "Merhaba <strong>" + (fn.isEmpty() ? req.companyName() : fn) + "</strong>, "
+                        + "<strong>" + req.companyName() + "</strong> hesabınız oluşturuldu.<br><br>"
+                        + "FREE plan ile başladınız: 20 ürüne kadar stok takibi + satış kaydı. "
+                        + "PRO'ya geçerek sınırsız ürün, çoklu kullanıcı, düşük stok uyarısı ve daha fazlasına erişebilirsiniz.";
+                notificationFacade.enqueueSaasNotification(
+                        req.email(),
+                        "Hoş geldiniz",
+                        "PetToptan'a hoş geldiniz",
+                        intro, null,
+                        "Pano'yu Aç", dashboardUrl
+                );
+            } catch (Exception e) {
+                log.warn("Welcome maili kuyruğa atılamadı: {}", e.getMessage());
+            }
         }
 
         // Verification gerekiyorsa token döndür ama email_verified=false → login engelli olur.
