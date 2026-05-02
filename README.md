@@ -1,4 +1,119 @@
-# Petshop — Geliştirici Notları
+# PetToptan — Multi-Tenant Petshop Stok & Satış SaaS
+
+> **Not:** Bu repo eskiden B2B toptan e-ticaret sitesiydi. Artık **petshop'lar için multi-tenant SaaS stok yönetim aracı**. Eski e-ticaret kodu silinmedi — `LEGACY_ECOMMERCE=true` env ile geri açılabilir.
+
+## SaaS Mimarisi
+
+### Multi-Tenant İzolasyon
+
+- **`companies`** tablosu (id, name, slug, plan)
+- `users`, `products`, `orders` → her satır `company_id` (NOT NULL) ile bir company'ye bağlı
+- JWT'de `companyId` + `plan` claim'leri taşınır
+- `JwtAuthenticationFilter` token'dan `companyId` okuyup `TenantContext` (ThreadLocal) içine koyar
+- Her SaaS service çağrısı `TenantContext.require()` ile başlar — atlama imkansız
+- Repository sorguları daima `findByIdAndCompanyId(id, companyId)` — cross-tenant 404
+
+### Plan Modeli
+
+| Plan | Limit | Özellikler |
+|---|---|---|
+| **FREE** | 20 ürün, 1 user | Ürün CRUD, stok update, basit satış kaydı |
+| **PRO** | sınırsız ürün, çoklu user | + düşük stok uyarısı, satış geçmişi, multi-user invite |
+| **PRO+** | + `/shop/{slug}` public mini vitrin | path-based, custom domain yok |
+
+`PlanLimitService` PostgreSQL `pg_advisory_xact_lock` ile race-safe — paralel "ürün ekle" istekleri sıraya girer.
+
+### SaaS API Endpoint'leri
+
+```
+POST /auth/register-company       — atomik company + admin user
+POST /auth/login                   — JWT + companyId/plan claim'leri
+GET  /admin/saas/dashboard         — istatistikler (toplam ürün, satış, düşük stok)
+GET  /admin/saas/products          — sayfalı ürün listesi
+POST /admin/saas/products          — yeni ürün (FREE: ≤20 limit)
+PUT  /admin/saas/products/{id}
+DELETE /admin/saas/products/{id}
+GET  /admin/saas/sales             — satış geçmişi (PRO)
+POST /admin/saas/sales             — iç satış kaydı + stok düşür
+GET  /admin/saas/users             — şirket kullanıcıları
+POST /admin/saas/users             — kullanıcı davet et (FREE: ≤1 user)
+GET  /public/shop/{slug}           — PRO+ public vitrin (auth gerektirmez)
+```
+
+### Hata Kodları
+
+`GlobalExceptionHandler` `errors.code` alanı:
+
+| Kod | HTTP | Anlamı |
+|---|---|---|
+| `PLAN_LIMIT_EXCEEDED` | 403 | FREE plan ürün limiti aşıldı |
+| `PLAN_FEATURE_LOCKED` | 403 | Bu özellik PRO/PRO+ gerektirir |
+| `CROSS_TENANT_ACCESS` | 404 | Başka company'nin kaydına erişim |
+| `TENANT_CONTEXT_MISSING` | 401 | Eski JWT (companyId yok) — re-login |
+
+### DB Migration
+
+İlk deploy'da Aiven console'da elle çalıştırılır:
+
+```bash
+psql ... -f server/src/main/resources/db/migration/V1__multi_tenant.sql
+```
+
+Bu script: `companies` tablosu + `company_id` kolonları + default company + index'ler. İdempotent (`IF NOT EXISTS`).
+
+### Frontend (Next.js 16)
+
+```
+nextjs/src/app/
+├── (auth)/giris             — SaaS login
+├── (auth)/kayit             — company register
+├── (dashboard)/dashboard    — istatistik panosu
+├── (dashboard)/urunler      — ürün CRUD
+├── (dashboard)/satislar     — satış kaydı (PRO)
+├── (dashboard)/kullanicilar — multi-user (PRO)
+├── (dashboard)/ayarlar      — company info
+└── shop/[slug]              — PRO+ public vitrin
+```
+
+`src/middleware.ts` — auth-aware redirect:
+- Auth'suz `/dashboard/**` → `/giris?callbackUrl=...`
+- Auth'lu `/giris`, `/kayit` → `/dashboard`
+- FREE plan'da PRO yolları → `/dashboard?upgrade=1`
+
+## Test
+
+```bash
+# Backend (22 unit + 4 JWT filter testi)
+cd server && mvn test
+
+# Backend (Testcontainers — Docker gerekli)
+mvn test -Dtest=TenantIsolationIT -DdockerAvailable=true
+
+# Frontend (16 vitest + 8 Playwright e2e)
+cd nextjs && npm test && npm run test:e2e
+```
+
+CI: `.github/workflows/ci.yml` — her PR'da otomatik.
+
+## Geliştirme
+
+```bash
+# Backend
+cd server && mvn spring-boot:run
+
+# Frontend
+cd nextjs && npm run dev
+```
+
+Test company oluştur:
+
+```bash
+curl -X POST http://localhost:8080/auth/register-company \
+  -H 'Content-Type: application/json' \
+  -d '{"companyName":"Test Petshop","email":"admin@test.com","password":"123456"}'
+```
+
+---
 
 ## Modüler Mimari (Spring Modulith)
 
