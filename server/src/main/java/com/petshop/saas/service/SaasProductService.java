@@ -26,6 +26,7 @@ public class SaasProductService {
 
     private final ProductRepository productRepository;
     private final PlanLimitService planLimitService;
+    private final com.petshop.audit.service.AuditLogger auditLogger;
 
     @Transactional(readOnly = true)
     public Page<ProductDto> list(int page, int size) {
@@ -63,7 +64,10 @@ public class SaasProductService {
                 .isActive(true)
                 .isFeatured(false)
                 .build();
-        return ProductDto.from(productRepository.save(p));
+        Product saved = productRepository.save(p);
+        auditLogger.log("PRODUCT_CREATE", "product", saved.getId(),
+                "name=" + saved.getName() + " sku=" + saved.getSku() + " stock=" + saved.getStockQuantity());
+        return ProductDto.from(saved);
     }
 
     @Transactional
@@ -71,11 +75,15 @@ public class SaasProductService {
         Long cid = TenantContext.require();
         Product p = productRepository.findByIdAndCompanyId(id, cid)
                 .orElseThrow(() -> new CrossTenantAccessException("Product " + id));
+        int oldStock = p.getStockQuantity();
         p.setName(req.name());
         p.setBasePrice(req.price());
         p.setStockQuantity(req.stock());
         if (req.active() != null) p.setIsActive(req.active());
-        return ProductDto.from(productRepository.save(p));
+        Product saved = productRepository.save(p);
+        auditLogger.log("PRODUCT_UPDATE", "product", saved.getId(),
+                "stock=" + oldStock + "→" + saved.getStockQuantity() + " active=" + saved.getIsActive());
+        return ProductDto.from(saved);
     }
 
     @Transactional
@@ -84,6 +92,7 @@ public class SaasProductService {
         Product p = productRepository.findByIdAndCompanyId(id, cid)
                 .orElseThrow(() -> new CrossTenantAccessException("Product " + id));
         productRepository.delete(p);
+        auditLogger.log("PRODUCT_DELETE", "product", id, "name=" + p.getName() + " sku=" + p.getSku());
     }
 
     private String slugify(String s) {

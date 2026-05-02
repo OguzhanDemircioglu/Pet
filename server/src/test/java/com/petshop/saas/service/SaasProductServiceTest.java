@@ -28,7 +28,7 @@ class SaasProductServiceTest {
     void init() {
         repo = mock(ProductRepository.class);
         planLimit = mock(PlanLimitService.class);
-        service = new SaasProductService(repo, planLimit);
+        service = new SaasProductService(repo, planLimit, mock(com.petshop.audit.service.AuditLogger.class));
         TenantContext.set(7L, "FREE");
         when(repo.save(any(Product.class))).thenAnswer(i -> i.getArgument(0));
         when(repo.findBySku(any())).thenReturn(Optional.empty());

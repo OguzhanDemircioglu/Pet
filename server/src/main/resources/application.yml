@@ -1,6 +1,25 @@
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /
+  tomcat:
+    max-http-form-post-size: 262144   # 256 KB — SaaS payload'ları küçük
+    connection-timeout: 20s
+    max-keep-alive-requests: 100
+  shutdown: graceful
+  compression:
+    enabled: true
+    mime-types: application/json,text/plain,text/html,text/css,application/javascript
+    min-response-size: 1024
+  error:
+    include-stacktrace: never
+    include-message: always
+
 spring:
   application:
     name: petshop-server
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
 
   datasource:
     url: jdbc:postgresql://${DB_HOST:pg-3da83de9-keya.h.aivencloud.com}:${DB_PORT:15474}/${DB_NAME:defaultdb}?currentSchema=petshop&sslmode=${DB_SSL_MODE:require}
@@ -43,10 +62,7 @@ spring:
       max-file-size: 10MB
       max-request-size: 50MB
 
-server:
-  port: ${SERVER_PORT:8080}
-  servlet:
-    context-path: /
+# (server config'i dosyanın başında — port + tomcat tuning birlikte)
 
 # JWT
 jwt:

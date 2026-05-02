@@ -23,6 +23,7 @@
                 "pricing :: dto-response",
                 "siteadmin :: api",
                 "siteadmin :: dto-response",
+                "tenant",
                 "dto",
                 "constant"
         }

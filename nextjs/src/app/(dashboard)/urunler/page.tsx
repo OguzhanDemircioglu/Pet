@@ -1,6 +1,7 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { saasApi, type ProductDto } from '@/lib/api/saas'
 import toast from 'react-hot-toast'
 import { Search, ChevronLeft, ChevronRight } from 'lucide-react'
@@ -8,18 +9,16 @@ import { Search, ChevronLeft, ChevronRight } from 'lucide-react'
 const PAGE_SIZE = 20
 
 export default function ProductsPage() {
-  const [allProducts, setAllProducts] = useState<ProductDto[]>([])
-  const [loading, setLoading] = useState(true)
+  const qc = useQueryClient()
+  const { data, isLoading } = useQuery({
+    queryKey: ['saas', 'products'],
+    queryFn: () => saasApi.listProducts(0, 1000),
+    staleTime: 30_000,
+  })
+  const allProducts: ProductDto[] = data?.content ?? []
+
   const [page, setPage] = useState(0)
   const [search, setSearch] = useState('')
-
-  const load = () => {
-    setLoading(true)
-    saasApi.listProducts(0, 1000)
-      .then(p => setAllProducts(p.content))
-      .finally(() => setLoading(false))
-  }
-  useEffect(() => { load() }, [])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -33,17 +32,18 @@ export default function ProductsPage() {
   const safePage = Math.min(page, totalPages - 1)
   const visible = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE)
 
-  useEffect(() => { setPage(0) }, [search])
-
-  const handleDelete = async (id: number, name: string) => {
-    if (!confirm(`"${name}" ürününü silmek istiyor musunuz?`)) return
-    try {
-      await saasApi.deleteProduct(id)
+  const deleteMut = useMutation({
+    mutationFn: (id: number) => saasApi.deleteProduct(id),
+    onSuccess: () => {
       toast.success('Ürün silindi')
-      load()
-    } catch (e) {
-      toast.error((e as Error).message)
-    }
+      qc.invalidateQueries({ queryKey: ['saas'] })
+    },
+    onError: (e) => toast.error((e as Error).message),
+  })
+
+  const handleDelete = (id: number, name: string) => {
+    if (!confirm(`"${name}" ürününü silmek istiyor musunuz?`)) return
+    deleteMut.mutate(id)
   }
 
   return (
@@ -64,12 +64,12 @@ export default function ProductsPage() {
           type="search"
           placeholder="Ürün adı veya SKU ile ara…"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => { setSearch(e.target.value); setPage(0) }}
           className="w-full rounded-md border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:border-gray-700 dark:bg-gray-900"
         />
       </div>
 
-      {loading ? (
+      {isLoading ? (
         <p className="text-gray-500">Yükleniyor…</p>
       ) : filtered.length === 0 ? (
         <div className="rounded-lg border-2 border-dashed border-gray-200 bg-white p-12 text-center dark:border-gray-800 dark:bg-gray-950">
@@ -110,7 +110,11 @@ export default function ProductsPage() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <Link href={`/urunler/${p.id}`} className="text-sm text-sky-700 hover:underline">Düzenle</Link>
-                        <button onClick={() => handleDelete(p.id, p.name)} className="ml-3 text-sm text-red-600 hover:underline">Sil</button>
+                        <button
+                          onClick={() => handleDelete(p.id, p.name)}
+                          disabled={deleteMut.isPending}
+                          className="ml-3 text-sm text-red-600 hover:underline disabled:opacity-50"
+                        >Sil</button>
                       </td>
                     </tr>
                   )

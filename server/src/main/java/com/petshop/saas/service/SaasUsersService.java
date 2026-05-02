@@ -22,6 +22,7 @@ public class SaasUsersService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final PlanLimitService planLimitService;
+    private final com.petshop.audit.service.AuditLogger auditLogger;
 
     @Transactional(readOnly = true)
     public List<CompanyUserDto> list() {
@@ -50,7 +51,9 @@ public class SaasUsersService {
                 .isActive(true)
                 .emailVerified(true)
                 .build();
-        return CompanyUserDto.from(userRepository.save(u));
+        User saved = userRepository.save(u);
+        auditLogger.log("USER_INVITE", "user", saved.getId(), "email=" + saved.getEmail());
+        return CompanyUserDto.from(saved);
     }
 
     @Transactional
@@ -60,5 +63,6 @@ public class SaasUsersService {
                 .orElseThrow(() -> new CrossTenantAccessException("User " + userId));
         u.setIsActive(false);
         userRepository.save(u);
+        auditLogger.log("USER_DEACTIVATE", "user", userId, "email=" + u.getEmail());
     }
 }

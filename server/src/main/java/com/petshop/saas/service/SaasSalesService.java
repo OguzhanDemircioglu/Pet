@@ -31,6 +31,7 @@ public class SaasSalesService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final PlanLimitService planLimitService;
+    private final com.petshop.audit.service.AuditLogger auditLogger;
 
     @Transactional
     public SaleDto create(CreateSaleRequest req) {
@@ -79,6 +80,8 @@ public class SaasSalesService {
         order.setSubtotal(total);
         order.setTotal(total);
         Order saved = orderRepository.save(order);
+        auditLogger.log("SALE_CREATE", "order", saved.getId(),
+                "no=" + saved.getOrderNumber() + " items=" + saved.getItems().size() + " total=" + saved.getTotal());
         return SaleDto.from(saved);
     }
 

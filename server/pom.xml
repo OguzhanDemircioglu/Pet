@@ -114,6 +114,19 @@
       <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
 
+    <!-- Rate limiting (Bucket4j, in-memory caffeine) -->
+    <dependency>
+      <groupId>com.bucket4j</groupId>
+      <artifactId>bucket4j-core</artifactId>
+      <version>8.10.1</version>
+    </dependency>
+
+    <!-- Spring AOP (audit logging) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-aop</artifactId>
+    </dependency>
+
     <!-- Flyway DB migration -->
     <dependency>
       <groupId>org.flywaydb</groupId>

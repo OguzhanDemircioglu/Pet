@@ -37,6 +37,7 @@ public class SaasPlanController {
     private final CompanyService companyService;
     private final UserRepository userRepository;
     private final AuthFacade authFacade;
+    private final com.petshop.audit.service.AuditLogger auditLogger;
 
     @GetMapping
     public ResponseEntity<DataGenericResponse<PlanInfoDto>> info() {
@@ -59,8 +60,10 @@ public class SaasPlanController {
             throw new BusinessException("Zaten bu plandasınız: " + req.plan());
         }
 
+        Plan oldPlan = c.getPlan();
         c.setPlan(req.plan());
         companyRepository.save(c);
+        auditLogger.log("PLAN_CHANGE", "company", c.getId(), "from=" + oldPlan + " to=" + req.plan());
 
         // Şirketin tüm kullanıcılarının token'larını geçersiz kıl
         // (yeni plan claim'i bir sonraki login'de gelir)

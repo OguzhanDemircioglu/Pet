@@ -1,28 +1,29 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import StatCard from '@/components/dashboard/StatCard'
-import { saasApi, type DashboardStats } from '@/lib/api/saas'
+import { saasApi } from '@/lib/api/saas'
 import { useSearchParams } from 'next/navigation'
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [error, setError] = useState<string | null>(null)
   const params = useSearchParams()
   const upgradeHint = params.get('upgrade') === '1'
 
-  useEffect(() => {
-    saasApi.dashboard().then(setStats).catch((e) => setError(e.message))
-  }, [])
+  const { data: stats, error, isLoading } = useQuery({
+    queryKey: ['saas', 'dashboard'],
+    queryFn: () => saasApi.dashboard(),
+    staleTime: 30_000,
+  })
 
-  if (error) return <div className="text-red-600">Hata: {error}</div>
-  if (!stats) return <div className="text-gray-500">Yükleniyor…</div>
+  if (isLoading) return <div className="text-gray-500">Yükleniyor…</div>
+  if (error) return <div className="text-red-600">Hata: {(error as Error).message}</div>
+  if (!stats) return null
 
   const limitText = stats.productLimit < 0 ? 'sınırsız' : `/ ${stats.productLimit} limit`
 
   return (
     <div className="space-y-6">
       {upgradeHint && (
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
           Bu özellik için <strong>PRO</strong> plana yükseltme gereklidir.
         </div>
       )}
