@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 
 const dashboardPaths = ['/dashboard', '/urunler', '/satislar', '/kullanicilar', '/audit', '/ayarlar']
 // Auth'suz public sayfalar — giriş'liyken bu sayfaları görenler /dashboard'a yönlendirilir
-const authOnlyVisitorPaths = ['/giris', '/kayit', '/sifre-unuttum']
+const authOnlyVisitorPaths = ['/giris', '/kayit', '/sifre-unuttum', '/dogrula']
 // /sifre-sifirla?token=... emaildeki linkten geldiği için auth'lu da görebilir, redirect etme
 
 const proPaths = ['/satislar', '/kullanicilar', '/audit']

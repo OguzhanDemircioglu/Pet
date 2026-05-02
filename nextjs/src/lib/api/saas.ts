@@ -88,6 +88,10 @@ export const saasApi = {
     const r = await clientApi.get('/admin/saas/sales', { params: { page, size } })
     return r.data
   },
+  async getSale(id: number): Promise<SaleDto> {
+    const r = await clientApi.get(`/admin/saas/sales/${id}`)
+    return r.data
+  },
   async registerCompany(input: { companyName: string; email: string; password: string; firstName?: string; lastName?: string }): Promise<{ accessToken: string; refreshToken: string; user: unknown }> {
     const r = await clientApi.post('/auth/register-company', input)
     return r.data

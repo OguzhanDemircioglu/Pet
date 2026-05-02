@@ -86,6 +86,29 @@ public class SaasProductService {
         return ProductDto.from(saved);
     }
 
+    /**
+     * Hızlı stok hareketi — delta pozitif (giriş) ya da negatif (düzeltme/kayıp).
+     * Stok eksiye düşemez.
+     */
+    @Transactional
+    public ProductDto adjustStock(Long id, int delta, String note) {
+        Long cid = TenantContext.require();
+        Product p = productRepository.findByIdAndCompanyId(id, cid)
+                .orElseThrow(() -> new CrossTenantAccessException("Product " + id));
+        int oldStock = p.getStockQuantity();
+        int newStock = oldStock + delta;
+        if (newStock < 0) {
+            throw new com.petshop.exception.BusinessException(
+                    "Stok eksiye düşemez (mevcut: " + oldStock + ", istenen delta: " + delta + ")");
+        }
+        p.setStockQuantity(newStock);
+        Product saved = productRepository.save(p);
+        auditLogger.log("STOCK_ADJUST", "product", saved.getId(),
+                "delta=" + delta + " " + oldStock + "→" + newStock
+                        + (note != null && !note.isBlank() ? " note=" + note : ""));
+        return ProductDto.from(saved);
+    }
+
     @Transactional
     public void delete(Long id) {
         Long cid = TenantContext.require();

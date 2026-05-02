@@ -91,7 +91,9 @@ export default function SalesPage() {
               </thead>
               <tbody>
                 {sales.map(s => (
-                  <tr key={s.id} className="border-t border-gray-100 dark:border-gray-800">
+                  <tr key={s.id}
+                      className="cursor-pointer border-t border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900"
+                      onClick={() => window.location.href = `/satislar/${s.id}`}>
                     <td className="px-4 py-3">{new Date(s.createdAt).toLocaleString('tr-TR')}</td>
                     <td className="px-4 py-3 font-mono text-xs">{s.orderNumber}</td>
                     <td className="px-4 py-3">{s.customerName ?? '—'}</td>

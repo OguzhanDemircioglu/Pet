@@ -49,4 +49,11 @@ public class SaasProductController {
         service.delete(id);
         return ResponseEntity.ok(GenericResponse.ok());
     }
+
+    @PostMapping("/{id}/stock")
+    public ResponseEntity<DataGenericResponse<ProductDto>> adjustStock(
+            @PathVariable Long id,
+            @Valid @RequestBody com.petshop.saas.dto.StockAdjustRequest req) {
+        return ResponseEntity.ok(DataGenericResponse.of(service.adjustStock(id, req.delta(), req.note())));
+    }
 }
