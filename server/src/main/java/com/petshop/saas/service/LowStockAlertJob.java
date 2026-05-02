@@ -95,6 +95,22 @@ public class LowStockAlertJob {
                 intro, table,
                 "Ürünleri Görüntüle", url
         );
+
+        // Admin Telegram (opsiyonel — global ayar; tenant-bazlı değil — basit)
+        try {
+            StringBuilder tg = new StringBuilder("⚠️ *Düşük Stok* — ").append(c.getName()).append("\n");
+            int show = Math.min(low.size(), 5);
+            for (int i = 0; i < show; i++) {
+                Product p = low.get(i);
+                int avail = p.getStockQuantity() - p.getReservedQuantity();
+                tg.append("• ").append(p.getName()).append(" — *").append(avail).append("* adet\n");
+            }
+            if (low.size() > show) tg.append("... ve ").append(low.size() - show).append(" ürün daha");
+            notificationFacade.enqueueTelegramMessage(tg.toString());
+        } catch (Exception ignored) {
+            // Telegram opsiyonel — düşürmek hata verirse log'a düş
+        }
+
         log.info("Düşük stok email kuyruğa alındı: {} ({} ürün)", c.getSlug(), low.size());
     }
 
