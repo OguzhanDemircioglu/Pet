@@ -40,4 +40,39 @@ describe('ProductForm', () => {
     fireEvent.click(screen.getByText('Kaydet'))
     expect(await screen.findByRole('alert')).toHaveTextContent(/SKU zaten kullan/i)
   })
+
+  it('initial values formu önceden doldurur', () => {
+    render(<ProductForm
+      initial={{ name: 'Mevcut', sku: 'EXIST-1', price: 49.99, stock: 100, active: true }}
+      showSku={false}
+      showActive
+      onSubmit={vi.fn()}
+    />)
+    expect((screen.getByLabelText('Ad') as HTMLInputElement).value).toBe('Mevcut')
+    expect((screen.getByLabelText('Fiyat (₺)') as HTMLInputElement).value).toBe('49.99')
+    expect((screen.getByLabelText('Stok (adet)') as HTMLInputElement).value).toBe('100')
+    // showSku=false → SKU input görünmez
+    expect(screen.queryByLabelText('SKU')).toBeNull()
+    // showActive=true → checkbox checked
+    expect((screen.getByLabelText('Aktif') as HTMLInputElement).checked).toBe(true)
+  })
+
+  it('submit butonu pending durumunda disable + spinner metni', async () => {
+    let resolve: () => void = () => {}
+    const onSubmit = vi.fn(() => new Promise<void>(r => { resolve = r }))
+    render(<ProductForm showSku onSubmit={onSubmit} />)
+    fireEvent.change(screen.getByLabelText('Ad'), { target: { value: 'X' } })
+    fireEvent.change(screen.getByLabelText('SKU'), { target: { value: 'X' } })
+    const btn = screen.getByRole('button', { name: 'Kaydet' })
+    fireEvent.click(btn)
+    expect(await screen.findByText(/Kaydediliyor…/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Kaydediliyor…' })).toBeDisabled()
+    resolve()
+    await waitFor(() => expect(screen.getByRole('button')).toBeEnabled())
+  })
+
+  it('custom submitLabel kullanılır', () => {
+    render(<ProductForm showSku submitLabel="Oluştur" onSubmit={vi.fn()} />)
+    expect(screen.getByRole('button', { name: 'Oluştur' })).toBeInTheDocument()
+  })
 })

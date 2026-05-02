@@ -61,4 +61,25 @@ public class SaasChartController {
         }
         return ResponseEntity.ok(DataGenericResponse.of(result));
     }
+
+    @GetMapping("/top-sellers")
+    public ResponseEntity<DataGenericResponse<List<com.petshop.saas.dto.TopSellerDto>>> topSellers(
+            @RequestParam(defaultValue = "30") int days,
+            @RequestParam(defaultValue = "10") int limit) {
+        Long cid = TenantContext.require();
+        int safeDays = Math.max(1, Math.min(days, 365));
+        int safeLimit = Math.max(1, Math.min(limit, 50));
+        LocalDateTime since = LocalDate.now().minusDays(safeDays - 1L).atStartOfDay();
+
+        List<Object[]> rows = orderRepository.topSellersByCompanySince(cid, since,
+                org.springframework.data.domain.PageRequest.of(0, safeLimit));
+        List<com.petshop.saas.dto.TopSellerDto> result = rows.stream()
+                .map(r -> new com.petshop.saas.dto.TopSellerDto(
+                        ((Number) r[0]).longValue(),
+                        (String) r[1],
+                        ((Number) r[2]).longValue(),
+                        r[3] instanceof BigDecimal bd ? bd : new BigDecimal(r[3].toString())
+                )).toList();
+        return ResponseEntity.ok(DataGenericResponse.of(result));
+    }
 }

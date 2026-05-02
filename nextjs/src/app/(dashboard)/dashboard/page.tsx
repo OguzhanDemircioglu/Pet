@@ -31,6 +31,13 @@ export default function DashboardPage() {
     enabled: !isLoading && !!stats && stats.salesCount > 0,
   })
 
+  const { data: topSellers } = useQuery({
+    queryKey: ['saas', 'top-sellers', 30, 5],
+    queryFn: () => saasApi.topSellers(30, 5),
+    staleTime: 60_000,
+    enabled: !isLoading && !!stats && stats.salesCount > 0,
+  })
+
   if (isLoading) return <div className="text-gray-500">Yükleniyor…</div>
   if (error) return <div className="text-red-600">Hata: {(error as Error).message}</div>
   if (!stats) return null
@@ -150,6 +157,30 @@ export default function DashboardPage() {
             <MetricMini label="Ort. Sepet" value={`${Number(monthly.averageOrderValue).toFixed(2)} ₺`} />
             <MetricMini label="Aktif Ürün" value={`${monthly.activeProducts}/${monthly.totalProducts}`} />
           </div>
+        </section>
+      )}
+
+      {topSellers && topSellers.length > 0 && (
+        <section className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-950">
+          <h2 className="mb-3 text-lg font-semibold">En Çok Satanlar (30 gün)</h2>
+          <ol className="space-y-2 text-sm">
+            {topSellers.map((t, i) => (
+              <li key={t.productId} className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-100 text-xs font-bold text-red-700 dark:bg-red-900 dark:text-red-200">
+                    {i + 1}
+                  </span>
+                  <Link href={`/urunler/${t.productId}`} className="font-medium hover:text-sky-700 hover:underline">
+                    {t.productName}
+                  </Link>
+                </div>
+                <div className="flex items-baseline gap-3 text-right">
+                  <span className="text-xs text-gray-500">{t.totalQuantity} adet</span>
+                  <span className="font-semibold">{Number(t.totalRevenue).toFixed(2)} ₺</span>
+                </div>
+              </li>
+            ))}
+          </ol>
         </section>
       )}
 

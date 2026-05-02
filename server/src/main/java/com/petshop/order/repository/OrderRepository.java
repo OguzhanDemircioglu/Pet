@@ -81,4 +81,17 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             @org.springframework.data.repository.query.Param("to") java.time.LocalDateTime to,
             @org.springframework.data.repository.query.Param("q") String q,
             org.springframework.data.domain.Pageable pageable);
+
+    @org.springframework.data.jpa.repository.Query("""
+        SELECT oi.productId, oi.productName, SUM(oi.quantity), SUM(oi.lineTotal)
+        FROM OrderItem oi
+        WHERE oi.order.companyId = :cid
+          AND oi.order.createdAt >= :since
+        GROUP BY oi.productId, oi.productName
+        ORDER BY SUM(oi.quantity) DESC
+        """)
+    List<Object[]> topSellersByCompanySince(
+            @org.springframework.data.repository.query.Param("cid") Long companyId,
+            @org.springframework.data.repository.query.Param("since") java.time.LocalDateTime since,
+            org.springframework.data.domain.Pageable pageable);
 }

@@ -76,4 +76,47 @@ public class SaasExportController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .body(body);
     }
+
+    /**
+     * Ürünleri Excel/Sheets açabileceği CSV formatında export eder.
+     * Format ile birebir importProducts'ın beklediği şekilde — round-trip uyumlu.
+     */
+    @GetMapping(value = "/products.csv", produces = "text/csv;charset=UTF-8")
+    public ResponseEntity<String> exportProductsCsv() {
+        Long cid = TenantContext.require();
+        Company c = companyService.getById(cid);
+
+        List<ProductDto> products = productRepository
+                .findByCompanyId(cid, PageRequest.of(0, 10_000))
+                .map(ProductDto::from)
+                .getContent();
+
+        StringBuilder sb = new StringBuilder("﻿"); // UTF-8 BOM — Excel TR karakter için
+        sb.append("name,sku,price,stock\n");
+        for (ProductDto p : products) {
+            sb.append(csvEscape(p.name())).append(',')
+              .append(csvEscape(p.sku())).append(',')
+              .append(p.price() == null ? "0" : p.price().toPlainString()).append(',')
+              .append(p.stock() == null ? "0" : p.stock())
+              .append('\n');
+        }
+
+        auditLogger.log("DATA_EXPORT", "product", cid, "format=csv count=" + products.size());
+
+        String filename = "pettoptan-urunler-" + c.getSlug() + "-"
+                + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
+                + ".csv";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, "text/csv;charset=UTF-8")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .body(sb.toString());
+    }
+
+    private static String csvEscape(String s) {
+        if (s == null) return "";
+        boolean needsQuotes = s.contains(",") || s.contains("\"") || s.contains("\n") || s.contains(";");
+        String escaped = s.replace("\"", "\"\"");
+        return needsQuotes ? "\"" + escaped + "\"" : escaped;
+    }
 }

@@ -182,6 +182,14 @@ export const saasApi = {
     const r = await clientApi.get('/admin/saas/charts/sales-daily', { params: { days } })
     return r.data
   },
+  async topSellers(days = 30, limit = 10): Promise<TopSellerDto[]> {
+    const r = await clientApi.get('/admin/saas/charts/top-sellers', { params: { days, limit } })
+    return r.data
+  },
+  async exportProductsCsv(): Promise<Blob> {
+    const r = await clientApi.get('/admin/saas/export/products.csv', { responseType: 'blob' })
+    return r.data as Blob
+  },
   async searchSales(opts: { page?: number; size?: number; from?: string; to?: string; q?: string } = {}): Promise<PageResp<SaleDto>> {
     const r = await clientApi.get('/admin/saas/sales', {
       params: {
@@ -206,6 +214,13 @@ export const saasApi = {
     })
     return r.data
   },
+}
+
+export interface TopSellerDto {
+  productId: number
+  productName: string
+  totalQuantity: number
+  totalRevenue: number
 }
 
 export interface DailySalesPoint {
