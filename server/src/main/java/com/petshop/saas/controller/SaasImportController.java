@@ -24,4 +24,9 @@ public class SaasImportController {
     public ResponseEntity<DataGenericResponse<BulkImportResult>> importProducts(@RequestParam("file") MultipartFile file) {
         return ResponseEntity.ok(DataGenericResponse.of(service.importProductsCsv(file)));
     }
+
+    @PostMapping(value = "/products/update", consumes = "multipart/form-data")
+    public ResponseEntity<DataGenericResponse<BulkImportResult>> updateProducts(@RequestParam("file") MultipartFile file) {
+        return ResponseEntity.ok(DataGenericResponse.of(service.updateProductsCsv(file)));
+    }
 }

@@ -80,6 +80,10 @@ export const saasApi = {
   async deleteProduct(id: number): Promise<void> {
     await clientApi.delete(`/admin/saas/products/${id}`)
   },
+  async adjustStock(id: number, delta: number, note?: string): Promise<ProductDto> {
+    const r = await clientApi.post(`/admin/saas/products/${id}/stock`, { delta, note })
+    return r.data
+  },
   async createSale(input: { customerName?: string; notes?: string; items: { productId: number; quantity: number }[] }): Promise<SaleDto> {
     const r = await clientApi.post('/admin/saas/sales', input)
     return r.data

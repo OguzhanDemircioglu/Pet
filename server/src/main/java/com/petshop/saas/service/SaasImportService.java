@@ -158,6 +158,96 @@ public class SaasImportService {
         return new BulkImportResult(total, created, skipped, errors);
     }
 
+    /**
+     * CSV ile mevcut ürünleri toplu güncelle. Eşleşme SKU üzerinden.
+     * Format: name,sku,price,stock — eksik kolonlar değiştirilmez (nullable).
+     * Pratikte CSV'de hangi alan dolu gelirse o güncellenir; boş bırakılan alan
+     * mevcut değeri korur.
+     */
+    @Transactional
+    public BulkImportResult updateProductsCsv(MultipartFile file) {
+        Long cid = TenantContext.require();
+        if (file == null || file.isEmpty()) {
+            return new BulkImportResult(0, 0, 0, List.of(new BulkImportResult.RowError(0, "Dosya boş")));
+        }
+
+        List<BulkImportResult.RowError> errors = new ArrayList<>();
+        int updated = 0;
+        int total = 0;
+        int skipped = 0;
+
+        try (BufferedReader r = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+            String header = r.readLine();
+            if (header == null) return new BulkImportResult(0, 0, 0, List.of(new BulkImportResult.RowError(0, "Başlık satırı eksik")));
+            String[] cols = parseRow(header);
+            int skuIdx   = indexOf(cols, "sku");
+            int nameIdx  = indexOf(cols, "name");
+            int priceIdx = indexOf(cols, "price");
+            int stockIdx = indexOf(cols, "stock");
+            if (skuIdx < 0) return new BulkImportResult(0, 0, 0, List.of(new BulkImportResult.RowError(0, "SKU sütunu zorunlu")));
+
+            String line;
+            int rowNo = 1;
+            while ((line = r.readLine()) != null) {
+                rowNo++;
+                if (line.trim().isEmpty()) continue;
+                total++;
+                if (total > MAX_ROWS) {
+                    errors.add(new BulkImportResult.RowError(rowNo, "Limit aşıldı (max " + MAX_ROWS + " satır)"));
+                    break;
+                }
+                try {
+                    String[] vals = parseRow(line);
+                    String sku = safe(vals, skuIdx);
+                    if (sku.isBlank()) {
+                        errors.add(new BulkImportResult.RowError(rowNo, "SKU boş"));
+                        skipped++;
+                        continue;
+                    }
+                    Product p = productRepository.findBySku(sku).orElse(null);
+                    if (p == null || !p.getCompanyId().equals(cid)) {
+                        errors.add(new BulkImportResult.RowError(rowNo, "SKU bulunamadı: " + sku));
+                        skipped++;
+                        continue;
+                    }
+
+                    if (nameIdx >= 0) {
+                        String name = safe(vals, nameIdx);
+                        if (!name.isBlank()) p.setName(name);
+                    }
+                    if (priceIdx >= 0) {
+                        String priceStr = safe(vals, priceIdx);
+                        if (!priceStr.isBlank()) p.setBasePrice(new BigDecimal(priceStr.replace(',', '.')));
+                    }
+                    if (stockIdx >= 0) {
+                        String stockStr = safe(vals, stockIdx);
+                        if (!stockStr.isBlank()) {
+                            int s = Integer.parseInt(stockStr.trim());
+                            if (s < 0) throw new NumberFormatException("stok negatif olamaz");
+                            p.setStockQuantity(s);
+                        }
+                    }
+                    productRepository.save(p);
+                    updated++;
+                } catch (NumberFormatException nfe) {
+                    errors.add(new BulkImportResult.RowError(rowNo, "Sayı format hatası: " + nfe.getMessage()));
+                    skipped++;
+                } catch (Exception ex) {
+                    errors.add(new BulkImportResult.RowError(rowNo, ex.getMessage()));
+                    skipped++;
+                }
+            }
+        } catch (Exception e) {
+            log.error("CSV update I/O failed", e);
+            errors.add(new BulkImportResult.RowError(0, "Dosya okunamadı: " + e.getMessage()));
+        }
+
+        auditLogger.log("PRODUCT_BULK_UPDATE", "product", null,
+                "total=" + total + " updated=" + updated + " skipped=" + skipped);
+
+        return new BulkImportResult(total, updated, skipped, errors);
+    }
+
     private static int indexOf(String[] arr, String key) {
         for (int i = 0; i < arr.length; i++) if (arr[i].trim().equalsIgnoreCase(key)) return i;
         return -1;

@@ -27,12 +27,15 @@ public class SaasAuditController {
     @GetMapping
     public ResponseEntity<DataGenericResponse<Page<AuditLogDto>>> list(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size) {
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(required = false) String resourceType,
+            @RequestParam(required = false) String action) {
         Long cid = TenantContext.require();
-        // PRO+ özellik: kapsamlı audit erişimi
-        planLimitService.assertFeatureSalesHistory(cid); // FREE'de sales history kapalıysa audit de kapalı
+        planLimitService.assertFeatureSalesHistory(cid);
+        String rt = (resourceType == null || resourceType.isBlank()) ? null : resourceType;
+        String ac = (action == null || action.isBlank()) ? null : action;
         Page<AuditLogDto> result = auditRepo
-                .findByCompanyIdOrderByCreatedAtDesc(cid, PageRequest.of(page, Math.min(size, 200)))
+                .search(cid, rt, ac, PageRequest.of(page, Math.min(size, 200)))
                 .map(AuditLogDto::from);
         return ResponseEntity.ok(DataGenericResponse.of(result));
     }

@@ -3,8 +3,9 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { saasApi, type ProductDto } from '@/lib/api/saas'
+import StockAdjustModal from '@/components/products/StockAdjustModal'
 import toast from 'react-hot-toast'
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react'
 
 const PAGE_SIZE = 20
 
@@ -19,6 +20,7 @@ export default function ProductsPage() {
 
   const [page, setPage] = useState(0)
   const [search, setSearch] = useState('')
+  const [stockModalProduct, setStockModalProduct] = useState<ProductDto | null>(null)
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -117,7 +119,14 @@ export default function ProductsPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Link href={`/urunler/${p.id}`} className="text-sm text-sky-700 hover:underline">Düzenle</Link>
+                        <button
+                          onClick={() => setStockModalProduct(p)}
+                          className="inline-flex items-center gap-1 text-sm text-emerald-700 hover:underline"
+                          title="Stok ayarla"
+                        >
+                          <SlidersHorizontal className="h-3.5 w-3.5" /> Stok
+                        </button>
+                        <Link href={`/urunler/${p.id}`} className="ml-3 text-sm text-sky-700 hover:underline">Düzenle</Link>
                         <button
                           onClick={() => handleDelete(p.id, p.name)}
                           disabled={deleteMut.isPending}
@@ -155,6 +164,13 @@ export default function ProductsPage() {
             </div>
           )}
         </>
+      )}
+
+      {stockModalProduct && (
+        <StockAdjustModal
+          product={stockModalProduct}
+          onClose={() => setStockModalProduct(null)}
+        />
       )}
     </div>
   )
