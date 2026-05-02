@@ -4,37 +4,48 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { saasApi, type BulkImportResult } from '@/lib/api/saas'
-import { Upload, FileText, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Upload, FileText, AlertCircle, CheckCircle2, PlusCircle, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-const SAMPLE_CSV = `name,sku,price,stock
+const SAMPLE_CREATE = `name,sku,price,stock
 Royal Canin Kedi Maması 2kg,RC-CAT-2,189.90,42
 "Whiskas Kuru Mama, 5kg",WHS-DRY-5,289.50,30
 Pedigree Köpek Maması,PED-DOG-1,79.90,150`
+
+const SAMPLE_UPDATE = `sku,price,stock
+RC-CAT-2,199.90,55
+WHS-DRY-5,,40
+PED-DOG-1,89.90,`
+
+type Mode = 'create' | 'update'
 
 export default function ImportPage() {
   const router = useRouter()
   const qc = useQueryClient()
   const fileInput = useRef<HTMLInputElement>(null)
+  const [mode, setMode] = useState<Mode>('create')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [result, setResult] = useState<BulkImportResult | null>(null)
 
   const importMut = useMutation({
-    mutationFn: (file: File) => saasApi.importProductsCsv(file),
+    mutationFn: (file: File) => mode === 'create' ? saasApi.importProductsCsv(file) : saasApi.updateProductsCsv(file),
     onSuccess: (r) => {
       setResult(r)
       qc.invalidateQueries({ queryKey: ['saas'] })
-      if (r.createdCount > 0) toast.success(`${r.createdCount} ürün eklendi`)
+      const verb = mode === 'create' ? 'eklendi' : 'güncellendi'
+      if (r.createdCount > 0) toast.success(`${r.createdCount} ürün ${verb}`)
     },
     onError: (e) => toast.error((e as Error).message),
   })
 
   const downloadSample = () => {
-    const blob = new Blob([SAMPLE_CSV], { type: 'text/csv;charset=utf-8' })
+    const sample = mode === 'create' ? SAMPLE_CREATE : SAMPLE_UPDATE
+    const filename = mode === 'create' ? 'pettoptan-yeni-urunler.csv' : 'pettoptan-guncelle.csv'
+    const blob = new Blob([sample], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'pettoptan-ornek.csv'
+    a.download = filename
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -45,20 +56,55 @@ export default function ImportPage() {
     importMut.mutate(selectedFile)
   }
 
+  const switchMode = (m: Mode) => {
+    setMode(m)
+    setSelectedFile(null)
+    setResult(null)
+    if (fileInput.current) fileInput.current.value = ''
+  }
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Toplu Ürün Yükle (CSV)</h1>
-        <p className="mt-1 text-sm text-gray-500">Excel/Sheets ile hazırladığınız ürünleri tek seferde içe aktarın</p>
+        <h1 className="text-2xl font-bold">Toplu CSV İşlem</h1>
+        <p className="mt-1 text-sm text-gray-500">Yeni ürünleri içe aktar veya mevcut ürünleri SKU bazlı güncelle</p>
+      </div>
+
+      <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-800 dark:bg-gray-950">
+        <button
+          onClick={() => switchMode('create')}
+          className={`inline-flex items-center gap-1.5 rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
+            mode === 'create' ? 'bg-red-600 text-white' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+          }`}
+        >
+          <PlusCircle className="h-4 w-4" /> Yeni Ürün Ekle
+        </button>
+        <button
+          onClick={() => switchMode('update')}
+          className={`inline-flex items-center gap-1.5 rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
+            mode === 'update' ? 'bg-red-600 text-white' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+          }`}
+        >
+          <RefreshCw className="h-4 w-4" /> Mevcut Ürünleri Güncelle
+        </button>
       </div>
 
       <section className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950">
         <h2 className="mb-3 text-lg font-semibold">Format</h2>
-        <p className="mb-3 text-sm text-gray-600 dark:text-gray-400">
-          UTF-8, başlık satırı zorunlu. Ayraç: virgül <code>,</code> veya noktalı virgül <code>;</code>.
-          Maksimum 1000 satır.
-        </p>
-        <pre className="overflow-x-auto rounded bg-gray-50 p-3 font-mono text-xs dark:bg-gray-900">{SAMPLE_CSV}</pre>
+        {mode === 'create' ? (
+          <p className="mb-3 text-sm text-gray-600 dark:text-gray-400">
+            UTF-8, başlık satırı zorunlu (<code>name,sku,price,stock</code>). Ayraç: virgül veya noktalı virgül.
+            Maksimum 1000 satır. Aynı SKU varsa atlanır.
+          </p>
+        ) : (
+          <p className="mb-3 text-sm text-gray-600 dark:text-gray-400">
+            <code>sku</code> sütunu zorunlu, diğer sütunlar opsiyonel. Boş bırakılan alanlar mevcut değeri korur.
+            Sadece sizin ürünleriniz güncellenir (cross-tenant koruma).
+          </p>
+        )}
+        <pre className="overflow-x-auto rounded bg-gray-50 p-3 font-mono text-xs dark:bg-gray-900">
+          {mode === 'create' ? SAMPLE_CREATE : SAMPLE_UPDATE}
+        </pre>
         <button onClick={downloadSample} className="mt-3 inline-flex items-center gap-1.5 text-sm text-sky-700 hover:underline">
           <FileText className="h-4 w-4" /> Örnek CSV indir
         </button>
@@ -85,7 +131,7 @@ export default function ImportPage() {
           className="inline-flex items-center gap-1.5 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
         >
           <Upload className="h-4 w-4" />
-          {importMut.isPending ? 'Yükleniyor…' : 'Yükle'}
+          {importMut.isPending ? 'İşleniyor…' : (mode === 'create' ? 'Yeni Ürünleri Yükle' : 'Mevcut Ürünleri Güncelle')}
         </button>
         <Link href="/urunler" className="ml-3 text-sm text-gray-500 hover:underline">İptal</Link>
       </form>
@@ -95,7 +141,7 @@ export default function ImportPage() {
           <h2 className="mb-4 text-lg font-semibold">Sonuç</h2>
           <div className="grid grid-cols-3 gap-3">
             <Stat label="Toplam Satır" value={result.totalRows} />
-            <Stat label="Eklenen" value={result.createdCount} tone="success" />
+            <Stat label={mode === 'create' ? 'Eklenen' : 'Güncellenen'} value={result.createdCount} tone="success" />
             <Stat label="Atlanan" value={result.skippedCount} tone={result.skippedCount > 0 ? 'warn' : 'default'} />
           </div>
 

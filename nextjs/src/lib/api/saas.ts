@@ -119,8 +119,29 @@ export const saasApi = {
     const r = await clientApi.post('/admin/saas/plan/change', { plan })
     return r.data
   },
-  async listAudit(page = 0, size = 50): Promise<PageResp<AuditLogDto>> {
-    const r = await clientApi.get('/admin/saas/audit', { params: { page, size } })
+  async listAudit(opts: { page?: number; size?: number; resourceType?: string; action?: string } = {}): Promise<PageResp<AuditLogDto>> {
+    const r = await clientApi.get('/admin/saas/audit', {
+      params: {
+        page: opts.page ?? 0,
+        size: opts.size ?? 50,
+        ...(opts.resourceType ? { resourceType: opts.resourceType } : {}),
+        ...(opts.action ? { action: opts.action } : {}),
+      },
+    })
+    return r.data
+  },
+  async monthlyMetrics(period?: string): Promise<MonthlyMetrics> {
+    const r = await clientApi.get('/admin/saas/metrics/monthly', {
+      params: period ? { period } : {},
+    })
+    return r.data
+  },
+  async updateProductsCsv(file: File): Promise<BulkImportResult> {
+    const fd = new FormData()
+    fd.append('file', file)
+    const r = await clientApi.post('/admin/saas/import/products/update', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
     return r.data
   },
   async requestPasswordReset(email: string): Promise<void> {
@@ -170,6 +191,17 @@ export interface BulkImportResult {
   createdCount: number
   skippedCount: number
   errors: { row: number; reason: string }[]
+}
+
+export interface MonthlyMetrics {
+  period: string
+  totalSales: number
+  totalRevenue: number
+  averageOrderValue: number
+  totalProducts: number
+  activeProducts: number
+  lowStockProducts: number
+  inactiveProducts: number
 }
 
 export interface AuditLogDto {

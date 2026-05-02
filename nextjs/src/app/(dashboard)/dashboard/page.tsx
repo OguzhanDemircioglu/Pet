@@ -24,6 +24,13 @@ export default function DashboardPage() {
     enabled: !isLoading && !!stats && stats.salesCount > 0,
   })
 
+  const { data: monthly } = useQuery({
+    queryKey: ['saas', 'metrics', 'monthly'],
+    queryFn: () => saasApi.monthlyMetrics(),
+    staleTime: 60_000,
+    enabled: !isLoading && !!stats && stats.salesCount > 0,
+  })
+
   if (isLoading) return <div className="text-gray-500">Yükleniyor…</div>
   if (error) return <div className="text-red-600">Hata: {(error as Error).message}</div>
   if (!stats) return null
@@ -110,6 +117,21 @@ export default function DashboardPage() {
         </section>
       )}
 
+      {monthly && monthly.totalSales > 0 && (
+        <section className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-950">
+          <div className="mb-4 flex items-baseline justify-between">
+            <h2 className="text-lg font-semibold">Bu Ayki Performans</h2>
+            <span className="font-mono text-xs text-gray-500">{monthly.period}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            <MetricMini label="Satış" value={String(monthly.totalSales)} />
+            <MetricMini label="Ciro" value={`${Number(monthly.totalRevenue).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺`} accent />
+            <MetricMini label="Ort. Sepet" value={`${Number(monthly.averageOrderValue).toFixed(2)} ₺`} />
+            <MetricMini label="Aktif Ürün" value={`${monthly.activeProducts}/${monthly.totalProducts}`} />
+          </div>
+        </section>
+      )}
+
       <section>
         <h2 className="mb-3 text-lg font-semibold">Düşük Stoklu Ürünler</h2>
         {stats.lowStock.length === 0 ? (
@@ -154,6 +176,15 @@ export default function DashboardPage() {
           </ul>
         )}
       </section>
+    </div>
+  )
+}
+
+function MetricMini({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div>
+      <div className="text-xs uppercase text-gray-500">{label}</div>
+      <div className={`mt-1 text-xl font-bold ${accent ? 'text-red-600' : 'text-gray-900 dark:text-gray-100'}`}>{value}</div>
     </div>
   )
 }

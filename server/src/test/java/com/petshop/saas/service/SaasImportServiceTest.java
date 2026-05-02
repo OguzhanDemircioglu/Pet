@@ -150,4 +150,98 @@ class SaasImportServiceTest {
         assertThat(r.totalRows()).isZero();
         assertThat(r.errors()).isNotEmpty();
     }
+
+    // ─── updateProductsCsv ─────────────────────────────────────────────
+
+    @Test
+    void update_existing_product_modifies_fields() {
+        Product existing = Product.builder()
+                .id(99L).companyId(1L).name("Eski").sku("SKU-1")
+                .basePrice(new java.math.BigDecimal("10.00"))
+                .stockQuantity(5).reservedQuantity(0).build();
+        when(repo.findBySku("SKU-1")).thenReturn(Optional.of(existing));
+
+        var f = csv("""
+                sku,name,price,stock
+                SKU-1,Yeni,99.50,42
+                """);
+        BulkImportResult r = service.updateProductsCsv(f);
+        assertThat(r.createdCount()).isEqualTo(1);
+        assertThat(existing.getName()).isEqualTo("Yeni");
+        assertThat(existing.getBasePrice().compareTo(new java.math.BigDecimal("99.5"))).isZero();
+        assertThat(existing.getStockQuantity()).isEqualTo(42);
+    }
+
+    @Test
+    void update_blank_fields_preserve_existing() {
+        Product existing = Product.builder()
+                .id(99L).companyId(1L).name("Eski").sku("SKU-1")
+                .basePrice(new java.math.BigDecimal("10.00"))
+                .stockQuantity(5).reservedQuantity(0).build();
+        when(repo.findBySku("SKU-1")).thenReturn(Optional.of(existing));
+
+        var f = csv("""
+                sku,name,price,stock
+                SKU-1,,,42
+                """);
+        service.updateProductsCsv(f);
+        assertThat(existing.getName()).isEqualTo("Eski");
+        assertThat(existing.getBasePrice().compareTo(new java.math.BigDecimal("10.00"))).isZero();
+        assertThat(existing.getStockQuantity()).isEqualTo(42);
+    }
+
+    @Test
+    void update_unknown_sku_skipped() {
+        when(repo.findBySku("NOPE")).thenReturn(Optional.empty());
+        var f = csv("""
+                sku,price
+                NOPE,10
+                """);
+        BulkImportResult r = service.updateProductsCsv(f);
+        assertThat(r.createdCount()).isZero();
+        assertThat(r.skippedCount()).isEqualTo(1);
+        assertThat(r.errors().get(0).reason()).contains("bulunamadı");
+    }
+
+    @Test
+    void update_cross_tenant_sku_skipped() {
+        Product other = Product.builder().id(99L).companyId(999L).sku("OTHER")
+                .basePrice(new java.math.BigDecimal("1")).stockQuantity(1).reservedQuantity(0).build();
+        when(repo.findBySku("OTHER")).thenReturn(Optional.of(other));
+
+        var f = csv("""
+                sku,price
+                OTHER,10
+                """);
+        BulkImportResult r = service.updateProductsCsv(f);
+        assertThat(r.createdCount()).isZero();
+        assertThat(r.skippedCount()).isEqualTo(1);
+    }
+
+    @Test
+    void update_missing_sku_column_returns_error() {
+        var f = csv("""
+                name,price
+                X,10
+                """);
+        BulkImportResult r = service.updateProductsCsv(f);
+        assertThat(r.errors()).isNotEmpty();
+        assertThat(r.errors().get(0).reason()).contains("SKU sütunu zorunlu");
+    }
+
+    @Test
+    void update_negative_stock_skipped() {
+        Product existing = Product.builder()
+                .id(99L).companyId(1L).sku("SKU-1")
+                .basePrice(new java.math.BigDecimal("10")).stockQuantity(5).reservedQuantity(0).build();
+        when(repo.findBySku("SKU-1")).thenReturn(Optional.of(existing));
+
+        var f = csv("""
+                sku,stock
+                SKU-1,-5
+                """);
+        BulkImportResult r = service.updateProductsCsv(f);
+        assertThat(r.skippedCount()).isEqualTo(1);
+        assertThat(existing.getStockQuantity()).isEqualTo(5);
+    }
 }
