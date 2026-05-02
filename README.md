@@ -64,7 +64,7 @@ Bu script: `companies` tablosu + `company_id` kolonları + default company + ind
 ### Frontend (Next.js 16)
 
 ```
-nextjs/src/app/
+client/src/app/
 ├── (auth)/giris             — SaaS login
 ├── (auth)/kayit             — company register
 ├── (dashboard)/dashboard    — istatistik panosu
@@ -90,7 +90,7 @@ cd server && mvn test
 mvn test -Dtest=TenantIsolationIT -DdockerAvailable=true
 
 # Frontend (16 vitest + 8 Playwright e2e)
-cd nextjs && npm test && npm run test:e2e
+cd client && npm test && npm run test:e2e
 ```
 
 CI: `.github/workflows/ci.yml` — her PR'da otomatik.
@@ -102,7 +102,7 @@ CI: `.github/workflows/ci.yml` — her PR'da otomatik.
 cd server && mvn spring-boot:run
 
 # Frontend
-cd nextjs && npm run dev
+cd client && npm run dev
 ```
 
 Test company oluştur:

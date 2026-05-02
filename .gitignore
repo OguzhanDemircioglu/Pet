@@ -11,15 +11,15 @@
 /.claude/
 
 # Frontend build
-/nextjs/node_modules/
-/nextjs/.next/
-/nextjs/out/
+/client/node_modules/
+/client/.next/
+/client/out/
 
 # Test artifacts
-/nextjs/test-results/
-/nextjs/playwright-report/
-/nextjs/coverage/
-/nextjs/playwright/.cache/
+/client/test-results/
+/client/playwright-report/
+/client/coverage/
+/client/playwright/.cache/
 
 # OS
 Thumbs.db

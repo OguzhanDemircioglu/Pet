@@ -3,7 +3,7 @@
 #
 #   docker compose up -d
 #   cd server && DB_HOST=localhost DB_PORT=5432 DB_NAME=petshop DB_USERNAME=petshop DB_PASSWORD=petshop DB_SSL_MODE=disable mvn spring-boot:run
-#   cd nextjs && npm run dev
+#   cd client && npm run dev
 #
 # Adminer: http://localhost:8081 (Server: postgres, User: petshop, Password: petshop, Database: petshop)
 
