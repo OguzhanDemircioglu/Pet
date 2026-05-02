@@ -17,11 +17,17 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
         WHERE a.companyId = :cid
           AND (:resourceType IS NULL OR a.resourceType = :resourceType)
           AND (:action IS NULL OR a.action = :action)
+          AND (:from IS NULL OR a.createdAt >= :from)
+          AND (:to IS NULL OR a.createdAt <= :to)
+          AND (:resourceId IS NULL OR a.resourceId = :resourceId)
         ORDER BY a.createdAt DESC
         """)
     Page<AuditLog> search(
             @org.springframework.data.repository.query.Param("cid") Long companyId,
             @org.springframework.data.repository.query.Param("resourceType") String resourceType,
             @org.springframework.data.repository.query.Param("action") String action,
+            @org.springframework.data.repository.query.Param("from") java.time.LocalDateTime from,
+            @org.springframework.data.repository.query.Param("to") java.time.LocalDateTime to,
+            @org.springframework.data.repository.query.Param("resourceId") Long resourceId,
             Pageable pageable);
 }

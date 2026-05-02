@@ -119,16 +119,30 @@ export const saasApi = {
     const r = await clientApi.post('/admin/saas/plan/change', { plan })
     return r.data
   },
-  async listAudit(opts: { page?: number; size?: number; resourceType?: string; action?: string } = {}): Promise<PageResp<AuditLogDto>> {
+  async listAudit(opts: { page?: number; size?: number; resourceType?: string; action?: string; resourceId?: number; from?: string; to?: string } = {}): Promise<PageResp<AuditLogDto>> {
     const r = await clientApi.get('/admin/saas/audit', {
       params: {
         page: opts.page ?? 0,
         size: opts.size ?? 50,
         ...(opts.resourceType ? { resourceType: opts.resourceType } : {}),
         ...(opts.action ? { action: opts.action } : {}),
+        ...(opts.resourceId ? { resourceId: opts.resourceId } : {}),
+        ...(opts.from ? { from: opts.from } : {}),
+        ...(opts.to ? { to: opts.to } : {}),
       },
     })
     return r.data
+  },
+  async listApiKeys(): Promise<ApiKeyDto[]> {
+    const r = await clientApi.get('/admin/saas/api-keys')
+    return r.data
+  },
+  async createApiKey(input: { name: string; scopes?: string }): Promise<{ key: ApiKeyDto; plaintext: string }> {
+    const r = await clientApi.post('/admin/saas/api-keys', input)
+    return r.data
+  },
+  async revokeApiKey(id: number): Promise<void> {
+    await clientApi.delete(`/admin/saas/api-keys/${id}`)
   },
   async monthlyMetrics(period?: string): Promise<MonthlyMetrics> {
     const r = await clientApi.get('/admin/saas/metrics/monthly', {
@@ -191,6 +205,17 @@ export interface BulkImportResult {
   createdCount: number
   skippedCount: number
   errors: { row: number; reason: string }[]
+}
+
+export interface ApiKeyDto {
+  id: number
+  name: string
+  prefix: string
+  lastFour: string
+  scopes: string | null
+  lastUsedAt: string | null
+  revokedAt: string | null
+  createdAt: string
 }
 
 export interface MonthlyMetrics {

@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Package, Receipt, Users, Settings, Lock, History } from 'lucide-react'
+import { LayoutDashboard, Package, Receipt, Users, Settings, Lock, History, KeyRound } from 'lucide-react'
 import type { Plan } from '@/types'
 
 interface NavItem {
@@ -16,8 +16,9 @@ const NAV: NavItem[] = [
   { href: '/urunler',      label: 'Ürünler',      icon: Package },
   { href: '/satislar',     label: 'Satışlar',     icon: Receipt, requires: 'PRO' },
   { href: '/kullanicilar', label: 'Kullanıcılar', icon: Users,   requires: 'PRO' },
-  { href: '/audit',        label: 'Aktivite',     icon: History, requires: 'PRO' },
-  { href: '/ayarlar',      label: 'Ayarlar',      icon: Settings },
+  { href: '/audit',          label: 'Aktivite',       icon: History,  requires: 'PRO' },
+  { href: '/api-anahtarlari',label: 'API Anahtarları',icon: KeyRound, requires: 'PRO' },
+  { href: '/ayarlar',        label: 'Ayarlar',        icon: Settings },
 ]
 
 const ORDER: Record<Plan, number> = { FREE: 0, PRO: 1, PRO_PLUS: 2 }

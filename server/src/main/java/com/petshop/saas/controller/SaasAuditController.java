@@ -29,13 +29,18 @@ public class SaasAuditController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size,
             @RequestParam(required = false) String resourceType,
-            @RequestParam(required = false) String action) {
+            @RequestParam(required = false) String action,
+            @RequestParam(required = false) Long resourceId,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate from,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate to) {
         Long cid = TenantContext.require();
         planLimitService.assertFeatureSalesHistory(cid);
         String rt = (resourceType == null || resourceType.isBlank()) ? null : resourceType;
         String ac = (action == null || action.isBlank()) ? null : action;
+        java.time.LocalDateTime fromDt = from != null ? from.atStartOfDay() : null;
+        java.time.LocalDateTime toDt   = to != null ? to.plusDays(1).atStartOfDay() : null;
         Page<AuditLogDto> result = auditRepo
-                .search(cid, rt, ac, PageRequest.of(page, Math.min(size, 200)))
+                .search(cid, rt, ac, fromDt, toDt, resourceId, PageRequest.of(page, Math.min(size, 200)))
                 .map(AuditLogDto::from);
         return ResponseEntity.ok(DataGenericResponse.of(result));
     }

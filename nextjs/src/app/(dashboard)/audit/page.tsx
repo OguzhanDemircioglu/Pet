@@ -39,30 +39,34 @@ export default function AuditPage() {
   const [page, setPage] = useState(0)
   const [resourceType, setResourceType] = useState('')
   const [action, setAction] = useState('')
-  const [applied, setApplied] = useState({ resourceType: '', action: '' })
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
+  const [applied, setApplied] = useState({ resourceType: '', action: '', from: '', to: '' })
 
   const { data, isLoading, error, isFetching } = useQuery({
-    queryKey: ['saas', 'audit', page, applied.resourceType, applied.action],
+    queryKey: ['saas', 'audit', page, applied.resourceType, applied.action, applied.from, applied.to],
     queryFn: () => saasApi.listAudit({
       page, size: 50,
       resourceType: applied.resourceType || undefined,
       action: applied.action || undefined,
+      from: applied.from || undefined,
+      to: applied.to || undefined,
     }),
     staleTime: 30_000,
   })
 
   const logs: AuditLogDto[] = data?.content ?? []
   const totalPages = data?.totalPages ?? 1
-  const hasFilter = applied.resourceType || applied.action
+  const hasFilter = applied.resourceType || applied.action || applied.from || applied.to
 
   const apply = (e: React.FormEvent) => {
     e.preventDefault()
     setPage(0)
-    setApplied({ resourceType, action })
+    setApplied({ resourceType, action, from, to })
   }
   const reset = () => {
-    setResourceType(''); setAction('')
-    setApplied({ resourceType: '', action: '' })
+    setResourceType(''); setAction(''); setFrom(''); setTo('')
+    setApplied({ resourceType: '', action: '', from: '', to: '' })
     setPage(0)
   }
 
@@ -83,6 +87,12 @@ export default function AuditPage() {
           <select value={action} onChange={(e) => setAction(e.target.value)} className={input}>
             {ACTION_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
+        </Field>
+        <Field label="Başlangıç">
+          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={input} />
+        </Field>
+        <Field label="Bitiş">
+          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={input} />
         </Field>
         <button type="submit" className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
           Filtrele
