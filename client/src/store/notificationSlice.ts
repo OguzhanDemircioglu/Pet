@@ -1,75 +1,32 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import { notificationApi, type NotificationResponse } from '../api/orderApi'
-import type { RootState } from './index'
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import type { NotificationResponse } from '@/types'
 
 interface NotificationState {
   items: NotificationResponse[]
-  loading: boolean
   loaded: boolean
 }
 
-const initialState: NotificationState = {
-  items: [],
-  loading: false,
-  loaded: false,
-}
-
-export const fetchNotificationsThunk = createAsyncThunk(
-  'notifications/fetch',
-  async () => notificationApi.listMy(),
-  {
-    condition: (_, { getState }) => {
-      const state = getState() as RootState
-      return !state.notifications.loaded
-    },
-  }
-)
-
-export const markReadThunk = createAsyncThunk(
-  'notifications/markRead',
-  async (id: number) => {
-    await notificationApi.markRead(id)
-    return id
-  }
-)
-
-export const markAllReadThunk = createAsyncThunk(
-  'notifications/markAllRead',
-  async () => {
-    await notificationApi.markAllRead()
-  }
-)
-
 const notificationSlice = createSlice({
   name: 'notifications',
-  initialState,
+  initialState: { items: [], loaded: false } as NotificationState,
   reducers: {
-    resetNotifications: (state) => {
-      state.loaded = false
-      state.items = []
+    setNotifications(state, action: PayloadAction<NotificationResponse[]>) {
+      state.items = action.payload
+      state.loaded = true
     },
-  },
-  extraReducers: (builder) => {
-    builder
-      .addCase(fetchNotificationsThunk.pending, (state) => { state.loading = true })
-      .addCase(fetchNotificationsThunk.fulfilled, (state, action) => {
-        if (action.payload) {
-          state.items = action.payload
-          state.loaded = true
-        }
-        state.loading = false
-      })
-      .addCase(fetchNotificationsThunk.rejected, (state) => { state.loading = false })
-      .addCase(markReadThunk.fulfilled, (state, action) => {
-        const id = action.payload
-        const n = state.items.find(x => x.id === id)
-        if (n) n.isRead = true
-      })
-      .addCase(markAllReadThunk.fulfilled, (state) => {
-        state.items.forEach(n => { n.isRead = true })
-      })
+    markRead(state, action: PayloadAction<number>) {
+      const n = state.items.find(x => x.id === action.payload)
+      if (n) n.isRead = true
+    },
+    markAllRead(state) {
+      state.items.forEach(n => { n.isRead = true })
+    },
+    reset(state) {
+      state.items = []
+      state.loaded = false
+    },
   },
 })
 
-export const { resetNotifications } = notificationSlice.actions
+export const { setNotifications, markRead, markAllRead, reset: resetNotifications } = notificationSlice.actions
 export default notificationSlice.reducer
