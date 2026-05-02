@@ -1,13 +1,32 @@
 import { test, expect } from '@playwright/test'
 
-/**
- * Sayfa render testleri. Backend'siz sınanır.
- * Middleware/redirect davranışı vitest middleware.test.ts'de unit olarak sınanıyor;
- * gerçek redirect e2e'de NextAuth session validation gerekiyor (entegrasyon ortamı).
- */
+test.describe('Auth-only routing (backend gerektirmez)', () => {
+  test('anasayfa auth\'suz → /giris', async ({ page }) => {
+    await page.goto('/')
+    await expect(page).toHaveURL(/\/giris(\?|$)/)
+  })
 
-test.describe('Public sayfa render', () => {
-  test('/giris SaaS login formu', async ({ page }) => {
+  test('/dashboard auth\'suz → /giris (callbackUrl ile)', async ({ page }) => {
+    await page.goto('/dashboard')
+    await expect(page).toHaveURL(/\/giris\?.*callbackUrl=.*dashboard/)
+  })
+
+  test('/urunler auth\'suz → /giris', async ({ page }) => {
+    await page.goto('/urunler')
+    await expect(page).toHaveURL(/\/giris/)
+  })
+
+  test('/satislar auth\'suz → /giris', async ({ page }) => {
+    await page.goto('/satislar')
+    await expect(page).toHaveURL(/\/giris/)
+  })
+
+  test('/kullanicilar auth\'suz → /giris', async ({ page }) => {
+    await page.goto('/kullanicilar')
+    await expect(page).toHaveURL(/\/giris/)
+  })
+
+  test('/giris SaaS login formu render', async ({ page }) => {
     await page.goto('/giris')
     await expect(page.getByRole('heading', { name: /giriş yap/i })).toBeVisible()
     await expect(page.getByLabel('E-posta')).toBeVisible()
@@ -15,7 +34,7 @@ test.describe('Public sayfa render', () => {
     await expect(page.getByRole('link', { name: /ücretsiz başla/i })).toBeVisible()
   })
 
-  test('/kayit company register formu', async ({ page }) => {
+  test('/kayit company register formu render', async ({ page }) => {
     await page.goto('/kayit')
     await expect(page.getByRole('heading', { name: /pettoptan/i })).toBeVisible()
     await expect(page.getByLabel('İşletme Adı')).toBeVisible()
@@ -24,12 +43,11 @@ test.describe('Public sayfa render', () => {
     await expect(page.getByRole('button', { name: /ücretsiz hesap/i })).toBeVisible()
   })
 
-  test('/giris hatalı şifre toast veya alert gösterir', async ({ page }) => {
+  test('giriş hatalı şifre alert mesajı gösterir', async ({ page }) => {
     await page.goto('/giris')
     await page.getByLabel('E-posta').fill('test@example.com')
     await page.getByLabel('Şifre').fill('wrong-password-x')
     await page.getByRole('button', { name: /giriş yap/i }).click()
-    // Backend yoksa NextAuth credentials authorize null döner → form alert mesajı
     await expect(page.getByRole('alert')).toBeVisible({ timeout: 15_000 })
   })
 })
