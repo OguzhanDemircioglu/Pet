@@ -9,21 +9,19 @@ public record UserResponse(
         String lastName,
         String phone,
         String role,
+        Long companyId,
+        String plan,
         boolean pendingEmailChange
 ) {
     public static UserResponse from(User user) {
-        return new UserResponse(
-                user.getId(),
-                user.getEmail(),
-                user.getFirstName(),
-                user.getLastName(),
-                user.getPhone(),
-                user.getRole().name(),
-                false
-        );
+        return from(user, false, null);
     }
 
     public static UserResponse from(User user, boolean pendingEmailChange) {
+        return from(user, pendingEmailChange, null);
+    }
+
+    public static UserResponse from(User user, boolean pendingEmailChange, String plan) {
         return new UserResponse(
                 user.getId(),
                 user.getEmail(),
@@ -31,6 +29,8 @@ public record UserResponse(
                 user.getLastName(),
                 user.getPhone(),
                 user.getRole().name(),
+                user.getCompanyId(),
+                plan,
                 pendingEmailChange
         );
     }

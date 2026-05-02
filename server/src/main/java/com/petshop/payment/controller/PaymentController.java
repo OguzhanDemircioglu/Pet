@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+
+@ConditionalOnProperty(name = "features.legacy-ecommerce", havingValue = "true", matchIfMissing = false)
 @RestController
 @RequestMapping("/payment")
 @RequiredArgsConstructor

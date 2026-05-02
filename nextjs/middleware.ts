@@ -1,17 +1,45 @@
 import { auth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 
-const protectedPaths = ['/profil']
+const dashboardPaths = ['/dashboard', '/urunler', '/satislar', '/kullanicilar', '/ayarlar']
+const authOnlyVisitorPaths = ['/giris', '/kayit']
+
+const proPaths = ['/satislar', '/kullanicilar']
+const proPlusPaths = ['/shop-settings']
+
+function startsWithAny(path: string, list: string[]) {
+  return list.some(p => path === p || path.startsWith(p + '/'))
+}
 
 export default auth((req) => {
   const { nextUrl } = req
-  const session = req.auth
+  const session = req.auth as unknown as
+    | { user?: unknown; plan?: 'FREE' | 'PRO' | 'PRO_PLUS' | null }
+    | null
   const isLoggedIn = !!session?.user
+  const plan = session?.plan ?? null
+  const path = nextUrl.pathname
 
-  const isProtected = protectedPaths.some(p => nextUrl.pathname.startsWith(p))
+  if (isLoggedIn && startsWithAny(path, authOnlyVisitorPaths)) {
+    return NextResponse.redirect(new URL('/dashboard', nextUrl))
+  }
 
-  if (isProtected && !isLoggedIn) {
-    return NextResponse.redirect(new URL('/giris', nextUrl))
+  if (startsWithAny(path, dashboardPaths) && !isLoggedIn) {
+    const url = new URL('/giris', nextUrl)
+    url.searchParams.set('callbackUrl', path)
+    return NextResponse.redirect(url)
+  }
+
+  if (isLoggedIn && startsWithAny(path, proPaths) && plan === 'FREE') {
+    const url = new URL('/dashboard', nextUrl)
+    url.searchParams.set('upgrade', '1')
+    return NextResponse.redirect(url)
+  }
+
+  if (isLoggedIn && startsWithAny(path, proPlusPaths) && plan !== 'PRO_PLUS') {
+    const url = new URL('/dashboard', nextUrl)
+    url.searchParams.set('upgrade', '1')
+    return NextResponse.redirect(url)
   }
 
   return NextResponse.next()

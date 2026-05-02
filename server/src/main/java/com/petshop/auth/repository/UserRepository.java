@@ -23,4 +23,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Modifying
     @Query("DELETE FROM User u WHERE u.emailVerified = false AND u.createdAt < :cutoff")
     int deleteUnverifiedBefore(@Param("cutoff") LocalDateTime cutoff);
+
+    // Tenant-aware (SaaS multi-user)
+    List<User> findByCompanyIdOrderByCreatedAtDesc(Long companyId);
+    long countByCompanyId(Long companyId);
+    Optional<User> findByIdAndCompanyId(Long id, Long companyId);
 }

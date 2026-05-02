@@ -27,6 +27,9 @@ public class Product {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "company_id", nullable = false)
+    private Long companyId;
+
     @Column(nullable = false, length = 255)
     private String name;
 
@@ -43,7 +46,7 @@ public class Product {
     private String shortDescription;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id", nullable = false)
+    @JoinColumn(name = "category_id")
     private Category category;
 
     @ManyToOne(fetch = FetchType.LAZY)

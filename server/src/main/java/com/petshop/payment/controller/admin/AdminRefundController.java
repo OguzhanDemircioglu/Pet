@@ -14,6 +14,9 @@ import java.util.Map;
  * Admin: iade ve fatura retry endpoint'leri.
  * Cross-module bağımlılık: invoice modülünde sadece {@link InvoiceFacade} kullanır.
  */
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+
+@ConditionalOnProperty(name = "features.legacy-ecommerce", havingValue = "true", matchIfMissing = false)
 @RestController
 @RequestMapping("/admin/orders")
 @RequiredArgsConstructor

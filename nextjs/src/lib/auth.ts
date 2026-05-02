@@ -108,6 +108,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const u = token.backendUser as User
       if (u) {
         session.user = { ...session.user, ...u, id: String(u.id) } as typeof session.user
+        ;(session as unknown as Record<string, unknown>).companyId = u.companyId
+        ;(session as unknown as Record<string, unknown>).plan = u.plan
       }
       return session
     },

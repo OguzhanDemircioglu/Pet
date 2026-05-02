@@ -1,6 +1,7 @@
 package com.petshop.auth.service;
 
 import com.petshop.auth.api.AuthFacade;
+import com.petshop.tenant.service.TenantContext;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -30,6 +31,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String token = extractToken(request);
+        boolean tenantSet = false;
 
         if (token != null && jwtTokenProvider.validateToken(token)) {
             try {
@@ -49,12 +51,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         List.of(new SimpleGrantedAuthority("ROLE_" + role))
                 );
                 SecurityContextHolder.getContext().setAuthentication(auth);
+
+                Number cidNum = claims.get("companyId", Number.class);
+                if (cidNum != null) {
+                    String plan = claims.get("plan", String.class);
+                    TenantContext.set(cidNum.longValue(), plan);
+                    tenantSet = true;
+                } else {
+                    log.warn("JWT companyId yok — eski token, SaaS endpoint'leri 401 verecek (userId={})", userId);
+                }
             } catch (Exception e) {
                 log.debug("JWT auth failed: {}", e.getMessage());
             }
         }
 
-        filterChain.doFilter(request, response);
+        try {
+            filterChain.doFilter(request, response);
+        } finally {
+            if (tenantSet) TenantContext.clear();
+        }
     }
 
     private String extractToken(HttpServletRequest request) {

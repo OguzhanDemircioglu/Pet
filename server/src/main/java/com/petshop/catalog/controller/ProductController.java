@@ -22,6 +22,9 @@ import java.util.List;
  * Stok bildirim aboneliği endpoint'leri notification modülünde
  * ({@code com.petshop.notification.controller.StockSubscriptionController}).
  */
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+
+@ConditionalOnProperty(name = "features.legacy-ecommerce", havingValue = "true", matchIfMissing = false)
 @RestController
 @RequestMapping("/products")
 @RequiredArgsConstructor

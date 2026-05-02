@@ -40,19 +40,15 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // Public endpoints
-                .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/register", "/auth/google", "/auth/refresh", "/auth/verify-email", "/auth/resend-verification").permitAll()
+                // Public auth endpoints
+                .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/register", "/auth/register-company", "/auth/google", "/auth/refresh", "/auth/verify-email", "/auth/resend-verification").permitAll()
                 .requestMatchers(HttpMethod.GET, "/auth/me/email/confirm").permitAll()
-                .requestMatchers(HttpMethod.GET, "/categories/**", "/products/**", "/brands/**", "/public/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/products/*/reviews").permitAll()
-                .requestMatchers(HttpMethod.POST, "/orders/guest").permitAll()
-                .requestMatchers(HttpMethod.POST, "/products/*/notify-stock").permitAll()
-                .requestMatchers(HttpMethod.POST, "/payment/iyzico/callback").permitAll()
-                .requestMatchers(HttpMethod.POST, "/admin/discounts/validate-coupon").permitAll()
+                // Public PRO+ mini shop (Faz 5) — sadece okuma
+                .requestMatchers(HttpMethod.GET, "/public/shop/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
                 // Admin only
                 .requestMatchers("/admin/**").hasRole("ADMIN")
-                // Everything else needs auth
+                // Hepsi auth
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

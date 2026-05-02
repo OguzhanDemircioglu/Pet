@@ -22,6 +22,9 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+
+@ConditionalOnProperty(name = "features.legacy-ecommerce", havingValue = "true", matchIfMissing = false)
 @RestController
 @RequestMapping("/admin/products/{productId}/images")
 @PreAuthorize("hasRole('ADMIN')")

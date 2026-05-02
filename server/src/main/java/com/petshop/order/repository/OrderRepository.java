@@ -40,4 +40,15 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Object[]> findBestSellerProductIdsByStatuses(
             @Param("statuses") java.util.Collection<Order.OrderStatus> statuses,
             org.springframework.data.domain.Pageable pageable);
+
+    // ─── Tenant-aware (SaaS) ─────────────────────────────────────────────────
+
+    long countByCompanyId(Long companyId);
+
+    org.springframework.data.domain.Page<Order> findByCompanyIdOrderByCreatedAtDesc(Long companyId,
+            org.springframework.data.domain.Pageable pageable);
+
+    Optional<Order> findByIdAndCompanyId(Long id, Long companyId);
+
+    List<Order> findTop10ByCompanyIdOrderByCreatedAtDesc(Long companyId);
 }

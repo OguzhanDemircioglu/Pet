@@ -25,18 +25,34 @@ public class JwtTokenProvider {
     }
 
     public String generateAccessToken(Long userId, String email, String role, int tokenVersion) {
+        return generateAccessToken(userId, email, role, tokenVersion, null, null);
+    }
+
+    public String generateAccessToken(Long userId, String email, String role, int tokenVersion,
+                                      Long companyId, String plan) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + accessTokenExpirationMs);
 
-        return Jwts.builder()
+        JwtBuilder b = Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim("email", email)
                 .claim("role", role)
                 .claim("tv", tokenVersion)
                 .issuedAt(now)
                 .expiration(expiry)
-                .signWith(key)
-                .compact();
+                .signWith(key);
+        if (companyId != null) b.claim("companyId", companyId);
+        if (plan != null) b.claim("plan", plan);
+        return b.compact();
+    }
+
+    public Long getCompanyIdFromToken(String token) {
+        Number n = parseToken(token).get("companyId", Number.class);
+        return n == null ? null : n.longValue();
+    }
+
+    public String getPlanFromToken(String token) {
+        return parseToken(token).get("plan", String.class);
     }
 
     public Claims parseToken(String token) {

@@ -76,6 +76,9 @@ cloudinary:
   api-key: ${CLOUDINARY_API_KEY:}
   api-secret: ${CLOUDINARY_API_SECRET:}
 
+features:
+  legacy-ecommerce: ${LEGACY_ECOMMERCE:false}
+
 logging:
   level:
     com.petshop: INFO

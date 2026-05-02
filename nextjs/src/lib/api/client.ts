@@ -71,7 +71,14 @@ clientApi.interceptors.response.use(
     }
 
     const backendMsg = error.response?.data?.message
-    return Promise.reject(backendMsg ? new Error(backendMsg) : error)
+    const backendCode = error.response?.data?.errors?.code as string | undefined
+    if (backendMsg || backendCode) {
+      const e = new Error(backendMsg || 'İşlem başarısız') as Error & { code?: string; status?: number }
+      e.code = backendCode
+      e.status = status
+      return Promise.reject(e)
+    }
+    return Promise.reject(error)
   }
 )
 

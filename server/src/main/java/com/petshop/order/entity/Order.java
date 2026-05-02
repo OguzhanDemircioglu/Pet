@@ -24,6 +24,9 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "company_id", nullable = false)
+    private Long companyId;
+
     @Column(name = "order_number", nullable = false, unique = true, length = 20)
     private String orderNumber;
 

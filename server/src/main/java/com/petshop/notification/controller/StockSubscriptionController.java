@@ -18,6 +18,9 @@ import java.util.Map;
  * Daha önce catalog/ProductController içindeydi; modüler sınırları korumak için
  * notification modülüne taşındı. URL aynı: /products/{productId}/notify-stock
  */
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+
+@ConditionalOnProperty(name = "features.legacy-ecommerce", havingValue = "true", matchIfMissing = false)
 @RestController
 @RequestMapping("/products/{productId}/notify-stock")
 @RequiredArgsConstructor

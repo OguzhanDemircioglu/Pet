@@ -127,4 +127,23 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     @Query("SELECT p FROM Product p WHERE p.isActive = true AND p.stockQuantity - p.reservedQuantity > 0")
     Page<Product> findInStock(Pageable pageable);
+
+    // ─── Tenant-aware queries (SaaS dashboard) ────────────────────────────────
+
+    long countByCompanyId(Long companyId);
+
+    Page<Product> findByCompanyId(Long companyId, Pageable pageable);
+
+    Optional<Product> findByIdAndCompanyId(Long id, Long companyId);
+
+    boolean existsByIdAndCompanyId(Long id, Long companyId);
+
+    @Query("""
+        SELECT p FROM Product p
+        WHERE p.companyId = :cid
+          AND p.isActive = true
+          AND (p.stockQuantity - p.reservedQuantity) <= :threshold
+        ORDER BY (p.stockQuantity - p.reservedQuantity) ASC
+        """)
+    List<Product> findLowStockByCompany(@Param("cid") Long companyId, @Param("threshold") int threshold, Pageable pageable);
 }

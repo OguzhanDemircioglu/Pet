@@ -78,6 +78,47 @@ public class GlobalExceptionHandler {
         log.debug("Client disconnected before response completed");
     }
 
+    @ExceptionHandler(com.petshop.tenant.exception.PlanLimitExceededException.class)
+    public ResponseEntity<GenericResponse> handlePlanLimit(com.petshop.tenant.exception.PlanLimitExceededException ex) {
+        log.info("Plan limit exceeded: {}", ex.getMessage());
+        Map<String, String> details = new LinkedHashMap<>();
+        details.put("code", com.petshop.tenant.exception.PlanLimitExceededException.CODE);
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(GenericResponse.error(ex.getMessage(), details));
+    }
+
+    @ExceptionHandler(com.petshop.tenant.exception.PlanFeatureLockedException.class)
+    public ResponseEntity<GenericResponse> handlePlanFeature(com.petshop.tenant.exception.PlanFeatureLockedException ex) {
+        Map<String, String> details = new LinkedHashMap<>();
+        details.put("code", com.petshop.tenant.exception.PlanFeatureLockedException.CODE);
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(GenericResponse.error(ex.getMessage(), details));
+    }
+
+    @ExceptionHandler(com.petshop.tenant.exception.CrossTenantAccessException.class)
+    public ResponseEntity<GenericResponse> handleCrossTenant(com.petshop.tenant.exception.CrossTenantAccessException ex) {
+        log.warn("Cross-tenant access blocked: {}", ex.getMessage());
+        Map<String, String> details = new LinkedHashMap<>();
+        details.put("code", com.petshop.tenant.exception.CrossTenantAccessException.CODE);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(GenericResponse.error("Kayıt bulunamadı", details));
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<GenericResponse> handleIllegalState(IllegalStateException ex) {
+        // TenantContext.require() throws this when companyId yok — auth sorunu olarak ele al
+        if (ex.getMessage() != null && ex.getMessage().contains("TenantContext")) {
+            log.warn("Tenant context missing — eski JWT veya filter bypass: {}", ex.getMessage());
+            Map<String, String> details = new LinkedHashMap<>();
+            details.put("code", "TENANT_CONTEXT_MISSING");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(GenericResponse.error("Oturum süresi dolmuş — tekrar giriş yapın", details));
+        }
+        log.error("Illegal state", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(GenericResponse.error(ExceptionMessages.UNEXPECTED_ERROR.get()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<GenericResponse> handleGeneral(Exception ex) {
         log.error("Unhandled exception", ex);

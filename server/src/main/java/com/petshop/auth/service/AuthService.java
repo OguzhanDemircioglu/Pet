@@ -47,6 +47,8 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final NotificationFacade notificationFacade;
     private final PendingEmailChangeRepository pendingEmailChangeRepository;
+    private final com.petshop.tenant.repository.CompanyRepository companyRepository;
+    private final com.petshop.tenant.service.CompanyService companyService;
 
     @Value("${app.url}")
     private String appUrl;
@@ -58,6 +60,34 @@ public class AuthService {
 
     @Value("${jwt.refresh-token-expiration-ms}")
     private long refreshTokenExpirationMs;
+
+    /**
+     * SaaS register: Company + Admin user atomik oluşturur, FREE plan ile başlar.
+     * Email verification atlanır (admin direkt giriş yapsın).
+     */
+    @Transactional
+    public AuthResponse registerCompany(com.petshop.auth.dto.request.RegisterCompanyRequest req) {
+        if (userRepository.existsByEmail(req.email())) {
+            throw new BusinessException(AuthMessages.EMAIL_ALREADY_EXISTS.get());
+        }
+
+        com.petshop.tenant.entity.Company company = companyService.createCompany(
+                req.companyName(), com.petshop.tenant.entity.Company.Plan.FREE);
+
+        User admin = User.builder()
+                .companyId(company.getId())
+                .email(req.email())
+                .passwordHash(passwordEncoder.encode(req.password()))
+                .firstName(req.firstName())
+                .lastName(req.lastName())
+                .role(User.Role.ADMIN)
+                .isActive(true)
+                .emailVerified(true)
+                .build();
+        userRepository.save(admin);
+
+        return generateAuthResponse(admin);
+    }
 
     @Transactional
     public AuthResponse login(LoginRequest req) {
@@ -91,7 +121,12 @@ public class AuthService {
 
         String code = String.format("%06d", RANDOM.nextInt(1_000_000));
 
+        Long defaultCompanyId = companyRepository.findBySlug("default")
+                .map(c -> c.getId())
+                .orElseThrow(() -> new IllegalStateException("Default company yok — DB migration çalıştırılmalı"));
+
         User user = User.builder()
+                .companyId(defaultCompanyId)
                 .email(req.email())
                 .passwordHash(passwordEncoder.encode(req.password()))
                 .firstName(req.firstName())
@@ -182,7 +217,11 @@ public class AuthService {
                     return u;
                 })
                 .orElseGet(() -> {
+                    Long defaultCompanyId = companyRepository.findBySlug("default")
+                            .map(c -> c.getId())
+                            .orElseThrow(() -> new IllegalStateException("Default company yok"));
                     User newUser = User.builder()
+                            .companyId(defaultCompanyId)
                             .email(email)
                             .googleId(googleId)
                             .firstName(firstName)
@@ -247,8 +286,14 @@ public class AuthService {
     // ---- private helpers ----
 
     private AuthResponse generateAuthResponse(User user) {
+        String plan = null;
+        if (user.getCompanyId() != null) {
+            plan = companyRepository.findPlanById(user.getCompanyId())
+                    .map(Enum::name).orElse(null);
+        }
         String accessToken = jwtTokenProvider.generateAccessToken(
-                user.getId(), user.getEmail(), user.getRole().name(), user.getTokenVersion());
+                user.getId(), user.getEmail(), user.getRole().name(), user.getTokenVersion(),
+                user.getCompanyId(), plan);
 
         String refreshTokenStr = UUID.randomUUID().toString();
         RefreshToken rt = RefreshToken.builder()
@@ -259,7 +304,7 @@ public class AuthService {
                 .build();
         refreshTokenRepository.save(rt);
 
-        return new AuthResponse(accessToken, refreshTokenStr, UserResponse.from(user));
+        return new AuthResponse(accessToken, refreshTokenStr, UserResponse.from(user, false, plan));
     }
 
     private JsonNode fetchGoogleUserInfo(String accessToken) {

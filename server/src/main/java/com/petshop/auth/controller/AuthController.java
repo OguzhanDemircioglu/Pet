@@ -37,6 +37,12 @@ public class AuthController {
         return ResponseEntity.ok(GenericResponse.ok("Doğrulama kodu e-posta adresinize gönderildi."));
     }
 
+    @PostMapping("/register-company")
+    public ResponseEntity<DataGenericResponse<AuthResponse>> registerCompany(
+            @Valid @RequestBody com.petshop.auth.dto.request.RegisterCompanyRequest req) {
+        return ResponseEntity.ok(DataGenericResponse.of(authService.registerCompany(req)));
+    }
+
     @PostMapping("/verify-email")
     public ResponseEntity<DataGenericResponse<AuthResponse>> verifyEmail(@RequestBody Map<String, String> body) {
         String email = body.get("email");

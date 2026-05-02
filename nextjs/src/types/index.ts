@@ -62,6 +62,8 @@ export interface Product {
   variants: ProductVariant[]
 }
 
+export type Plan = 'FREE' | 'PRO' | 'PRO_PLUS'
+
 export interface User {
   id: number
   email: string
@@ -69,6 +71,8 @@ export interface User {
   lastName: string
   phone: string | null
   role: 'ADMIN' | 'CUSTOMER'
+  companyId: number | null
+  plan: Plan | null
   pendingEmailChange: boolean
 }
 

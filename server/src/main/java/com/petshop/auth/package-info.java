@@ -4,7 +4,8 @@
                 "notification :: api",
                 "dto",
                 "exception",
-                "constant"
+                "constant",
+                "tenant"
         }
 )
 package com.petshop.auth;
