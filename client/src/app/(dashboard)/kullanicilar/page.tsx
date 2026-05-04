@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { saasApi, type CompanyUserDto } from '@/lib/api/saas'
 import toast from 'react-hot-toast'
+import { swalError } from '@/lib/swal'
 
 export default function UsersPage() {
   const [users, setUsers] = useState<CompanyUserDto[]>([])
@@ -9,6 +10,7 @@ export default function UsersPage() {
   const [showInvite, setShowInvite] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [role, setRole] = useState<'STAFF' | 'ADMIN'>('STAFF')
   const [busy, setBusy] = useState(false)
 
   const load = () => {
@@ -21,16 +23,16 @@ export default function UsersPage() {
     e.preventDefault()
     setBusy(true)
     try {
-      await saasApi.inviteUser({ email, password })
+      await saasApi.inviteUser({ email, password, role })
       toast.success('Kullanıcı eklendi')
-      setEmail(''); setPassword(''); setShowInvite(false)
+      setEmail(''); setPassword(''); setRole('STAFF'); setShowInvite(false)
       load()
     } catch (err) {
       const e = err as Error & { code?: string }
       if (e.code === 'PLAN_FEATURE_LOCKED') {
-        toast.error('Çoklu kullanıcı PRO planı gerektirir.', { duration: 5000 })
+        swalError('Çoklu kullanıcı PRO planı gerektirir.', 'Plan kısıtı')
       } else {
-        toast.error(e.message)
+        swalError(e.message)
       }
     } finally {
       setBusy(false)
@@ -44,7 +46,7 @@ export default function UsersPage() {
       toast.success('Pasifleştirildi')
       load()
     } catch (e) {
-      toast.error((e as Error).message)
+      swalError((e as Error).message)
     }
   }
 
@@ -64,6 +66,23 @@ export default function UsersPage() {
         <form onSubmit={submit} className="space-y-3 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
           <input type="email" placeholder="E-posta" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900" />
           <input type="password" placeholder="Geçici şifre" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900" />
+          <fieldset className="space-y-2">
+            <legend className="text-xs font-medium text-gray-700 dark:text-gray-300">Rol</legend>
+            <label className="flex cursor-pointer items-start gap-2 rounded-md border border-gray-300 p-2 text-sm dark:border-gray-700">
+              <input type="radio" name="role" value="STAFF" checked={role === 'STAFF'} onChange={() => setRole('STAFF')} className="mt-0.5" />
+              <span>
+                <span className="font-medium">Personel (Staff)</span>
+                <span className="block text-xs text-gray-500">Ürün, satış, stok, dashboard. Plan/ayarlar/diğer kullanıcı yönetimi yok.</span>
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-2 rounded-md border border-gray-300 p-2 text-sm dark:border-gray-700">
+              <input type="radio" name="role" value="ADMIN" checked={role === 'ADMIN'} onChange={() => setRole('ADMIN')} className="mt-0.5" />
+              <span>
+                <span className="font-medium">Yönetici (Admin)</span>
+                <span className="block text-xs text-gray-500">Tam yetki — sizinle aynı seviyede. Plan/şirket ayarlarını da değiştirebilir.</span>
+              </span>
+            </label>
+          </fieldset>
           <button type="submit" disabled={busy} className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
             {busy ? 'Ekleniyor…' : 'Ekle'}
           </button>

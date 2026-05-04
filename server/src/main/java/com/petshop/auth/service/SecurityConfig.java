@@ -51,7 +51,12 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/actuator/health/**", "/actuator/info").permitAll()
                 // Metrics (production'da reverse proxy/firewall ile internal IP'lere kısıtlanmalı)
                 .requestMatchers(HttpMethod.GET, "/actuator/metrics/**").hasRole("ADMIN")
-                // Admin only
+                // SaaS daily ops accessible to STAFF too. Sensitive sub-areas
+                // (user mgmt, plan, company settings, api keys, audit log) are
+                // additionally locked down to ADMIN via @PreAuthorize on the
+                // individual controllers.
+                .requestMatchers("/admin/saas/**").hasAnyRole("ADMIN", "STAFF")
+                // Legacy e-commerce admin surface stays ADMIN-only.
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 // Hepsi auth
                 .anyRequest().authenticated()

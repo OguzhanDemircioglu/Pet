@@ -111,7 +111,7 @@ export const saasApi = {
     const r = await clientApi.get('/admin/saas/users')
     return r.data
   },
-  async inviteUser(input: { email: string; password: string; firstName?: string; lastName?: string }): Promise<CompanyUserDto> {
+  async inviteUser(input: { email: string; password: string; firstName?: string; lastName?: string; role?: 'ADMIN' | 'STAFF' }): Promise<CompanyUserDto> {
     const r = await clientApi.post('/admin/saas/users', input)
     return r.data
   },

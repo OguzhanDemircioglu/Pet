@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { saasApi, type ProductDto } from '@/lib/api/saas'
 import toast from 'react-hot-toast'
+import { swalError } from '@/lib/swal'
 
 interface Line { productId: number; quantity: number }
 
@@ -28,14 +29,14 @@ export default function NewSalePage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (lines.length === 0) return toast.error('En az bir ürün ekleyin')
+    if (lines.length === 0) { swalError('En az bir ürün ekleyin'); return }
     setBusy(true)
     try {
       await saasApi.createSale({ customerName: customer || undefined, items: lines })
       toast.success('Satış kaydedildi')
       router.push('/satislar')
     } catch (e) {
-      toast.error((e as Error).message)
+      swalError((e as Error).message)
     } finally {
       setBusy(false)
     }

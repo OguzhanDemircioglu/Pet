@@ -95,9 +95,13 @@ public class SaasSalesService {
                                 java.time.LocalDate from, java.time.LocalDate to, String q) {
         Long cid = TenantContext.require();
         planLimitService.assertFeatureSalesHistory(cid);
-        java.time.LocalDateTime fromDt = from != null ? from.atStartOfDay() : null;
-        java.time.LocalDateTime toDt   = to != null ? to.plusDays(1).atStartOfDay() : null;
-        String qNorm = (q == null || q.isBlank()) ? null : q.trim();
+        java.time.LocalDateTime fromDt = from != null
+                ? from.atStartOfDay()
+                : java.time.LocalDateTime.of(1970, 1, 1, 0, 0);
+        java.time.LocalDateTime toDt = to != null
+                ? to.plusDays(1).atStartOfDay()
+                : java.time.LocalDateTime.of(9999, 12, 31, 0, 0);
+        String qNorm = (q == null || q.isBlank()) ? "" : q.trim();
         return orderRepository
                 .searchByCompany(cid, fromDt, toDt, qNorm, PageRequest.of(page, Math.min(size, 100)))
                 .map(SaleDto::from);

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { saasApi, type ApiKeyDto } from '@/lib/api/saas'
 import toast from 'react-hot-toast'
+import { swalError } from '@/lib/swal'
 import { KeyRound, Copy, AlertTriangle, Check } from 'lucide-react'
 
 export default function ApiKeysPage() {
@@ -26,7 +27,7 @@ export default function ApiKeysPage() {
       setName(''); setScopes('')
       qc.invalidateQueries({ queryKey: ['saas', 'api-keys'] })
     },
-    onError: (e) => toast.error((e as Error).message),
+    onError: (e) => swalError((e as Error).message),
   })
 
   const revokeMut = useMutation({
@@ -35,7 +36,7 @@ export default function ApiKeysPage() {
       toast.success('Anahtar iptal edildi')
       qc.invalidateQueries({ queryKey: ['saas', 'api-keys'] })
     },
-    onError: (e) => toast.error((e as Error).message),
+    onError: (e) => swalError((e as Error).message),
   })
 
   return (

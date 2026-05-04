@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { saasApi } from '@/lib/api/saas'
-import toast from 'react-hot-toast'
+import { swalError } from '@/lib/swal'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -16,7 +16,7 @@ export default function ForgotPasswordPage() {
       await saasApi.requestPasswordReset(email)
       setDone(true)
     } catch (err) {
-      toast.error((err as Error).message)
+      swalError((err as Error).message)
     } finally {
       setBusy(false)
     }

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { signOut } from 'next-auth/react'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
+import { swalError } from '@/lib/swal'
 import { saasApi } from '@/lib/api/saas'
 import type { Plan } from '@/types'
 
@@ -48,7 +49,7 @@ export default function SettingsPage() {
       toast.success('Plan değiştirildi. Yeni plan için tekrar giriş yapın.')
       setTimeout(() => signOut({ callbackUrl: '/giris' }), 1500)
     } catch (err) {
-      toast.error((err as Error).message)
+      swalError((err as Error).message)
       setBusy(null)
     }
   }
@@ -148,9 +149,9 @@ function NotificationSettingsCard() {
     } catch (e) {
       const err = e as Error & { code?: string }
       if (err.code === 'PLAN_FEATURE_LOCKED') {
-        toast.error('Bu özellik PRO plan ile açılır')
+        swalError('Bu özellik PRO plan ile açılır', 'Plan kısıtı')
       } else {
-        toast.error(err.message)
+        swalError(err.message)
       }
     } finally {
       setBusy(false)
@@ -260,7 +261,7 @@ function ExportButton() {
       URL.revokeObjectURL(url)
       toast.success('Veri yedeği indirildi')
     } catch (e) {
-      toast.error((e as Error).message)
+      swalError((e as Error).message)
     } finally {
       setBusy(false)
     }

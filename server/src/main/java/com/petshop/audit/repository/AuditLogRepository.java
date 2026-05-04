@@ -12,14 +12,17 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     @org.springframework.data.jpa.repository.Query("DELETE FROM AuditLog a WHERE a.createdAt < :cutoff")
     int deleteOlderThan(@org.springframework.data.repository.query.Param("cutoff") java.time.LocalDateTime cutoff);
 
+    // All filter params required and non-null; callers pass sentinels for "any" —
+    // ("" for strings, epoch/max for dates, -1 for resourceId). Avoids Postgres
+    // failing to determine the type of a null-bound `:param IS NULL` placeholder.
     @org.springframework.data.jpa.repository.Query("""
         SELECT a FROM AuditLog a
         WHERE a.companyId = :cid
-          AND (:resourceType IS NULL OR a.resourceType = :resourceType)
-          AND (:action IS NULL OR a.action = :action)
-          AND (:from IS NULL OR a.createdAt >= :from)
-          AND (:to IS NULL OR a.createdAt <= :to)
-          AND (:resourceId IS NULL OR a.resourceId = :resourceId)
+          AND (:resourceType = '' OR a.resourceType = :resourceType)
+          AND (:action = '' OR a.action = :action)
+          AND a.createdAt >= :from
+          AND a.createdAt <= :to
+          AND (:resourceId = -1 OR a.resourceId = :resourceId)
         ORDER BY a.createdAt DESC
         """)
     Page<AuditLog> search(

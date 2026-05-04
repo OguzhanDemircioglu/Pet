@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { saasApi, type ProductDto } from '@/lib/api/saas'
 import { Plus, Minus, X } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { swalError } from '@/lib/swal'
 
 interface Props {
   product: ProductDto
@@ -23,12 +24,12 @@ export default function StockAdjustModal({ product, onClose }: Props) {
       qc.invalidateQueries({ queryKey: ['saas'] })
       onClose()
     },
-    onError: (e) => toast.error((e as Error).message),
+    onError: (e) => swalError((e as Error).message),
   })
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (delta === 0) return toast.error('Değişim 0 olamaz')
+    if (delta === 0) { swalError('Değişim 0 olamaz'); return }
     mut.mutate()
   }
 

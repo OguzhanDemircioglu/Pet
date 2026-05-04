@@ -63,7 +63,7 @@ public class DailySummaryJob {
         LocalDateTime from = today.atStartOfDay();
         LocalDateTime to = today.plusDays(1).atStartOfDay();
 
-        var orders = orderRepository.searchByCompany(c.getId(), from, to, null, PageRequest.of(0, 1000));
+        var orders = orderRepository.searchByCompany(c.getId(), from, to, "", PageRequest.of(0, 1000));
         long count = orders.getTotalElements();
         if (count == 0) {
             log.debug("Daily summary atlandı (satış yok): {}", c.getSlug());

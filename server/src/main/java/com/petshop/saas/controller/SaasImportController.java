@@ -15,7 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/admin/saas/import")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','STAFF')")
 public class SaasImportController {
 
     private final SaasImportService service;

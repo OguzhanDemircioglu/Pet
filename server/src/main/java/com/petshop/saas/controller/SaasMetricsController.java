@@ -30,7 +30,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/admin/saas/metrics")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','STAFF')")
 public class SaasMetricsController {
 
     private static final DateTimeFormatter MONTH_FMT = DateTimeFormatter.ofPattern("yyyy-MM");
@@ -47,8 +47,8 @@ public class SaasMetricsController {
         LocalDateTime from = ym.atDay(1).atStartOfDay();
         LocalDateTime to = ym.atEndOfMonth().atTime(23, 59, 59);
 
-        // Aylık satışlar — searchByCompany null-friendly filter zaten var
-        var orders = orderRepository.searchByCompany(cid, from, to, null, PageRequest.of(0, 10_000));
+        // Aylık satışlar — :q must be "" (empty), not null, to avoid Postgres lower(bytea) error
+        var orders = orderRepository.searchByCompany(cid, from, to, "", PageRequest.of(0, 10_000));
         long totalSales = orders.getTotalElements();
         BigDecimal totalRevenue = orders.getContent().stream()
                 .map(Order::getTotal)

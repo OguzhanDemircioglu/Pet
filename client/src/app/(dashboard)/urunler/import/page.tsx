@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { saasApi, type BulkImportResult } from '@/lib/api/saas'
 import { Upload, FileText, AlertCircle, CheckCircle2, PlusCircle, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { swalError } from '@/lib/swal'
 
 const SAMPLE_CREATE = `name,sku,price,stock
 Royal Canin Kedi Maması 2kg,RC-CAT-2,189.90,42
@@ -35,7 +36,7 @@ export default function ImportPage() {
       const verb = mode === 'create' ? 'eklendi' : 'güncellendi'
       if (r.createdCount > 0) toast.success(`${r.createdCount} ürün ${verb}`)
     },
-    onError: (e) => toast.error((e as Error).message),
+    onError: (e) => swalError((e as Error).message),
   })
 
   const downloadSample = () => {
@@ -52,7 +53,7 @@ export default function ImportPage() {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedFile) return toast.error('CSV dosyası seçin')
+    if (!selectedFile) { swalError('CSV dosyası seçin'); return }
     importMut.mutate(selectedFile)
   }
 

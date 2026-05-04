@@ -41,18 +41,22 @@ public class SaasUsersService {
         if (userRepository.existsByEmail(req.email())) {
             throw new BusinessException("Bu e-posta zaten kullanılıyor");
         }
+        // Default to STAFF (daily ops). Owner can promote later or pass role=ADMIN
+        // explicitly when they want to grant full access. Cannot invite as CUSTOMER.
+        User.Role assigned = (req.role() == null) ? User.Role.STAFF : User.Role.valueOf(req.role());
         User u = User.builder()
                 .companyId(cid)
                 .email(req.email())
                 .passwordHash(passwordEncoder.encode(req.password()))
                 .firstName(req.firstName())
                 .lastName(req.lastName())
-                .role(User.Role.ADMIN)
+                .role(assigned)
                 .isActive(true)
                 .emailVerified(true)
                 .build();
         User saved = userRepository.save(u);
-        auditLogger.log("USER_INVITE", "user", saved.getId(), "email=" + saved.getEmail());
+        auditLogger.log("USER_INVITE", "user", saved.getId(),
+                "email=" + saved.getEmail() + " role=" + assigned.name());
         return CompanyUserDto.from(saved);
     }
 

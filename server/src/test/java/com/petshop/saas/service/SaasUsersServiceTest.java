@@ -64,7 +64,7 @@ class SaasUsersServiceTest {
         when(userRepo.countByCompanyId(7L)).thenReturn(0L);
         when(userRepo.existsByEmail("new@x.com")).thenReturn(false);
 
-        service.invite(new InviteUserRequest("new@x.com", "secret123", "A", "B"));
+        service.invite(new InviteUserRequest("new@x.com", "secret123", "A", "B", null));
 
         // İlk user → plan limit kontrolü yapılmaz (multi-user FREE'de 1 hakkı)
         verify(planLimit, never()).assertFeatureMultiUser(anyLong());
@@ -76,7 +76,7 @@ class SaasUsersServiceTest {
         when(userRepo.countByCompanyId(7L)).thenReturn(1L);
         doThrow(new PlanFeatureLockedException("PRO gerekli")).when(planLimit).assertFeatureMultiUser(7L);
 
-        assertThatThrownBy(() -> service.invite(new InviteUserRequest("new@x.com", "secret123", null, null)))
+        assertThatThrownBy(() -> service.invite(new InviteUserRequest("new@x.com", "secret123", null, null, null)))
                 .isInstanceOf(PlanFeatureLockedException.class);
         verify(userRepo, never()).save(any(User.class));
     }
@@ -86,7 +86,7 @@ class SaasUsersServiceTest {
         when(userRepo.countByCompanyId(7L)).thenReturn(0L);
         when(userRepo.existsByEmail("dupe@x.com")).thenReturn(true);
 
-        assertThatThrownBy(() -> service.invite(new InviteUserRequest("dupe@x.com", "secret123", null, null)))
+        assertThatThrownBy(() -> service.invite(new InviteUserRequest("dupe@x.com", "secret123", null, null, null)))
                 .isInstanceOf(BusinessException.class);
     }
 

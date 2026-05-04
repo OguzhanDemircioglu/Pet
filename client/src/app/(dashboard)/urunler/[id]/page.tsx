@@ -6,6 +6,7 @@ import ProductForm from '@/components/products/ProductForm'
 import StockAdjustModal from '@/components/products/StockAdjustModal'
 import { saasApi } from '@/lib/api/saas'
 import toast from 'react-hot-toast'
+import { swalError } from '@/lib/swal'
 import { History, SlidersHorizontal } from 'lucide-react'
 
 export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
@@ -55,9 +56,14 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           showActive
           submitLabel="Güncelle"
           onSubmit={async (v) => {
-            await saasApi.updateProduct(p.id, { name: v.name, price: v.price, stock: v.stock, active: v.active })
-            toast.success('Güncellendi')
-            router.push('/urunler')
+            try {
+              await saasApi.updateProduct(p.id, { name: v.name, price: v.price, stock: v.stock, active: v.active })
+              toast.success('Güncellendi')
+              router.push('/urunler')
+            } catch (e) {
+              swalError((e as Error).message)
+              throw e
+            }
           }}
         />
       </section>

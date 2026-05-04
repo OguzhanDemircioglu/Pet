@@ -7,6 +7,10 @@ const authOnlyVisitorPaths = ['/giris', '/kayit', '/sifre-unuttum', '/dogrula']
 // /sifre-sifirla?token=... emaildeki linkten geldiği için auth'lu da görebilir, redirect etme
 
 const proPaths = ['/satislar', '/kullanicilar', '/audit', '/api-anahtarlari']
+// PRO-prefixed routes that FREE users actually CAN reach (carve-outs).
+// FREE: can record sales (backend SaasSalesService.create() doesn't gate by plan,
+// matches README "FREE: ... basit satış kaydı"). The history page itself stays PRO.
+const proPathFreeExceptions = ['/satislar/yeni']
 const proPlusPaths = ['/shop-settings']
 
 function startsWithAny(path: string, list: string[]) {
@@ -32,7 +36,12 @@ export default auth((req) => {
     return NextResponse.redirect(url)
   }
 
-  if (isLoggedIn && startsWithAny(path, proPaths) && plan === 'FREE') {
+  if (
+    isLoggedIn &&
+    startsWithAny(path, proPaths) &&
+    !startsWithAny(path, proPathFreeExceptions) &&
+    plan === 'FREE'
+  ) {
     const url = new URL('/dashboard', nextUrl)
     url.searchParams.set('upgrade', '1')
     return NextResponse.redirect(url)

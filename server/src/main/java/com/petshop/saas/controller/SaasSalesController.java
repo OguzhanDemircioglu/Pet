@@ -16,7 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/admin/saas/sales")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','STAFF')")
 public class SaasSalesController {
 
     private final SaasSalesService service;

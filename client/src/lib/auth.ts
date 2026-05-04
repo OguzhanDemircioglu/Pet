@@ -5,12 +5,47 @@ import type { User } from '@/types'
 
 const BASE_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
 
+// Backend access token: 15 dk TTL. 60s headroom — refresh kicks in at minute 14
+// to absorb clock skew + the round-trip latency of the refresh call itself.
+const ACCESS_TOKEN_TTL_MS = 14 * 60 * 1000
+
 function unwrap<T>(data: unknown): T {
   const d = data as Record<string, unknown>
   if (d && typeof d === 'object' && 'success' in d) {
     return (d.data ?? d) as T
   }
   return data as T
+}
+
+type TokenPair = { accessToken: string; refreshToken: string; user: User }
+
+// Calls backend POST /auth/refresh and returns a fresh token bundle. Backend
+// rotates the refresh token (old one revoked), so we replace both. Failure
+// (network error or revoked refresh token) marks the JWT with an error so the
+// client side interceptor signs the user out cleanly instead of pretending the
+// session is still valid.
+async function refreshAccessToken(token: Record<string, unknown>): Promise<Record<string, unknown>> {
+  try {
+    const res = await fetch(`${BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: token.refreshToken }),
+    })
+    if (!res.ok) throw new Error(`refresh ${res.status}`)
+    const json = await res.json()
+    const tokens = unwrap<TokenPair>(json)
+    if (!tokens.accessToken) throw new Error('refresh empty')
+    return {
+      ...token,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken ?? token.refreshToken,
+      accessTokenExpires: Date.now() + ACCESS_TOKEN_TTL_MS,
+      backendUser: tokens.user,
+      error: undefined,
+    }
+  } catch {
+    return { ...token, error: 'RefreshAccessTokenError' }
+  }
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -60,23 +95,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // Google ilk login: Google access_token'ı backend /auth/google'a değiş, kendi JWT'mizi al.
       if (account?.provider === 'google' && account.access_token) {
         try {
-          console.log('[auth.jwt] google → backend exchange başlıyor')
           const res = await fetch(`${BASE_URL}/auth/google`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ accessToken: account.access_token }),
           })
-          console.log('[auth.jwt] backend /auth/google status:', res.status)
           if (res.ok) {
             const json = await res.json()
-            const tokens = unwrap<{ accessToken: string; refreshToken: string; user: User }>(json)
+            const tokens = unwrap<TokenPair>(json)
             token.accessToken = tokens.accessToken
             token.refreshToken = tokens.refreshToken
             token.backendUser = tokens.user
-            console.log('[auth.jwt] backend tokens alındı, accessToken length:', tokens.accessToken?.length, 'phone:', tokens.user?.phone)
+            token.accessTokenExpires = Date.now() + ACCESS_TOKEN_TTL_MS
           } else {
-            const text = await res.text().catch(() => '')
-            console.error('[auth.jwt] backend /auth/google başarısız:', text.slice(0, 200))
+            console.error('[auth.jwt] backend /auth/google başarısız:', res.status)
           }
         } catch (err) {
           console.error('[auth.jwt] backend exchange exception:', err)
@@ -87,8 +119,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.accessToken = u.accessToken as string
         token.refreshToken = u.refreshToken as string
         token.backendUser = u.backendUser as User
+        token.accessTokenExpires = Date.now() + ACCESS_TOKEN_TTL_MS
       }
-      // Client `update()` çağrısı: backend'den fresh user çek, token'ı yenile.
+      // Client `update()` çağrısı: backend'den fresh user çek.
       if (trigger === 'update' && token.accessToken) {
         try {
           const res = await fetch(`${BASE_URL}/auth/me`, {
@@ -100,6 +133,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }
         } catch { /* token eski haliyle kalsın */ }
       }
+      // Auto-refresh: access token TTL bitmek üzereyse refresh akışını çalıştır.
+      // Initial sign-in (henüz expires set değil) ve update trigger'ı yukarıda
+      // halledildi; bu blok sonraki request'lerde devreye girer.
+      const expires = token.accessTokenExpires as number | undefined
+      if (token.accessToken && expires && Date.now() >= expires) {
+        return await refreshAccessToken(token)
+      }
       return token
     },
 
@@ -110,6 +150,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user = { ...session.user, ...u, id: String(u.id) } as typeof session.user
         ;(session as unknown as Record<string, unknown>).companyId = u.companyId
         ;(session as unknown as Record<string, unknown>).plan = u.plan
+      }
+      // Refresh failed → propagate so client interceptor can sign user out.
+      if (token.error) {
+        ;(session as unknown as Record<string, unknown>).error = token.error
       }
       return session
     },

@@ -28,7 +28,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/admin/saas/charts")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','STAFF')")
 public class SaasChartController {
 
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("yyyy-MM-dd");

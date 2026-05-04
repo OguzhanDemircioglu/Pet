@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import toast from 'react-hot-toast'
+import { swalError } from '@/lib/swal'
 import clientApi from '@/lib/api/client'
 
 export default function VerifyEmailPage() {
@@ -44,7 +45,7 @@ export default function VerifyEmailPage() {
       await clientApi.post('/auth/resend-verification', { email })
       toast.success('Yeni doğrulama kodu gönderildi')
     } catch (e) {
-      toast.error((e as Error).message)
+      swalError((e as Error).message)
     } finally {
       setBusy(false)
     }

@@ -50,6 +50,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     Optional<Order> findByIdAndCompanyId(Long id, Long companyId);
 
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "items")
     List<Order> findTop10ByCompanyIdOrderByCreatedAtDesc(Long companyId);
 
     @org.springframework.data.jpa.repository.Query("""
@@ -66,13 +67,16 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             @org.springframework.data.repository.query.Param("cid") Long companyId,
             @org.springframework.data.repository.query.Param("since") java.time.LocalDateTime since);
 
+    // All params required and non-null. Callers pass sentinels (epoch/max for dates, "" for q)
+    // when filter is "any" — this avoids Postgres failing to infer parameter types for
+    // null binds (lower(bytea) / could not determine data type).
     @org.springframework.data.jpa.repository.Query("""
         SELECT o FROM Order o
         WHERE o.companyId = :cid
-          AND (:from IS NULL OR o.createdAt >= :from)
-          AND (:to   IS NULL OR o.createdAt <= :to)
-          AND (:q    IS NULL OR LOWER(COALESCE(o.guestName, '')) LIKE LOWER(CONCAT('%', :q, '%'))
-                              OR LOWER(o.orderNumber) LIKE LOWER(CONCAT('%', :q, '%')))
+          AND o.createdAt >= :from
+          AND o.createdAt <= :to
+          AND (:q = '' OR LOWER(COALESCE(o.guestName, '')) LIKE LOWER(CONCAT('%', :q, '%'))
+                       OR LOWER(o.orderNumber) LIKE LOWER(CONCAT('%', :q, '%')))
         ORDER BY o.createdAt DESC
         """)
     org.springframework.data.domain.Page<Order> searchByCompany(

@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation'
 import ProductForm from '@/components/products/ProductForm'
 import { saasApi } from '@/lib/api/saas'
 import toast from 'react-hot-toast'
+import { swalError } from '@/lib/swal'
 
 export default function NewProductPage() {
   const router = useRouter()
@@ -20,11 +21,13 @@ export default function NewProductPage() {
           } catch (e) {
             const err = e as Error & { code?: string }
             if (err.code === 'PLAN_LIMIT_EXCEEDED') {
-              toast.error('FREE plan ürün limitine ulaştınız. PRO plana yükseltin.', { duration: 5000 })
+              swalError('FREE plan ürün limitine ulaştınız. PRO plana yükseltin.', 'Plan limiti aşıldı')
             } else {
-              toast.error(err.message)
+              swalError(err.message)
             }
-            throw e
+            // No re-throw: ProductForm's inline-banner path is reserved for client-side
+            // validation; API errors are owned by the Swal modal here.
+            throw e // keep throw so ProductForm catch resets busy via finally
           }
         }}
       />

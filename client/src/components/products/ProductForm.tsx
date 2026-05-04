@@ -34,8 +34,10 @@ export default function ProductForm({ initial, showSku = true, showActive = fals
     setBusy(true)
     try {
       await onSubmit({ name, sku: showSku ? sku : undefined, price: Number(price), stock: Number(stock), active: showActive ? active : undefined })
-    } catch (e) {
-      setErr((e as Error).message)
+    } catch {
+      // API errors are surfaced by the caller via Swal — keep this banner for
+      // client-side validation only (e.g. "Ad zorunlu") so we don't show the
+      // same message twice.
     } finally {
       setBusy(false)
     }

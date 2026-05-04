@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { saasApi, type ProductDto } from '@/lib/api/saas'
 import StockAdjustModal from '@/components/products/StockAdjustModal'
 import toast from 'react-hot-toast'
+import { swalError } from '@/lib/swal'
 import { Search, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react'
 
 const PAGE_SIZE = 20
@@ -40,7 +41,7 @@ export default function ProductsPage() {
       toast.success('Ürün silindi')
       qc.invalidateQueries({ queryKey: ['saas'] })
     },
-    onError: (e) => toast.error((e as Error).message),
+    onError: (e) => swalError((e as Error).message),
   })
 
   const handleDelete = (id: number, name: string) => {
@@ -64,7 +65,7 @@ export default function ProductsPage() {
                 URL.revokeObjectURL(url)
                 toast.success('CSV indirildi')
               } catch (e) {
-                toast.error((e as Error).message)
+                swalError((e as Error).message)
               }
             }}
             className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"

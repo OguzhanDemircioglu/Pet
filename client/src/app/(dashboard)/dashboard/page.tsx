@@ -76,8 +76,7 @@ export default function DashboardPage() {
             desc="Mağazada bir satış olduğunda kaydet — stok otomatik düşer."
             actionLabel="Satış oluştur"
             actionHref="/satislar/yeni"
-            disabled={stats.plan === 'FREE'}
-            disabledNote="Satış geçmişi PRO plan ile açılır"
+            note={stats.plan === 'FREE' ? 'Satış geçmişi PRO plan ile açılır' : undefined}
           />
           <OnboardStep
             num={3}
@@ -242,7 +241,7 @@ function MetricMini({ label, value, accent }: { label: string; value: string; ac
 }
 
 function OnboardStep({
-  num, icon: Icon, title, desc, actionLabel, actionHref, secondaryLabel, secondaryHref, disabled, disabledNote,
+  num, icon: Icon, title, desc, actionLabel, actionHref, secondaryLabel, secondaryHref, disabled, disabledNote, note,
 }: {
   num: number
   icon: React.ComponentType<{ className?: string }>
@@ -254,6 +253,9 @@ function OnboardStep({
   secondaryHref?: string
   disabled?: boolean
   disabledNote?: string
+  // Active step can still surface a partial-feature hint (e.g. "creation works,
+  // history requires PRO"). Rendered as muted text under the action buttons.
+  note?: string
 }) {
   return (
     <div className="flex flex-col rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-950">
@@ -268,16 +270,19 @@ function OnboardStep({
       {disabled ? (
         <p className="text-xs italic text-gray-400">🔒 {disabledNote}</p>
       ) : (
-        <div className="flex flex-wrap gap-2">
-          <Link href={actionHref} className="inline-block rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700">
-            {actionLabel}
-          </Link>
-          {secondaryLabel && secondaryHref && (
-            <Link href={secondaryHref} className="inline-block rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">
-              {secondaryLabel}
+        <>
+          <div className="flex flex-wrap gap-2">
+            <Link href={actionHref} className="inline-block rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700">
+              {actionLabel}
             </Link>
-          )}
-        </div>
+            {secondaryLabel && secondaryHref && (
+              <Link href={secondaryHref} className="inline-block rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">
+                {secondaryLabel}
+              </Link>
+            )}
+          </div>
+          {note && <p className="mt-2 text-xs italic text-gray-400">🔒 {note}</p>}
+        </>
       )}
     </div>
   )

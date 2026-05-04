@@ -29,7 +29,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/admin/saas/export")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','STAFF')")
 public class SaasExportController {
 
     private final CompanyService companyService;

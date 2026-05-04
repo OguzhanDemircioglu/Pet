@@ -22,7 +22,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/admin/saas/dashboard")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','STAFF')")
 public class SaasDashboardController {
 
     private final ProductRepository productRepository;

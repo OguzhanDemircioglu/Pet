@@ -76,6 +76,10 @@ public class User {
     private List<RefreshToken> refreshTokens = new ArrayList<>();
 
     public enum Role {
-        ADMIN, CUSTOMER
+        // SaaS roles within a tenant company:
+        // - ADMIN: full access (manage users, plan, settings, api keys, audit log)
+        // - STAFF: daily ops (products, sales, dashboard, stock, exports/imports)
+        // - CUSTOMER: legacy e-commerce shopper role; not used by SaaS flows
+        ADMIN, STAFF, CUSTOMER
     }
 }
