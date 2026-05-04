@@ -7,24 +7,25 @@ import { test, expect } from '@playwright/test'
 test.describe('Kayıt akışı', () => {
   test('boş form submit etmez (HTML5 validation)', async ({ page }) => {
     await page.goto('/kayit')
-    const submit = page.getByRole('button', { name: /ücretsiz hesap/i })
-    await submit.click()
-    // Hâlâ /kayit sayfasındayız (form submit olmadı)
+    const regForm = page.getByRole('form', { name: /kayıt formu/i })
+    await regForm.getByRole('button', { name: /üye ol/i }).click()
     await expect(page).toHaveURL(/\/kayit/)
   })
 
   test('form alanları doldurulabilir', async ({ page }) => {
     await page.goto('/kayit')
-    await page.getByLabel('İşletme Adı').fill('Test Petshop')
-    await page.getByLabel('E-posta').fill('test@test.com')
-    await page.getByLabel('Şifre').fill('secret123')
-    await expect(page.getByLabel('İşletme Adı')).toHaveValue('Test Petshop')
-    await expect(page.getByLabel('E-posta')).toHaveValue('test@test.com')
+    const regForm = page.getByRole('form', { name: /kayıt formu/i })
+    await regForm.getByLabel('İşletme Adı').fill('Test Petshop')
+    await regForm.getByLabel('E-posta').fill('test@test.com')
+    await regForm.getByLabel('Şifre', { exact: true }).fill('secret123')
+    await expect(regForm.getByLabel('İşletme Adı')).toHaveValue('Test Petshop')
+    await expect(regForm.getByLabel('E-posta')).toHaveValue('test@test.com')
   })
 
   test('giriş ekranına dön linki çalışır', async ({ page }) => {
     await page.goto('/kayit')
-    await page.getByRole('link', { name: /giriş yap/i }).click()
+    // Tab geçişi: "Giriş Yap" tab veya "Giriş yap" link aynı route'a götürür
+    await page.getByRole('button', { name: /^giriş yap$/i }).first().click()
     await expect(page).toHaveURL(/\/giris/)
   })
 
@@ -39,6 +40,7 @@ test.describe('Kayıt akışı', () => {
     await page.goto('/sifre-unuttum')
     await page.getByLabel('E-posta').fill('test@example.com')
     await page.getByRole('button', { name: /sıfırlama/i }).click()
-    // Backend yoksa bile alert/spinner gözlenir; minimum click olur
+    // Backend yoksa hata gözlenir; varsa success message
+    // Minimum: click başarılı olmalı, error throw yok
   })
 })

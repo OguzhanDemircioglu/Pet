@@ -60,6 +60,10 @@ const nextConfig: NextConfig = {
     ]
   },
   async headers() {
+    // Dev mode: Next.js HMR/Fast Refresh `eval` kullanır, bazı browser'lar
+    // 'unsafe-eval' verilse bile dev'de güvenli HMR socket'ini blokluyor.
+    // Production'da tam CSP, dev'de güvenlik header'sız.
+    if (process.env.NODE_ENV !== 'production') return []
     return [
       { source: '/:path*', headers: securityHeaders },
     ]

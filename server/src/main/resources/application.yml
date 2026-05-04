@@ -41,7 +41,6 @@ spring:
       hibernate:
         default_schema: petshop
         format_sql: true
-    defer-datasource-initialization: true
     open-in-view: false
 
   flyway:

@@ -100,6 +100,13 @@ export const saasApi = {
     const r = await clientApi.post('/auth/register-company', input)
     return r.data
   },
+  async verifyEmail(email: string, code: string): Promise<{ accessToken: string; refreshToken: string; user: unknown }> {
+    const r = await clientApi.post('/auth/verify-email', { email, code })
+    return r.data
+  },
+  async resendVerification(email: string): Promise<void> {
+    await clientApi.post('/auth/resend-verification', { email })
+  },
   async listUsers(): Promise<CompanyUserDto[]> {
     const r = await clientApi.get('/admin/saas/users')
     return r.data

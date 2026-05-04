@@ -28,6 +28,9 @@ export const metadata: Metadata = {
     images: [{ url: '/og-default.jpg' }],
   },
   twitter: { card: 'summary_large_image' },
+  // Browser'ın kendi force-dark mekanizmalarını engellemek için her iki şemayı da
+  // desteklediğimizi söylüyoruz; prefers-color-scheme'e göre next-themes karar verir.
+  colorScheme: 'light dark',
 }
 
 const orgSchema = {

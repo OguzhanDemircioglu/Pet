@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+/* Browser'a "kendi temamı yönetiyorum, force-dark uygulama" diye sinyal verir.
+   Bunu yapmazsa tarayıcı (Opera, Chrome force-dark flag, Dark Reader, vb.)
+   light mode renklerini otomatik karartır → kart bg ile text aynı tonda kalır
+   ve içerik görünmez olur. */
+:root {
+  color-scheme: light;
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
 :root {
   --bg: #f8f9fa;
   --bg2: #ffffff;
@@ -25,7 +36,7 @@
 }
 
 [data-theme="dark"] {
-  --bg: #111827;
+  --bg: #0f172a;
   --bg2: #1e2535;
   --bg3: #1f2937;
   --text: #f1f5f9;
@@ -35,8 +46,8 @@
   --border2: #374151;
   --primary-bg: #450a0a;
   --orange-bg: #431407;
-  --shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.5);
 }
 
 *, *::before, *::after {
