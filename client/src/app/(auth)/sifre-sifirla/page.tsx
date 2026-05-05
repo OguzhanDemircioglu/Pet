@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import AuthShell from '../AuthShell'
 import { saasApi } from '@/lib/api/saas'
 import toast from 'react-hot-toast'
 
@@ -12,9 +13,11 @@ export default function ResetPasswordPage() {
 
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [showPwd, setShowPwd] = useState(false)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [done, setDone] = useState(false)
+  const [shake, setShake] = useState(false)
 
   useEffect(() => {
     if (!token) setErr('Geçersiz veya eksik token')
@@ -22,8 +25,8 @@ export default function ResetPasswordPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (password.length < 6) { setErr('Şifre en az 6 karakter olmalı'); return }
-    if (password !== confirm) { setErr('Şifreler eşleşmiyor'); return }
+    if (password.length < 6) { setErr('Şifre en az 6 karakter olmalı'); triggerShake(); return }
+    if (password !== confirm) { setErr('Şifreler eşleşmiyor'); triggerShake(); return }
     setErr(null); setBusy(true)
     try {
       await saasApi.confirmPasswordReset(token, password)
@@ -32,49 +35,81 @@ export default function ResetPasswordPage() {
       setTimeout(() => router.push('/giris'), 2000)
     } catch (err) {
       setErr((err as Error).message)
+      triggerShake()
     } finally {
       setBusy(false)
     }
   }
 
-  return (
-    <div className="mx-auto max-w-md py-12">
-      <h1 className="mb-8 text-center text-3xl font-bold">
-        <span className="text-red-600">Pet</span><span className="text-sky-400">Toptan</span>
-      </h1>
+  const triggerShake = () => {
+    setShake(true)
+    window.setTimeout(() => setShake(false), 450)
+  }
 
-      <div className="rounded-lg border border-gray-200 bg-white p-8 shadow-sm dark:border-gray-800 dark:bg-gray-950">
-        <h2 className="mb-6 text-xl font-semibold">Yeni Şifre Belirle</h2>
+  return (
+    <AuthShell>
+      <div className={'login-card' + (shake ? ' shake' : '')}>
+        <div className="login-header">
+          <h2 className="login-title">Yeni Şifre Belirle 🔐</h2>
+          <div className="login-sub">Hesabın için güçlü bir şifre seç. En az 6 karakter.</div>
+        </div>
 
         {done ? (
-          <div className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-            Şifreniz başarıyla değiştirildi. Giriş ekranına yönlendiriliyorsunuz…
+          <div className="auth-done">
+            <div className="auth-done-icon" aria-hidden="true">✓</div>
+            <p style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.55 }}>
+              Şifren başarıyla değiştirildi. Giriş ekranına yönlendiriliyorsun…
+            </p>
           </div>
         ) : (
-          <>
-            {err && <div role="alert" className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{err}</div>}
-
-            <form onSubmit={submit} className="space-y-4">
-              <label className="block">
-                <span className="mb-1 block text-sm font-medium">Yeni şifre</span>
-                <input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 dark:border-gray-700 dark:bg-gray-900" />
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-sm font-medium">Yeni şifre (tekrar)</span>
-                <input type="password" required minLength={6} value={confirm} onChange={(e) => setConfirm(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 dark:border-gray-700 dark:bg-gray-900" />
-              </label>
-              <button type="submit" disabled={busy || !token} className="w-full rounded-md bg-red-600 px-4 py-2.5 font-medium text-white hover:bg-red-700 disabled:opacity-50">
-                {busy ? 'Sıfırlanıyor…' : 'Şifreyi Sıfırla'}
-              </button>
-              <p className="text-center text-sm text-gray-500">
-                <Link href="/giris" className="text-sky-700 hover:underline">← Girişe dön</Link>
-              </p>
-            </form>
-          </>
+          <form onSubmit={submit} aria-label="Şifre sıfırlama formu">
+            <div className="form-group">
+              <label className="form-label" htmlFor="new-pwd">Yeni Şifre</label>
+              <div className="password-wrap">
+                <input
+                  id="new-pwd"
+                  type={showPwd ? 'text' : 'password'}
+                  minLength={6}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="form-input"
+                  placeholder="En az 6 karakter"
+                />
+                <button
+                  type="button"
+                  className="pwd-toggle"
+                  onClick={() => setShowPwd((v) => !v)}
+                  aria-label={showPwd ? 'Şifreyi gizle' : 'Şifreyi göster'}
+                >
+                  {showPwd ? '🙈' : '👁️'}
+                </button>
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="confirm-pwd">Yeni Şifre (Tekrar)</label>
+              <input
+                id="confirm-pwd"
+                type={showPwd ? 'text' : 'password'}
+                minLength={6}
+                required
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                className="form-input"
+                placeholder="Şifreyi tekrar yaz"
+              />
+            </div>
+            {err && <div role="alert" className="alert-error">⚠️ {err}</div>}
+            <button type="submit" className="btn-submit" disabled={busy || !token}>
+              {busy ? 'Sıfırlanıyor…' : 'Şifreyi Sıfırla'}
+            </button>
+            <div className="helper-row">
+              <span className="muted">İşin bitti mi?</span>
+              <Link href="/giris">← Girişe dön</Link>
+            </div>
+          </form>
         )}
       </div>
-    </div>
+    </AuthShell>
   )
 }

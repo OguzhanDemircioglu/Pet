@@ -1,0 +1,51 @@
+/* ── KATEGORİ LİSTELEME ── */
+.cat-page { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+.cat-bc { padding: 18px 0 12px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; }
+.cat-bc a, .cat-bc span { color: var(--text2); }
+.cat-bc a:hover { color: var(--primary); }
+.cat-bc .sep { color: var(--text3); font-size: 11px; }
+.cat-bc .current { color: var(--text); font-weight: 700; }
+
+.cat-hero { position: relative; border-radius: var(--r2); padding: 36px 40px; margin-bottom: 28px; color: #fff; overflow: hidden; min-height: 160px; display: flex; align-items: center; justify-content: space-between; }
+.cat-hero-1 { background: linear-gradient(135deg, #dc2626, #991b1b); }
+.cat-hero-2 { background: linear-gradient(135deg, #1e3a5f, #0f2035); }
+.cat-hero-3 { background: linear-gradient(135deg, #0f766e, #0d5c56); }
+.cat-hero-4 { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
+.cat-hero-5 { background: linear-gradient(135deg, #ea580c, #c2410c); }
+.cat-hero-6 { background: linear-gradient(135deg, #059669, #047857); }
+.cat-hero::before { content: ''; position: absolute; inset: 0; background-image: radial-gradient(circle at 20% 50%, white 1px, transparent 1px); background-size: 50px 50px; opacity: .07; }
+.cat-hero-content { position: relative; z-index: 1; max-width: 640px; }
+.cat-hero-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.28); border-radius: 20px; padding: 4px 14px; font-size: 12.5px; font-weight: 600; margin-bottom: 12px; backdrop-filter: blur(6px); }
+.cat-hero-title { font-size: clamp(24px, 3vw, 36px); font-weight: 900; line-height: 1.1; letter-spacing: -.5px; margin-bottom: 8px; }
+.cat-hero-sub { font-size: 14.5px; color: rgba(255,255,255,.85); line-height: 1.5; }
+.cat-hero-emoji { position: relative; z-index: 1; font-size: 96px; flex-shrink: 0; filter: drop-shadow(0 6px 14px rgba(0,0,0,.25)); }
+
+/* Layout */
+.cat-grid { display: grid; grid-template-columns: 260px 1fr; gap: 24px; align-items: start; padding-bottom: 48px; }
+@media (max-width: 1024px) { .cat-grid { grid-template-columns: 1fr; } }
+
+/* SIDEBAR (filters) */
+.cat-side { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r2); padding: 18px 20px; position: sticky; top: 88px; }
+@media (max-width: 1024px) { .cat-side { position: static; } }
+.cat-side-block { padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+.cat-side-block:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.cat-side-title { font-size: 13px; font-weight: 800; color: var(--text); margin-bottom: 10px; text-transform: uppercase; letter-spacing: .5px; }
+.cat-filter { display: flex; align-items: center; gap: 8px; padding: 6px 0; cursor: pointer; }
+.cat-filter input { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
+.cat-filter span { font-size: 13px; color: var(--text2); flex: 1; }
+.cat-filter-count { font-size: 11px; color: var(--text3); }
+.cat-filter:hover span { color: var(--text); }
+.cat-price-row { display: flex; gap: 8px; align-items: center; }
+.cat-price-row input { width: 100%; height: 36px; border: 1.5px solid var(--border); border-radius: 6px; padding: 0 10px; background: var(--bg3); color: var(--text); font-size: 13px; outline: none; font-family: inherit; }
+.cat-price-row input:focus { border-color: var(--primary); }
+.cat-side-clear { width: 100%; margin-top: 12px; padding: 8px; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; font-size: 12.5px; font-weight: 600; color: var(--text2); cursor: pointer; transition: .15s; font-family: inherit; }
+.cat-side-clear:hover { color: var(--primary); border-color: var(--primary); }
+
+/* MAIN */
+.cat-main { min-width: 0; }
+.cat-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 12px; }
+.cat-result-count { font-size: 13.5px; color: var(--text2); }
+.cat-result-count strong { color: var(--text); font-weight: 800; }
+.cat-sort { display: flex; align-items: center; gap: 8px; }
+.cat-sort select { height: 38px; border: 1.5px solid var(--border); border-radius: 8px; background: var(--bg2); color: var(--text); font-size: 13px; padding: 0 32px 0 12px; outline: none; font-family: inherit; cursor: pointer; }
+.cat-sort select:focus { border-color: var(--primary); }

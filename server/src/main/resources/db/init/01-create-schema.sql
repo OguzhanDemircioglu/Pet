@@ -1,3 +1,3 @@
 -- Postgres container ilk açılırken çalışır.
--- Flyway otomatik migration için petshop schema'sını yaratır.
+-- Hibernate ddl-auto=update için petshop schema'sının önceden var olması gerekir.
 CREATE SCHEMA IF NOT EXISTS petshop;

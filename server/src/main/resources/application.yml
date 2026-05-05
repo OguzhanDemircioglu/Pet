@@ -43,14 +43,6 @@ spring:
         format_sql: true
     open-in-view: false
 
-  flyway:
-    enabled: ${FLYWAY_ENABLED:true}
-    schemas: petshop
-    default-schema: petshop
-    baseline-on-migrate: true
-    baseline-version: 0
-    locations: classpath:db/migration
-
   jackson:
     serialization:
       write-dates-as-timestamps: false

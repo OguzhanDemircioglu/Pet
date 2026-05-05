@@ -38,8 +38,23 @@ export default function DashboardPage() {
     enabled: !isLoading && !!stats && stats.salesCount > 0,
   })
 
-  if (isLoading) return <div className="text-gray-500">Yükleniyor…</div>
-  if (error) return <div className="text-red-600">Hata: {(error as Error).message}</div>
+  if (isLoading) return (
+    <div className="space-y-6">
+      <div className="h-8 w-48 animate-pulse rounded-md bg-gray-200 dark:bg-gray-800" />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="h-32 animate-pulse rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950" />
+        ))}
+      </div>
+      <div className="h-64 animate-pulse rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950" />
+    </div>
+  )
+  if (error) return (
+    <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+      <div className="font-semibold">⚠ Bir hata oluştu</div>
+      <div className="mt-1 text-sm">{(error as Error).message}</div>
+    </div>
+  )
   if (!stats) return null
 
   const isFirstTime = stats.productCount === 0 && stats.salesCount === 0
@@ -47,15 +62,21 @@ export default function DashboardPage() {
 
   if (isFirstTime) {
     return (
-      <div className="mx-auto max-w-3xl space-y-6 py-8">
-        <div className="text-center">
-          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-700 text-white">
-            <Sparkles className="h-8 w-8" />
+      <div className="mx-auto max-w-4xl space-y-8 py-8">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-500 via-red-600 to-orange-600 px-8 py-12 text-center text-white shadow-xl shadow-red-500/30">
+          <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10" aria-hidden="true" />
+          <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-white/10" aria-hidden="true" />
+          <div className="absolute right-12 top-8 text-3xl opacity-20" aria-hidden="true">🐾</div>
+          <div className="absolute left-16 bottom-10 text-2xl opacity-20" aria-hidden="true">🐾</div>
+          <div className="relative">
+            <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md">
+              <Sparkles className="h-8 w-8" />
+            </div>
+            <h1 className="text-4xl font-black tracking-tight">PetToptan'a hoş geldin! 🎉</h1>
+            <p className="mt-3 text-base text-white/90">
+              İşletmen için stok ve satış yönetimini birkaç dakikada kuralım.
+            </p>
           </div>
-          <h1 className="text-3xl font-bold">PetToptan'a hoş geldin!</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
-            İşletmen için stok ve satış yönetimini birkaç dakikada kuralım.
-          </p>
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -90,11 +111,16 @@ export default function DashboardPage() {
           />
         </div>
 
-        <div className="rounded-lg border border-gray-200 bg-white p-5 text-sm dark:border-gray-800 dark:bg-gray-950">
-          <p className="text-gray-600 dark:text-gray-400">
-            Mevcut planın: <strong>{stats.plan}</strong> · Ürün limiti: <strong>{stats.productLimit < 0 ? 'sınırsız' : stats.productLimit}</strong>
-          </p>
-          <Link href="/ayarlar" className="mt-1 inline-block text-sky-700 hover:underline">Plan yükselt →</Link>
+        <div className="rounded-xl border border-gray-200 bg-white p-5 text-sm shadow-sm dark:border-gray-800 dark:bg-gray-950">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <p className="text-gray-600 dark:text-gray-400">
+              Mevcut planın: <strong className="text-gray-900 dark:text-gray-100">{stats.plan}</strong>
+              {' · '}Ürün limiti: <strong className="text-gray-900 dark:text-gray-100">{stats.productLimit < 0 ? 'sınırsız' : stats.productLimit}</strong>
+            </p>
+            <Link href="/ayarlar" className="inline-flex items-center gap-1 rounded-md bg-gradient-to-r from-red-500 to-red-600 px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5">
+              Plan yükselt →
+            </Link>
+          </div>
         </div>
       </div>
     )
@@ -129,23 +155,39 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <h1 className="text-2xl font-bold">Pano</h1>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent dark:from-white dark:to-gray-400">
+            Pano
+          </h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            İşletmenin anlık durumu — stok, satış ve performans
+          </p>
+        </div>
+        <Link
+          href="/satislar/yeni"
+          className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-red-500 to-red-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-red-500/30 transition-all hover:from-red-600 hover:to-red-700 hover:shadow-lg hover:shadow-red-500/40 hover:-translate-y-0.5"
+        >
+          <Receipt className="h-4 w-4" />
+          Yeni Satış
+        </Link>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <StatCard label="Toplam Ürün" value={stats.productCount} hint={limitText} />
-        <StatCard label="Toplam Satış" value={stats.salesCount} />
-        <StatCard label="Düşük Stok" value={stats.lowStock.length} tone={stats.lowStock.length > 0 ? 'warn' : 'default'} hint="≤ 5 adet" />
+        <StatCard label="Toplam Ürün" value={stats.productCount} hint={limitText} icon="📦" tone="accent" />
+        <StatCard label="Toplam Satış" value={stats.salesCount} icon="🛍️" tone="success" />
+        <StatCard label="Düşük Stok" value={stats.lowStock.length} tone={stats.lowStock.length > 0 ? 'warn' : 'success'} hint="≤ 5 adet" icon={stats.lowStock.length > 0 ? '⚠️' : '✓'} />
       </div>
 
       {chart && chart.length > 0 && (
-        <section className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-950">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-950">
           <h2 className="mb-3 text-lg font-semibold">Satış Trendi</h2>
           <SalesChart data={chart} />
         </section>
       )}
 
       {monthly && monthly.totalSales > 0 && (
-        <section className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-950">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-950">
           <div className="mb-4 flex items-baseline justify-between">
             <h2 className="text-lg font-semibold">Bu Ayki Performans</h2>
             <span className="font-mono text-xs text-gray-500">{monthly.period}</span>
@@ -160,7 +202,7 @@ export default function DashboardPage() {
       )}
 
       {topSellers && topSellers.length > 0 && (
-        <section className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-950">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-950">
           <h2 className="mb-3 text-lg font-semibold">En Çok Satanlar (30 gün)</h2>
           <ol className="space-y-2 text-sm">
             {topSellers.map((t, i) => (
@@ -258,7 +300,7 @@ function OnboardStep({
   note?: string
 }) {
   return (
-    <div className="flex flex-col rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-950">
+    <div className="flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-950">
       <div className="mb-3 flex items-center gap-2">
         <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-700 dark:bg-gray-800 dark:text-gray-300">
           {num}
@@ -272,8 +314,8 @@ function OnboardStep({
       ) : (
         <>
           <div className="flex flex-wrap gap-2">
-            <Link href={actionHref} className="inline-block rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700">
-              {actionLabel}
+            <Link href={actionHref} className="inline-flex items-center gap-1 rounded-md bg-gradient-to-r from-red-500 to-red-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5">
+              {actionLabel} →
             </Link>
             {secondaryLabel && secondaryHref && (
               <Link href={secondaryHref} className="inline-block rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">

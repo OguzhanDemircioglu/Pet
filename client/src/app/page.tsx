@@ -1,32 +1,68 @@
-import { redirect } from 'next/navigation'
-import { cookies } from 'next/headers'
-import Link from 'next/link'
-import { auth } from '@/lib/auth'
+import {
+  getBrands,
+  getCategories,
+  getDeals,
+  getFeaturedProducts,
+  getNewArrivals,
+} from '@/lib/api/public'
+import InfoBar from '@/components/home/InfoBar'
+import SiteHeader from '@/components/home/SiteHeader'
+import CategoryBar from '@/components/home/CategoryBar'
+import HeroCarousel from '@/components/home/HeroCarousel'
+import CategoryGrid from '@/components/home/CategoryGrid'
+import ProductSection from '@/components/home/ProductSection'
+import PromoBanner from '@/components/home/PromoBanner'
+import BrandStrip from '@/components/home/BrandStrip'
+import TrustBadges from '@/components/home/TrustBadges'
+import SiteFooter from '@/components/home/SiteFooter'
+import PetMascot from '@/components/home/PetMascot'
+import './home.css'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 300
 
-export default async function RootPage() {
-  const session = await auth()
-  if (session?.user) redirect('/dashboard')
-
-  const isGuest = (await cookies()).get('pt-guest')?.value === 'true'
-  if (!isGuest) redirect('/giris')
+export default async function HomePage() {
+  const [featured, newArrivals, deals, categories, brands] = await Promise.all([
+    getFeaturedProducts(),
+    getNewArrivals(),
+    getDeals(),
+    getCategories(),
+    getBrands(),
+  ])
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[var(--bg)] p-8">
-      <div className="text-center">
-        <h1 className="mb-3 text-4xl font-black tracking-tight">
-          <span className="text-[var(--primary)]">Pet</span>
-          <span className="text-[var(--accent)]">Toptan</span>
-        </h1>
-        <p className="mb-6 text-[var(--text2)]">Anasayfa yakında açılacak.</p>
-        <Link
-          href="/giris"
-          className="inline-block rounded-md bg-[var(--primary)] px-6 py-2.5 font-semibold text-white shadow-[0_4px_14px_rgba(220,38,38,.3)] hover:bg-[var(--primary-dk)]"
-        >
-          Giriş yap
-        </Link>
-      </div>
-    </main>
+    <>
+      <InfoBar />
+      <SiteHeader />
+      <CategoryBar categories={categories} />
+      <HeroCarousel />
+      <main className="pt-page">
+        <CategoryGrid categories={categories} />
+        <ProductSection
+          title="🔥 Çok Satanlar"
+          href="/cok-satanlar"
+          products={featured}
+          emojiFallback="⭐"
+        />
+        <PromoBanner />
+        <ProductSection
+          title="✨ Yeni Gelenler"
+          href="/yeni-gelenler"
+          products={newArrivals}
+          badge="new"
+          emojiFallback="🆕"
+        />
+        <ProductSection
+          title="💸 İndirimli Ürünler"
+          href="/indirimli"
+          products={deals}
+          badge="sale"
+          emojiFallback="🏷️"
+        />
+        <BrandStrip brands={brands} />
+      </main>
+      <TrustBadges />
+      <SiteFooter />
+      <PetMascot />
+    </>
   )
 }
